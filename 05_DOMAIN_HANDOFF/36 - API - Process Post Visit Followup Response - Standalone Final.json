@@ -1,0 +1,291 @@
+{
+  "name": "36 - API - Process Post Visit Followup Response - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "02a5c204-e3a2-4332-aedd-662623c6d642",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "820e7d9a-e0da-4d65-87a0-a139b7155641",
+              "name": "followup_token",
+              "value": "REPLACE_WITH_REAL_FOLLOWUP_TOKEN",
+              "type": "string"
+            },
+            {
+              "id": "17779841-ec39-42ed-b289-df30ea164a06",
+              "name": "mobile",
+              "value": "09000000000",
+              "type": "string"
+            },
+            {
+              "id": "ea420969-c60c-4878-83e9-f1f4297cffdd",
+              "name": "recovery_status",
+              "value": "better",
+              "type": "string"
+            },
+            {
+              "id": "4bda52e7-9a27-4bca-89d7-bbd088ee8c00",
+              "name": "pain_level",
+              "value": 2,
+              "type": "number"
+            },
+            {
+              "id": "44c0c8e8-0677-46d8-bbe1-1620e174b48d",
+              "name": "has_red_flag",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "1ccfcdf1-5131-40c6-98c7-e83e9b501cc1",
+              "name": "red_flag_details",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "0aa56949-1d32-4d4f-8953-ba16070dd905",
+              "name": "has_medication_issue",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "2c5ced2b-d60e-495c-b559-fbd44d4487e4",
+              "name": "medication_issue_details",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "b8eb1b0c-cc4f-4ae9-bc1b-443dfba429bc",
+              "name": "has_complaint",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "ded8864a-3d18-4132-ac0a-f64b97727202",
+              "name": "complaint_details",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "c05ac5f7-3bdf-4295-88e0-cc903feeefd2",
+              "name": "satisfaction_score",
+              "value": 5,
+              "type": "number"
+            },
+            {
+              "id": "86471c5a-b914-4856-b18b-ea730e285398",
+              "name": "patient_comment",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "77b00075-5426-4e69-b1e6-900448a7e206",
+              "name": "confirm_response",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "64e88f8d-1495-4eb3-b5eb-2fdc9454bd76",
+      "name": "Manual Post Visit Response"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/appointments/process-post-visit-followup",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "f092c2dd-a0e2-48da-9cde-faa7a21274bb",
+      "name": "Webhook - Process Post Visit Followup"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst followup_token = text(input.followup_token);\nconst mobile = text(input.mobile);\nconst recovery_status = text(input.recovery_status).toLowerCase();\nconst pain_level = Number(input.pain_level);\nconst has_red_flag = toBoolean(input.has_red_flag);\nconst red_flag_details = text(input.red_flag_details);\nconst has_medication_issue = toBoolean(input.has_medication_issue);\nconst medication_issue_details = text(input.medication_issue_details);\nconst has_complaint = toBoolean(input.has_complaint);\nconst complaint_details = text(input.complaint_details);\nconst satisfaction_score = Number(input.satisfaction_score);\nconst patient_comment = text(input.patient_comment);\nconst confirm_response = toBoolean(input.confirm_response);\n\nconst errors = [];\n\nif (!followup_token) {\n  errors.push({\n    field: 'followup_token',\n    message: 'توکن پیگیری الزامی است.',\n  });\n}\n\nif (!mobile) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل بیمار الزامی است.',\n  });\n}\n\nif (mobile && !/^\\+?[0-9]{8,15}$/.test(mobile)) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل معتبر نیست.',\n  });\n}\n\nif (!['better', 'same', 'worse'].includes(recovery_status)) {\n  errors.push({\n    field: 'recovery_status',\n    message: 'وضعیت بهبود باید better، same یا worse باشد.',\n  });\n}\n\nif (!Number.isInteger(pain_level) || pain_level < 0 || pain_level > 10) {\n  errors.push({\n    field: 'pain_level',\n    message: 'شدت درد باید یک عدد صحیح بین 0 و 10 باشد.',\n  });\n}\n\nif (has_red_flag && !red_flag_details) {\n  errors.push({\n    field: 'red_flag_details',\n    message: 'در صورت وجود علامت هشدار، توضیح آن الزامی است.',\n  });\n}\n\nif (has_medication_issue && !medication_issue_details) {\n  errors.push({\n    field: 'medication_issue_details',\n    message: 'در صورت وجود مشکل دارویی، توضیح آن الزامی است.',\n  });\n}\n\nif (has_complaint && !complaint_details) {\n  errors.push({\n    field: 'complaint_details',\n    message: 'در صورت ثبت شکایت، توضیح آن الزامی است.',\n  });\n}\n\nif (\n  !Number.isInteger(satisfaction_score) ||\n  satisfaction_score < 1 ||\n  satisfaction_score > 5\n) {\n  errors.push({\n    field: 'satisfaction_score',\n    message: 'امتیاز رضایت باید یک عدد صحیح بین 1 و 5 باشد.',\n  });\n}\n\nfor (const [field, value, max] of [\n  ['red_flag_details', red_flag_details, 1000],\n  ['medication_issue_details', medication_issue_details, 1000],\n  ['complaint_details', complaint_details, 1000],\n  ['patient_comment', patient_comment, 2000],\n]) {\n  if (value.length > max) {\n    errors.push({\n      field,\n      message: `طول ${field} بیشتر از حد مجاز است.`,\n    });\n  }\n}\n\nif (confirm_response !== true) {\n  errors.push({\n    field: 'confirm_response',\n    message: 'پاسخ بیمار باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    followup_token,\n    mobile,\n    recovery_status,\n    pain_level,\n    has_red_flag,\n    red_flag_details,\n    has_medication_issue,\n    medication_issue_details,\n    has_complaint,\n    complaint_details,\n    satisfaction_score,\n    patient_comment,\n    confirm_response,\n    validation_status: errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "7d4e553d-7c30-4af6-af4a-882063c3b74b",
+      "name": "Normalize and Validate Post Visit Response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0940a476-94ce-40d9-a1f0-da6953468553",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "61287030-f671-4f6b-8f88-68e392cba6c8",
+      "name": "Is Post Visit Response Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS followup_token,\n        $2::TEXT AS mobile,\n        $3::TEXT AS recovery_status,\n        $4::INTEGER AS pain_level,\n        $5::BOOLEAN AS has_red_flag,\n        $6::TEXT AS red_flag_details,\n        $7::BOOLEAN AS has_medication_issue,\n        $8::TEXT AS medication_issue_details,\n        $9::BOOLEAN AS has_complaint,\n        $10::TEXT AS complaint_details,\n        $11::INTEGER AS satisfaction_score,\n        $12::TEXT AS patient_comment\n),\n\nfollowup_context AS (\n    SELECT\n        followup.id AS followup_id,\n        followup.appointment_id,\n        followup.followup_stage,\n        followup.status AS followup_status,\n        followup.expires_at,\n\n        appointment.clinic_id,\n        appointment.doctor_id,\n        appointment.patient_id,\n        appointment.service_id,\n        appointment.starts_at,\n        appointment.ends_at,\n\n        clinic.name AS clinic_name,\n        clinic.timezone,\n\n        patient.full_name AS patient_name,\n        patient.mobile,\n\n        doctor.full_name AS doctor_name,\n        service.name AS service_name,\n\n        request.recovery_status,\n        request.pain_level,\n        request.has_red_flag,\n        request.red_flag_details,\n        request.has_medication_issue,\n        request.medication_issue_details,\n        request.has_complaint,\n        request.complaint_details,\n        request.satisfaction_score,\n        request.patient_comment,\n\n        CASE\n            WHEN request.has_red_flag = TRUE\n              OR request.pain_level >= 9\n                THEN 'urgent'\n\n            WHEN request.has_medication_issue = TRUE\n              OR request.pain_level >= 7\n              OR (\n                    request.recovery_status = 'worse'\n                    AND request.pain_level >= 5\n                 )\n                THEN 'high'\n\n            WHEN request.recovery_status = 'worse'\n              OR request.pain_level >= 5\n              OR request.has_complaint = TRUE\n              OR request.satisfaction_score <= 2\n                THEN 'medium'\n\n            ELSE 'low'\n        END AS risk_level,\n\n        CASE\n            WHEN request.has_red_flag = TRUE\n              OR request.has_medication_issue = TRUE\n              OR request.recovery_status = 'worse'\n              OR request.pain_level >= 5\n              OR request.has_complaint = TRUE\n              OR request.satisfaction_score <= 2\n                THEN TRUE\n            ELSE FALSE\n        END AS needs_human_review,\n\n        CASE\n            WHEN request.has_red_flag = TRUE\n              OR request.has_medication_issue = TRUE\n              OR request.recovery_status = 'worse'\n              OR request.pain_level >= 5\n                THEN 'medical_review'\n            WHEN request.has_complaint = TRUE\n              OR request.satisfaction_score <= 2\n                THEN 'complaint'\n            ELSE NULL\n        END AS handoff_task_type\n\n    FROM appointment_post_visit_followups followup\n\n    INNER JOIN appointments appointment\n        ON appointment.id = followup.appointment_id\n\n    INNER JOIN clinics clinic\n        ON clinic.id = appointment.clinic_id\n\n    INNER JOIN patients patient\n        ON patient.id = appointment.patient_id\n\n    INNER JOIN doctors doctor\n        ON doctor.id = appointment.doctor_id\n\n    LEFT JOIN services service\n        ON service.id = appointment.service_id\n\n    INNER JOIN request_data request\n        ON request.followup_token =\n           followup.followup_token\n       AND request.mobile = patient.mobile\n\n    WHERE followup.status = 'pending'\n\n    LIMIT 1\n),\n\nexpired_followup AS (\n    UPDATE appointment_post_visit_followups followup\n\n    SET\n        status = 'expired',\n        updated_at = NOW()\n\n    FROM followup_context context\n\n    WHERE followup.id = context.followup_id\n      AND context.expires_at <= NOW()\n\n    RETURNING followup.id\n),\n\ninserted_handoff AS (\n    INSERT INTO human_handoff_tasks (\n        clinic_id,\n        patient_id,\n        appointment_id,\n\n        task_type,\n        source_type,\n        source_record_id,\n\n        priority,\n        status,\n\n        reason,\n        due_at\n    )\n\n    SELECT\n        context.clinic_id,\n        context.patient_id,\n        context.appointment_id,\n\n        context.handoff_task_type,\n        'appointment',\n        context.appointment_id,\n\n        CASE context.risk_level\n            WHEN 'urgent' THEN 'urgent'\n            WHEN 'high' THEN 'high'\n            ELSE 'normal'\n        END,\n\n        'open',\n\n        CASE\n            WHEN context.handoff_task_type = 'medical_review'\n                THEN CONCAT(\n                    'پاسخ پیگیری پس از مراجعه نیازمند بررسی انسانی است. ',\n                    'وضعیت بهبود: ',\n                    context.recovery_status,\n                    '، شدت درد: ',\n                    context.pain_level,\n                    '.'\n                )\n\n            WHEN context.handoff_task_type = 'complaint'\n                THEN 'پاسخ پیگیری پس از مراجعه شامل شکایت یا رضایت پایین بیمار است.'\n\n            ELSE 'پیگیری پس از مراجعه نیازمند بررسی انسانی است.'\n        END,\n\n        CASE context.risk_level\n            WHEN 'urgent' THEN NOW()\n            WHEN 'high' THEN NOW() + INTERVAL '30 minutes'\n            ELSE NOW() + INTERVAL '4 hours'\n        END\n\n    FROM followup_context context\n\n    WHERE context.expires_at > NOW()\n      AND context.needs_human_review = TRUE\n      AND context.handoff_task_type IS NOT NULL\n\n    ON CONFLICT DO NOTHING\n\n    RETURNING\n        id AS handoff_task_id,\n        task_type,\n        priority,\n        due_at\n),\n\neffective_handoff AS (\n    SELECT\n        inserted.handoff_task_id,\n        inserted.task_type,\n        inserted.priority,\n        inserted.due_at\n\n    FROM inserted_handoff inserted\n\n    UNION ALL\n\n    SELECT\n        existing.id AS handoff_task_id,\n        existing.task_type,\n        existing.priority,\n        existing.due_at\n\n    FROM human_handoff_tasks existing\n\n    INNER JOIN followup_context context\n        ON existing.source_type = 'appointment'\n       AND existing.source_record_id =\n           context.appointment_id\n       AND existing.task_type =\n           context.handoff_task_type\n\n    WHERE context.needs_human_review = TRUE\n\n      AND NOT EXISTS (\n          SELECT 1\n          FROM inserted_handoff\n      )\n\n    ORDER BY handoff_task_id\n    LIMIT 1\n),\n\nupdated_followup AS (\n    UPDATE appointment_post_visit_followups followup\n\n    SET\n        status = CASE\n            WHEN context.needs_human_review = TRUE\n                THEN 'escalated'\n            ELSE 'completed'\n        END,\n\n        responded_at = NOW(),\n\n        recovery_status =\n            context.recovery_status,\n\n        pain_level =\n            context.pain_level,\n\n        has_red_flag =\n            context.has_red_flag,\n\n        red_flag_details =\n            NULLIF(\n                context.red_flag_details,\n                ''\n            ),\n\n        has_medication_issue =\n            context.has_medication_issue,\n\n        medication_issue_details =\n            NULLIF(\n                context.medication_issue_details,\n                ''\n            ),\n\n        has_complaint =\n            context.has_complaint,\n\n        complaint_details =\n            NULLIF(\n                context.complaint_details,\n                ''\n            ),\n\n        satisfaction_score =\n            context.satisfaction_score,\n\n        patient_comment =\n            NULLIF(\n                context.patient_comment,\n                ''\n            ),\n\n        risk_level =\n            context.risk_level,\n\n        needs_human_review =\n            context.needs_human_review,\n\n        updated_at = NOW()\n\n    FROM followup_context context\n\n    WHERE followup.id = context.followup_id\n      AND context.expires_at > NOW()\n\n    RETURNING\n        followup.id AS followup_id,\n        followup.appointment_id,\n        followup.followup_stage,\n        followup.status AS followup_status,\n        followup.responded_at,\n        followup.risk_level,\n        followup.needs_human_review\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM followup_context\n        )\n            THEN FALSE\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM expired_followup\n        )\n            THEN FALSE\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM updated_followup\n        )\n            THEN TRUE\n\n        ELSE FALSE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM followup_context\n        )\n            THEN 'post_visit_followup_not_found'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM expired_followup\n        )\n            THEN 'post_visit_followup_expired'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM updated_followup\n            WHERE needs_human_review = TRUE\n              AND risk_level = 'urgent'\n        )\n            THEN 'urgent_human_review_required'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM updated_followup\n            WHERE needs_human_review = TRUE\n              AND risk_level = 'high'\n        )\n            THEN 'high_priority_review_required'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM updated_followup\n            WHERE needs_human_review = TRUE\n        )\n            THEN 'human_review_required'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM updated_followup\n        )\n            THEN 'post_visit_followup_completed'\n\n        ELSE 'post_visit_response_conflict'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM followup_context\n        )\n            THEN 'پیگیری فعال مطابق توکن و شماره موبایل پیدا نشد.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM expired_followup\n        )\n            THEN 'زمان اعتبار این پیگیری به پایان رسیده است.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM updated_followup\n            WHERE needs_human_review = TRUE\n              AND risk_level = 'urgent'\n        )\n            THEN 'پاسخ بیمار ثبت شد و برای بررسی فوری انسانی ارجاع گردید.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM updated_followup\n            WHERE needs_human_review = TRUE\n              AND risk_level = 'high'\n        )\n            THEN 'پاسخ بیمار ثبت شد و برای بررسی با اولویت بالا ارجاع گردید.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM updated_followup\n            WHERE needs_human_review = TRUE\n        )\n            THEN 'پاسخ بیمار ثبت شد و برای پیگیری انسانی ارجاع گردید.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM updated_followup\n        )\n            THEN 'پاسخ پیگیری پس از مراجعه با موفقیت ثبت شد.'\n\n        ELSE 'وضعیت پیگیری در فاصله بررسی تا ثبت پاسخ تغییر کرده است.'\n    END AS message,\n\n    (\n        SELECT followup_id\n        FROM updated_followup\n    ) AS followup_id,\n\n    (\n        SELECT appointment_id\n        FROM followup_context\n    ) AS appointment_id,\n\n    (\n        SELECT followup_stage\n        FROM followup_context\n    ) AS followup_stage,\n\n    (\n        SELECT patient_name\n        FROM followup_context\n    ) AS patient_name,\n\n    (\n        SELECT mobile\n        FROM followup_context\n    ) AS mobile,\n\n    (\n        SELECT doctor_name\n        FROM followup_context\n    ) AS doctor_name,\n\n    (\n        SELECT service_name\n        FROM followup_context\n    ) AS service_name,\n\n    (\n        SELECT risk_level\n        FROM updated_followup\n    ) AS risk_level,\n\n    (\n        SELECT needs_human_review\n        FROM updated_followup\n    ) AS needs_human_review,\n\n    (\n        SELECT handoff_task_id\n        FROM effective_handoff\n    ) AS handoff_task_id,\n\n    (\n        SELECT task_type\n        FROM effective_handoff\n    ) AS handoff_task_type,\n\n    (\n        SELECT priority\n        FROM effective_handoff\n    ) AS handoff_priority,\n\n    CASE\n        WHEN EXISTS (\n            SELECT 1\n            FROM updated_followup\n            WHERE risk_level = 'urgent'\n              AND needs_human_review = TRUE\n        )\n            THEN 'urgent_human_handoff'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM updated_followup\n            WHERE needs_human_review = TRUE\n        )\n            THEN 'human_handoff'\n\n        ELSE 'no_action'\n    END AS next_action\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.followup_token,\n  $json.mobile,\n  $json.recovery_status,\n  $json.pain_level,\n  $json.has_red_flag,\n  $json.red_flag_details,\n  $json.has_medication_issue,\n  $json.medication_issue_details,\n  $json.has_complaint,\n  $json.complaint_details,\n  $json.satisfaction_score,\n  $json.patient_comment\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "187ad36c-586d-4b30-8ea5-5b3111f7d192",
+      "name": "Process Post Visit Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: 'invalid_request',\n    message: 'اطلاعات پاسخ پیگیری ناقص یا نامعتبر است.',\n    errors: $json.errors ?? [],\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "10fac000-a2bf-49b0-9cf2-59b393dcd291",
+      "name": "Return Post Visit Response Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## پردازش پاسخ بیمار پس از مراجعه\n\nتوکن را از خروجی Workflow شماره 35 بردار.\n\nاطلاعات جمع‌آوری‌شده:\n- وضعیت بهبود: better / same / worse\n- شدت درد: 0 تا 10\n- علامت هشدار\n- مشکل دارویی\n- شکایت\n- رضایت: 1 تا 5\n\nWorkflow توصیه پزشکی تولید نمی‌کند؛ فقط پاسخ را ثبت، سطح ریسک را تعیین و در صورت نیاز تسک انسانی ایجاد می‌کند.",
+        "height": 410,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1140,
+        -300
+      ],
+      "id": "c56e8504-4735-4904-88ed-8c2bf51218ca",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Post Visit Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Post Visit Response": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Post Visit Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Process Post Visit Followup": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Post Visit Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Post Visit Response": {
+      "main": [
+        [
+          {
+            "node": "Is Post Visit Response Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Post Visit Response Valid?": {
+      "main": [
+        [
+          {
+            "node": "Process Post Visit Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Post Visit Response Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

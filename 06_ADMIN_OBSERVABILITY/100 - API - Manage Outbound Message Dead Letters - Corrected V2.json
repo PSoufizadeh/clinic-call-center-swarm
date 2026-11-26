@@ -1,0 +1,273 @@
+{
+  "name": "100 - API - Manage Outbound Message Dead Letters - Corrected V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "f93d6337-4540-4a31-a904-b5fdc6531b92",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "235b7acf-d8e7-46c5-804c-1834b7fbb215",
+              "name": "action",
+              "value": "list",
+              "type": "string"
+            },
+            {
+              "id": "d44627ad-d437-450e-b79b-3f38a37b11d9",
+              "name": "clinic_name",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "4a25945b-ba54-4d02-af7e-69e1cdb95329",
+              "name": "dead_letter_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "ee6359ab-8a93-4804-a7ba-d419c9202870",
+              "name": "outbound_message_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "4454beaf-0087-4edd-b60a-b9ab6ae5ccbc",
+              "name": "resolved_filter",
+              "value": "unresolved",
+              "type": "string"
+            },
+            {
+              "id": "b016e6c1-1f29-444a-ad62-0819bea7a060",
+              "name": "actor_name",
+              "value": "مدیر سیستم",
+              "type": "string"
+            },
+            {
+              "id": "af8dcd02-3c36-419e-91fb-c46681be2746",
+              "name": "resolution_note",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "f34c3719-8d9e-4292-a298-3ca909f88125",
+              "name": "reset_attempts",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "5d384ef0-a321-489c-94d2-932527305926",
+              "name": "limit",
+              "value": 50,
+              "type": "number"
+            },
+            {
+              "id": "2d132fb2-ee41-4e06-ba61-8b020b67f151",
+              "name": "confirm_action",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "47bb546b-ab15-482f-9ac8-4023cddaeb8c",
+      "name": "Manual Dead Letter Management"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/operations/dead-letters/manage",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "4f831968-afc2-4128-9581-898304031ac5",
+      "name": "Webhook - Manage Dead Letters"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst action = text(input.action || 'list').toLowerCase();\nconst clinic_name = text(input.clinic_name);\nconst dead_letter_id = Number(input.dead_letter_id ?? 0);\nconst outbound_message_id = Number(input.outbound_message_id ?? 0);\nconst resolved_filter = text(input.resolved_filter || 'unresolved').toLowerCase();\nconst actor_name = text(input.actor_name);\nconst resolution_note = text(input.resolution_note);\nconst reset_attempts = bool(\n  input.reset_attempts === undefined\n    ? true\n    : input.reset_attempts\n);\nconst limit = Number(input.limit ?? 50);\nconst confirm_action = bool(input.confirm_action);\n\nconst actions = [\n  'list',\n  'get',\n  'requeue',\n  'resolve',\n  'cancel',\n  'reopen',\n];\n\nconst filters = [\n  'all',\n  'resolved',\n  'unresolved',\n];\n\nconst errors = [];\n\nif (!actions.includes(action)) {\n  errors.push({\n    field: 'action',\n    message: 'اقدام معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(dead_letter_id) ||\n  dead_letter_id < 0\n) {\n  errors.push({\n    field: 'dead_letter_id',\n    message: 'شناسه Dead Letter معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(outbound_message_id) ||\n  outbound_message_id < 0\n) {\n  errors.push({\n    field: 'outbound_message_id',\n    message: 'شناسه پیام معتبر نیست.',\n  });\n}\n\nif (\n  ['get', 'requeue', 'resolve', 'cancel', 'reopen'].includes(action) &&\n  dead_letter_id < 1 &&\n  outbound_message_id < 1\n) {\n  errors.push({\n    field: 'dead_letter_reference',\n    message: 'شناسه Dead Letter یا پیام الزامی است.',\n  });\n}\n\nif (!filters.includes(resolved_filter)) {\n  errors.push({\n    field: 'resolved_filter',\n    message: 'فیلتر وضعیت معتبر نیست.',\n  });\n}\n\nif (\n  ['requeue', 'resolve', 'cancel', 'reopen'].includes(action) &&\n  !actor_name\n) {\n  errors.push({\n    field: 'actor_name',\n    message: 'نام انجام‌دهنده الزامی است.',\n  });\n}\n\nif (\n  ['resolve', 'cancel'].includes(action) &&\n  !resolution_note\n) {\n  errors.push({\n    field: 'resolution_note',\n    message: 'توضیح نتیجه الزامی است.',\n  });\n}\n\nif (\n  !Number.isInteger(limit) ||\n  limit < 1 ||\n  limit > 500\n) {\n  errors.push({\n    field: 'limit',\n    message: 'Limit باید بین 1 و 500 باشد.',\n  });\n}\n\nif (\n  action !== 'list' &&\n  action !== 'get' &&\n  confirm_action !== true\n) {\n  errors.push({\n    field: 'confirm_action',\n    message: 'اقدام روی Dead Letter باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    action,\n    clinic_name,\n    dead_letter_id,\n    outbound_message_id,\n    resolved_filter,\n    actor_name,\n    resolution_note,\n    reset_attempts,\n    limit,\n    confirm_action,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "b3bc9d1d-6dff-4c5b-9a80-f4bfdacd3903",
+      "name": "Normalize and Validate Dead Letter Management"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "14218834-7d44-48cb-99ff-2de993fc09c8",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "15ff8458-309b-43d8-a5e9-9d85fdfb5cfb",
+      "name": "Is Dead Letter Management Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS action,\n        NULLIF($2::TEXT, '') AS clinic_name,\n        NULLIF($3::BIGINT, 0) AS dead_letter_id,\n        NULLIF($4::BIGINT, 0) AS outbound_message_id,\n        $5::TEXT AS resolved_filter,\n        NULLIF($6::TEXT, '') AS actor_name,\n        NULLIF($7::TEXT, '') AS resolution_note,\n        $8::BOOLEAN AS reset_attempts,\n        $9::INTEGER AS result_limit\n),\n\nscope AS (\n    SELECT\n        request.*,\n        clinic.id AS clinic_id\n    FROM request_data request\n    LEFT JOIN clinics clinic\n        ON clinic.name = request.clinic_name\n       AND clinic.is_active = TRUE\n),\n\ntarget_dead_letter AS (\n    SELECT\n        dead_letter.*,\n        message.clinic_id,\n        message.status AS message_status,\n        message.channel,\n        message.purpose,\n        message.recipient,\n        message.attempt_count,\n        message.max_attempts,\n        message.last_error_code,\n        message.last_error_message\n    FROM outbound_message_dead_letters dead_letter\n    INNER JOIN outbound_messages message\n        ON message.id =\n           dead_letter.outbound_message_id\n    CROSS JOIN scope scope_row\n    WHERE (\n            (\n                scope_row.dead_letter_id IS NOT NULL\n                AND dead_letter.id =\n                    scope_row.dead_letter_id\n            )\n            OR (\n                scope_row.dead_letter_id IS NULL\n                AND scope_row.outbound_message_id IS NOT NULL\n                AND dead_letter.outbound_message_id =\n                    scope_row.outbound_message_id\n            )\n          )\n      AND (\n            scope_row.clinic_name IS NULL\n            OR message.clinic_id =\n               scope_row.clinic_id\n          )\n    ORDER BY dead_letter.id\n    LIMIT 1\n),\n\nrequeued_message AS (\n    UPDATE outbound_messages message\n    SET\n        status = 'queued',\n        attempt_count = CASE\n            WHEN scope_row.reset_attempts = TRUE\n                THEN 0\n            ELSE message.attempt_count\n        END,\n        next_attempt_at = NOW(),\n        failed_at = NULL,\n        last_error_code = NULL,\n        last_error_message = NULL,\n        updated_at = NOW()\n    FROM scope scope_row\n    WHERE scope_row.action = 'requeue'\n      AND message.id = (\n            SELECT outbound_message_id\n            FROM target_dead_letter\n          )\n    RETURNING message.*\n),\n\ncancelled_message AS (\n    UPDATE outbound_messages message\n    SET\n        status = 'cancelled',\n        updated_at = NOW()\n    FROM scope scope_row\n    WHERE scope_row.action = 'cancel'\n      AND message.id = (\n            SELECT outbound_message_id\n            FROM target_dead_letter\n          )\n    RETURNING message.*\n),\n\nupdated_dead_letter AS (\n    UPDATE outbound_message_dead_letters dead_letter\n    SET\n        resolved = CASE\n            WHEN scope_row.action IN (\n                'requeue',\n                'resolve',\n                'cancel'\n            )\n                THEN TRUE\n            WHEN scope_row.action = 'reopen'\n                THEN FALSE\n            ELSE dead_letter.resolved\n        END,\n\n        resolved_by = CASE\n            WHEN scope_row.action IN (\n                'requeue',\n                'resolve',\n                'cancel'\n            )\n                THEN scope_row.actor_name\n            WHEN scope_row.action = 'reopen'\n                THEN NULL\n            ELSE dead_letter.resolved_by\n        END,\n\n        resolution_note = CASE\n            WHEN scope_row.action = 'requeue'\n                THEN COALESCE(\n                    scope_row.resolution_note,\n                    'Message requeued for another delivery attempt.'\n                )\n            WHEN scope_row.action IN (\n                'resolve',\n                'cancel'\n            )\n                THEN scope_row.resolution_note\n            WHEN scope_row.action = 'reopen'\n                THEN NULL\n            ELSE dead_letter.resolution_note\n        END,\n\n        resolved_at = CASE\n            WHEN scope_row.action IN (\n                'requeue',\n                'resolve',\n                'cancel'\n            )\n                THEN NOW()\n            WHEN scope_row.action = 'reopen'\n                THEN NULL\n            ELSE dead_letter.resolved_at\n        END\n\n    FROM scope scope_row\n    WHERE dead_letter.id = (\n            SELECT id\n            FROM target_dead_letter\n          )\n      AND scope_row.action IN (\n            'requeue',\n            'resolve',\n            'cancel',\n            'reopen'\n          )\n    RETURNING dead_letter.*\n),\n\nreopened_message AS (\n    UPDATE outbound_messages message\n    SET\n        status = 'dead_letter',\n        updated_at = NOW()\n    FROM scope scope_row\n    WHERE scope_row.action = 'reopen'\n      AND message.id = (\n            SELECT outbound_message_id\n            FROM target_dead_letter\n          )\n    RETURNING message.*\n),\n\nlist_rows AS (\n    SELECT\n        dead_letter.id,\n        dead_letter.outbound_message_id,\n        message.clinic_id,\n        message.channel,\n        message.purpose,\n        message.recipient,\n        message.status AS message_status,\n        message.attempt_count,\n        message.max_attempts,\n        dead_letter.final_error_code,\n        dead_letter.final_error_message,\n        dead_letter.resolved,\n        dead_letter.resolved_by,\n        dead_letter.resolution_note,\n        dead_letter.resolved_at,\n        dead_letter.created_at\n    FROM outbound_message_dead_letters dead_letter\n    INNER JOIN outbound_messages message\n        ON message.id =\n           dead_letter.outbound_message_id\n    CROSS JOIN scope scope_row\n    WHERE scope_row.action = 'list'\n      AND (\n            scope_row.clinic_name IS NULL\n            OR message.clinic_id =\n               scope_row.clinic_id\n          )\n      AND (\n            scope_row.resolved_filter = 'all'\n            OR (\n                scope_row.resolved_filter = 'resolved'\n                AND dead_letter.resolved = TRUE\n            )\n            OR (\n                scope_row.resolved_filter = 'unresolved'\n                AND dead_letter.resolved = FALSE\n            )\n          )\n    ORDER BY dead_letter.created_at DESC\n    LIMIT (\n        SELECT result_limit\n        FROM request_data\n    )\n),\n\nselected_row AS (\n    SELECT TO_JSONB(target_dead_letter) AS value\n    FROM target_dead_letter\n    CROSS JOIN request_data request\n    WHERE request.action = 'get'\n\n    UNION ALL\n\n    SELECT JSONB_BUILD_OBJECT(\n        'dead_letter',\n            TO_JSONB(updated_dead_letter),\n        'requeued_message',\n            (\n                SELECT TO_JSONB(requeued_message)\n                FROM requeued_message\n            ),\n        'cancelled_message',\n            (\n                SELECT TO_JSONB(cancelled_message)\n                FROM cancelled_message\n            ),\n        'reopened_message',\n            (\n                SELECT TO_JSONB(reopened_message)\n                FROM reopened_message\n            )\n    )\n    FROM updated_dead_letter\n)\n\nSELECT\n    CASE\n        WHEN request.clinic_name IS NOT NULL\n         AND NOT EXISTS (\n            SELECT 1\n            FROM scope\n            WHERE clinic_id IS NOT NULL\n         )\n            THEN FALSE\n\n        WHEN request.action IN (\n            'get',\n            'requeue',\n            'resolve',\n            'cancel',\n            'reopen'\n        )\n         AND NOT EXISTS (\n            SELECT 1\n            FROM target_dead_letter\n         )\n            THEN FALSE\n\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN request.clinic_name IS NOT NULL\n         AND NOT EXISTS (\n            SELECT 1\n            FROM scope\n            WHERE clinic_id IS NOT NULL\n         )\n            THEN 'clinic_not_found'\n\n        WHEN request.action IN (\n            'get',\n            'requeue',\n            'resolve',\n            'cancel',\n            'reopen'\n        )\n         AND NOT EXISTS (\n            SELECT 1\n            FROM target_dead_letter\n         )\n            THEN 'dead_letter_not_found'\n\n        WHEN request.action = 'requeue'\n            THEN 'dead_letter_message_requeued'\n\n        WHEN request.action = 'resolve'\n            THEN 'dead_letter_resolved'\n\n        WHEN request.action = 'cancel'\n            THEN 'dead_letter_message_cancelled'\n\n        WHEN request.action = 'reopen'\n            THEN 'dead_letter_reopened'\n\n        WHEN request.action = 'get'\n            THEN 'dead_letter_loaded'\n\n        ELSE 'dead_letters_listed'\n    END AS result,\n\n    (\n        SELECT value\n        FROM selected_row\n        LIMIT 1\n    ) AS dead_letter,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                TO_JSONB(list_rows)\n            )\n            FROM list_rows\n        ),\n        '[]'::JSONB\n    ) AS dead_letters,\n\n    COALESCE(\n        (\n            SELECT COUNT(*)\n            FROM list_rows\n        ),\n        0\n    ) AS dead_letter_count\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.action,\n  $json.clinic_name,\n  $json.dead_letter_id,\n  $json.outbound_message_id,\n  $json.resolved_filter,\n  $json.actor_name,\n  $json.resolution_note,\n  $json.reset_attempts,\n  $json.limit\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "3acf8611-1be3-4bc7-be56-fd247457e41a",
+      "name": "Manage Outbound Message Dead Letter"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات مدیریت Dead Letter نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "993aac2c-fa7d-4b3a-b69a-c2f905cf3a7c",
+      "name": "Return Dead Letter Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## مدیریت Dead Letter\n\nاقدام‌ها:\n- list\n- get\n- requeue\n- resolve\n- cancel\n- reopen\n\nRequeue پیام را به صف برمی‌گرداند و Dead Letter را Resolve می‌کند.\n\nاصلاح V2:\n- Clinic Not Found دیگر Dead Letterهای همه کلینیک‌ها را نمایش نمی‌دهد.\n- Clinic Isolation برای dead_letter_id و outbound_message_id اعمال می‌شود.\n- اولویت OR/AND در target_dead_letter اصلاح شده است.",
+        "height": 370,
+        "width": 510
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -290
+      ],
+      "id": "7191350f-0e2f-4d24-911e-e778efe21e1a",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Dead Letter Management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Dead Letter Management": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Dead Letter Management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Manage Dead Letters": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Dead Letter Management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Dead Letter Management": {
+      "main": [
+        [
+          {
+            "node": "Is Dead Letter Management Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Dead Letter Management Valid?": {
+      "main": [
+        [
+          {
+            "node": "Manage Outbound Message Dead Letter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Dead Letter Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

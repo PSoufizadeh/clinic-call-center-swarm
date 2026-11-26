@@ -1,0 +1,243 @@
+{
+  "name": "61 - API - Submit Clinical Intake Answers - Corrected V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "9018ef15-4e24-48c3-868f-ea0e75961ae6",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6fc8fc5d-f5b1-4205-bc1c-b8bb43b2483b",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "681ca5fe-d8a3-4437-885d-9776fc8f9c2b",
+              "name": "clinical_intake_case_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "cdbd576c-fdb5-4c4f-b5a7-cc06ffc77f2a",
+              "name": "mobile",
+              "value": "09000000000",
+              "type": "string"
+            },
+            {
+              "id": "55e8a79f-949a-4c0d-8466-c6974c53688b",
+              "name": "answers",
+              "value": "[{\"question_code\":\"severity\",\"answer\":6},{\"question_code\":\"is_worsening\",\"answer\":true}]",
+              "type": "string"
+            },
+            {
+              "id": "eb3c3b3f-4182-40ab-9197-eb64fa6ff4c4",
+              "name": "confirm_submission",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "5073c7a4-8533-4be7-85ae-f536080e8341",
+      "name": "Manual Clinical Intake Answers"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/clinical-intake/submit-answers",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "095ed6e4-89cf-4214-a3ab-ff7742ea823d",
+      "name": "Webhook - Submit Clinical Intake Answers"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst clinic_name = text(input.clinic_name);\nconst clinical_intake_case_id =\n  Number(input.clinical_intake_case_id);\nconst mobile = text(input.mobile);\nconst confirm_submission =\n  toBoolean(input.confirm_submission);\n\nlet answers = input.answers ?? [];\n\nif (typeof answers === 'string') {\n  try {\n    answers = JSON.parse(answers || '[]');\n  } catch {\n    answers = null;\n  }\n}\n\nconst errors = [];\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (\n  !Number.isInteger(clinical_intake_case_id) ||\n  clinical_intake_case_id < 1\n) {\n  errors.push({\n    field: 'clinical_intake_case_id',\n    message: 'شناسه پرونده معتبر نیست.',\n  });\n}\n\nif (!/^\\+?[0-9]{8,15}$/.test(mobile)) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل معتبر نیست.',\n  });\n}\n\nif (!Array.isArray(answers)) {\n  errors.push({\n    field: 'answers',\n    message: 'answers باید یک آرایه JSON باشد.',\n  });\n  answers = [];\n}\n\nif (answers.length < 1 || answers.length > 50) {\n  errors.push({\n    field: 'answers',\n    message: 'تعداد پاسخ‌ها باید بین 1 و 50 باشد.',\n  });\n}\n\nconst deduplicated = new Map();\n\nfor (const item of answers) {\n  if (\n    !item ||\n    typeof item !== 'object' ||\n    Array.isArray(item)\n  ) {\n    errors.push({\n      field: 'answers',\n      message: 'هر پاسخ باید یک شیء JSON باشد.',\n    });\n    continue;\n  }\n\n  const questionCode = text(item.question_code);\n\n  if (!questionCode) {\n    errors.push({\n      field: 'answers.question_code',\n      message: 'کد سؤال برای همه پاسخ‌ها الزامی است.',\n    });\n    continue;\n  }\n\n  if (!Object.prototype.hasOwnProperty.call(item, 'answer')) {\n    errors.push({\n      field: `answers.${questionCode}`,\n      message: 'مقدار answer الزامی است.',\n    });\n    continue;\n  }\n\n  deduplicated.set(questionCode, {\n    question_code: questionCode,\n    answer: item.answer,\n  });\n}\n\nif (confirm_submission !== true) {\n  errors.push({\n    field: 'confirm_submission',\n    message: 'ثبت پاسخ‌ها باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nconst normalizedAnswers = [...deduplicated.values()];\n\nreturn [{\n  json: {\n    clinic_name,\n    clinical_intake_case_id,\n    mobile,\n    answers: normalizedAnswers,\n    answers_json: JSON.stringify(normalizedAnswers),\n    confirm_submission,\n    validation_status: errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "0faf5f8d-0822-49ba-b24a-d9d2154efbf8",
+      "name": "Normalize and Validate Intake Answers"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a7ce52e1-fb8c-4a05-81f2-a5dd4d44d7bd",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "db325af1-651a-43cf-a936-fc58e760aac0",
+      "name": "Are Intake Answers Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        $2::BIGINT AS case_id,\n        $3::TEXT AS mobile,\n        $4::JSONB AS answers\n),\n\ncase_context AS (\n    SELECT\n        intake.*,\n        clinic.name AS clinic_name\n    FROM clinical_intake_cases intake\n    INNER JOIN request_data request\n        ON request.case_id = intake.id\n       AND request.mobile = intake.contact_mobile\n    INNER JOIN clinics clinic\n        ON clinic.id = intake.clinic_id\n       AND clinic.name = request.clinic_name\n    WHERE intake.status NOT IN ('resolved', 'closed')\n    LIMIT 1\n),\n\nprovided_answers AS (\n    SELECT\n        element ->> 'question_code'\n            AS question_code,\n\n        element -> 'answer'\n            AS answer_json,\n\n        CASE\n            WHEN JSONB_TYPEOF(\n                element -> 'answer'\n            ) = 'string'\n                THEN element ->> 'answer'\n            ELSE element -> 'answer' #>> '{}'\n        END AS answer_text\n\n    FROM request_data request\n    CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(\n        request.answers\n    ) AS element\n),\n\napplicable_templates AS (\n    SELECT DISTINCT ON (template.question_code)\n        template.*\n    FROM clinical_intake_question_templates template\n    CROSS JOIN case_context intake\n    WHERE template.active = TRUE\n      AND (\n            template.clinic_id IS NULL\n            OR template.clinic_id = intake.clinic_id\n          )\n      AND LOWER(template.symptom_category) IN (\n            'general',\n            LOWER(intake.symptom_category)\n          )\n    ORDER BY\n        template.question_code,\n        CASE\n            WHEN template.clinic_id = intake.clinic_id\n                THEN 0\n            ELSE 1\n        END,\n        template.id DESC\n),\n\ninvalid_codes AS (\n    SELECT answer.question_code\n    FROM provided_answers answer\n    LEFT JOIN applicable_templates template\n        ON template.question_code =\n           answer.question_code\n    WHERE template.id IS NULL\n),\n\nvalidated_answers AS (\n    SELECT\n        template.id AS question_template_id,\n        answer.question_code,\n        answer.answer_text,\n        answer.answer_json,\n        template.answer_type,\n        template.maps_to_case_field,\n        template.risk_if_true,\n\n        CASE\n            WHEN LOWER(\n                COALESCE(answer.answer_text, '')\n            ) IN (\n                'true',\n                '1',\n                'yes',\n                'on',\n                'بله',\n                'بلی',\n                'آره',\n                'نعم'\n            )\n                THEN TRUE\n\n            WHEN LOWER(\n                COALESCE(answer.answer_text, '')\n            ) IN (\n                'false',\n                '0',\n                'no',\n                'off',\n                'خیر',\n                'نه',\n                'لا'\n            )\n                THEN FALSE\n\n            ELSE NULL\n        END AS boolean_value,\n\n        CASE\n            WHEN COALESCE(\n                answer.answer_text,\n                ''\n            ) ~ '^-?[0-9]+(\\.[0-9]+)?$'\n                THEN answer.answer_text::NUMERIC\n            ELSE NULL\n        END AS numeric_value\n\n    FROM provided_answers answer\n    INNER JOIN applicable_templates template\n        ON template.question_code =\n           answer.question_code\n    WHERE NOT EXISTS (\n        SELECT 1\n        FROM invalid_codes\n    )\n),\n\ninserted_answers AS (\n    INSERT INTO clinical_intake_answers (\n        case_id,\n        question_template_id,\n        question_code,\n        answer_text,\n        answer_json,\n        answered_at\n    )\n    SELECT\n        context.id,\n        answer.question_template_id,\n        answer.question_code,\n        answer.answer_text,\n        answer.answer_json,\n        NOW()\n    FROM case_context context\n    CROSS JOIN validated_answers answer\n    ON CONFLICT (\n        case_id,\n        question_code\n    )\n    DO UPDATE SET\n        question_template_id =\n            EXCLUDED.question_template_id,\n        answer_text =\n            EXCLUDED.answer_text,\n        answer_json =\n            EXCLUDED.answer_json,\n        answered_at =\n            NOW()\n    RETURNING *\n),\n\nanswer_flags AS (\n    SELECT\n        BOOL_OR(\n            answer.risk_if_true = 'urgent'\n            AND answer.boolean_value = TRUE\n        ) AS has_urgent_answer,\n\n        BOOL_OR(\n            answer.risk_if_true = 'high'\n            AND answer.boolean_value = TRUE\n        ) AS has_high_answer\n\n    FROM validated_answers answer\n),\n\ncalculated_case AS (\n    SELECT\n        context.*,\n\n        COALESCE(\n            (\n                SELECT answer.answer_text\n                FROM validated_answers answer\n                WHERE answer.maps_to_case_field =\n                      'duration_text'\n                LIMIT 1\n            ),\n            context.duration_text\n        ) AS calculated_duration_text,\n\n        COALESCE(\n            (\n                SELECT answer.numeric_value::INTEGER\n                FROM validated_answers answer\n                WHERE answer.maps_to_case_field =\n                      'severity'\n                  AND answer.numeric_value\n                      BETWEEN 0 AND 10\n                LIMIT 1\n            ),\n            context.severity\n        ) AS calculated_severity,\n\n        COALESCE(\n            (\n                SELECT answer.boolean_value\n                FROM validated_answers answer\n                WHERE answer.maps_to_case_field =\n                      'pregnancy_possible'\n                LIMIT 1\n            ),\n            context.pregnancy_possible\n        ) AS calculated_pregnancy_possible,\n\n        COALESCE(\n            (\n                SELECT answer.boolean_value\n                FROM validated_answers answer\n                WHERE answer.maps_to_case_field =\n                      'is_worsening'\n                LIMIT 1\n            ),\n            context.is_worsening\n        ) AS calculated_is_worsening,\n\n        COALESCE(\n            (\n                SELECT answer.boolean_value\n                FROM validated_answers answer\n                WHERE answer.maps_to_case_field =\n                      'difficulty_breathing'\n                LIMIT 1\n            ),\n            context.difficulty_breathing\n        ) AS calculated_difficulty_breathing,\n\n        COALESCE(\n            (\n                SELECT answer.boolean_value\n                FROM validated_answers answer\n                WHERE answer.maps_to_case_field =\n                      'chest_pain'\n                LIMIT 1\n            ),\n            context.chest_pain\n        ) AS calculated_chest_pain,\n\n        COALESCE(\n            (\n                SELECT answer.boolean_value\n                FROM validated_answers answer\n                WHERE answer.maps_to_case_field =\n                      'loss_of_consciousness'\n                LIMIT 1\n            ),\n            context.loss_of_consciousness\n        ) AS calculated_loss_of_consciousness,\n\n        COALESCE(\n            (\n                SELECT answer.boolean_value\n                FROM validated_answers answer\n                WHERE answer.maps_to_case_field =\n                      'seizure'\n                LIMIT 1\n            ),\n            context.seizure\n        ) AS calculated_seizure,\n\n        COALESCE(\n            (\n                SELECT answer.boolean_value\n                FROM validated_answers answer\n                WHERE answer.maps_to_case_field =\n                      'severe_bleeding'\n                LIMIT 1\n            ),\n            context.severe_bleeding\n        ) AS calculated_severe_bleeding,\n\n        COALESCE(\n            (\n                SELECT answer.boolean_value\n                FROM validated_answers answer\n                WHERE answer.maps_to_case_field =\n                      'possible_overdose'\n                LIMIT 1\n            ),\n            context.possible_overdose\n        ) AS calculated_possible_overdose,\n\n        COALESCE(\n            (\n                SELECT answer.boolean_value\n                FROM validated_answers answer\n                WHERE answer.maps_to_case_field =\n                      'pregnancy_emergency_concern'\n                LIMIT 1\n            ),\n            context.pregnancy_emergency_concern\n        ) AS calculated_pregnancy_emergency_concern,\n\n        COALESCE(\n            (\n                SELECT answer.boolean_value\n                FROM validated_answers answer\n                WHERE answer.maps_to_case_field =\n                      'self_harm_or_violence'\n                LIMIT 1\n            ),\n            context.self_harm_or_violence\n        ) AS calculated_self_harm_or_violence,\n\n        COALESCE(\n            (\n                SELECT answer.answer_text\n                FROM validated_answers answer\n                WHERE answer.maps_to_case_field =\n                      'chronic_conditions'\n                LIMIT 1\n            ),\n            context.chronic_conditions\n        ) AS calculated_chronic_conditions,\n\n        COALESCE(\n            (\n                SELECT answer.answer_text\n                FROM validated_answers answer\n                WHERE answer.maps_to_case_field =\n                      'current_medications'\n                LIMIT 1\n            ),\n            context.current_medications\n        ) AS calculated_current_medications,\n\n        COALESCE(\n            (\n                SELECT has_urgent_answer\n                FROM answer_flags\n            ),\n            FALSE\n        ) AS has_urgent_answer,\n\n        COALESCE(\n            (\n                SELECT has_high_answer\n                FROM answer_flags\n            ),\n            FALSE\n        ) AS has_high_answer\n\n    FROM case_context context\n),\n\nrisk_calculation AS (\n    SELECT\n        calculated.*,\n\n        CASE\n            WHEN calculated.has_urgent_answer = TRUE\n              OR calculated.calculated_difficulty_breathing = TRUE\n              OR calculated.calculated_chest_pain = TRUE\n              OR calculated.calculated_loss_of_consciousness = TRUE\n              OR calculated.calculated_seizure = TRUE\n              OR calculated.calculated_severe_bleeding = TRUE\n              OR calculated.calculated_possible_overdose = TRUE\n              OR calculated.calculated_pregnancy_emergency_concern = TRUE\n              OR calculated.calculated_self_harm_or_violence = TRUE\n              OR calculated.calculated_severity = 10\n                THEN 'urgent'\n\n            WHEN calculated.has_high_answer = TRUE\n              OR calculated.calculated_severity >= 8\n              OR calculated.calculated_is_worsening = TRUE\n                THEN 'high'\n\n            WHEN calculated.calculated_severity >= 5\n              OR calculated.calculated_pregnancy_possible = TRUE\n                THEN 'medium'\n\n            ELSE 'low'\n        END AS calculated_risk_level\n\n    FROM calculated_case calculated\n),\n\nremaining_templates AS (\n    SELECT\n        template.id,\n        template.question_code,\n        template.question_text_fa,\n        template.question_text_en,\n        template.answer_type,\n        template.options_json,\n        template.required,\n        template.risk_if_true,\n        template.sort_order\n\n    FROM applicable_templates template\n    CROSS JOIN risk_calculation intake\n\n    WHERE NOT EXISTS (\n        SELECT 1\n        FROM clinical_intake_answers answer\n        WHERE answer.case_id = intake.id\n          AND answer.question_code =\n              template.question_code\n    )\n\n      AND NOT EXISTS (\n        SELECT 1\n        FROM validated_answers submitted\n        WHERE submitted.question_code =\n              template.question_code\n      )\n\n      AND CASE template.maps_to_case_field\n            WHEN 'duration_text'\n                THEN intake.calculated_duration_text IS NULL\n            WHEN 'severity'\n                THEN intake.calculated_severity IS NULL\n            WHEN 'pregnancy_possible'\n                THEN intake.calculated_pregnancy_possible IS NULL\n            WHEN 'is_worsening'\n                THEN intake.calculated_is_worsening IS NULL\n            WHEN 'difficulty_breathing'\n                THEN intake.calculated_difficulty_breathing IS NULL\n            WHEN 'chest_pain'\n                THEN intake.calculated_chest_pain IS NULL\n            WHEN 'loss_of_consciousness'\n                THEN intake.calculated_loss_of_consciousness IS NULL\n            WHEN 'seizure'\n                THEN intake.calculated_seizure IS NULL\n            WHEN 'severe_bleeding'\n                THEN intake.calculated_severe_bleeding IS NULL\n            WHEN 'possible_overdose'\n                THEN intake.calculated_possible_overdose IS NULL\n            WHEN 'pregnancy_emergency_concern'\n                THEN intake.calculated_pregnancy_emergency_concern IS NULL\n            WHEN 'self_harm_or_violence'\n                THEN intake.calculated_self_harm_or_violence IS NULL\n            WHEN 'chronic_conditions'\n                THEN intake.calculated_chronic_conditions IS NULL\n            WHEN 'current_medications'\n                THEN intake.calculated_current_medications IS NULL\n            ELSE TRUE\n          END\n),\n\nupdated_case AS (\n    UPDATE clinical_intake_cases intake\n    SET\n        duration_text =\n            calculated.calculated_duration_text,\n\n        severity =\n            calculated.calculated_severity,\n\n        pregnancy_possible =\n            calculated.calculated_pregnancy_possible,\n\n        is_worsening =\n            calculated.calculated_is_worsening,\n\n        difficulty_breathing =\n            calculated.calculated_difficulty_breathing,\n\n        chest_pain =\n            calculated.calculated_chest_pain,\n\n        loss_of_consciousness =\n            calculated.calculated_loss_of_consciousness,\n\n        seizure =\n            calculated.calculated_seizure,\n\n        severe_bleeding =\n            calculated.calculated_severe_bleeding,\n\n        possible_overdose =\n            calculated.calculated_possible_overdose,\n\n        pregnancy_emergency_concern =\n            calculated.calculated_pregnancy_emergency_concern,\n\n        self_harm_or_violence =\n            calculated.calculated_self_harm_or_violence,\n\n        chronic_conditions =\n            calculated.calculated_chronic_conditions,\n\n        current_medications =\n            calculated.calculated_current_medications,\n\n        risk_level =\n            calculated.calculated_risk_level,\n\n        recommended_route =\n            CASE calculated.calculated_risk_level\n                WHEN 'urgent'\n                    THEN 'emergency_services'\n                WHEN 'high'\n                    THEN 'urgent_clinic'\n                WHEN 'medium'\n                    THEN 'doctor_review'\n                ELSE 'routine_appointment'\n            END,\n\n        status =\n            CASE\n                WHEN calculated.calculated_risk_level\n                     IN ('urgent', 'high')\n                    THEN 'escalated'\n\n                WHEN EXISTS (\n                    SELECT 1\n                    FROM remaining_templates\n                    WHERE required = TRUE\n                )\n                    THEN 'awaiting_patient'\n\n                ELSE 'routed'\n            END,\n\n        updated_at = NOW()\n\n    FROM risk_calculation calculated\n\n    WHERE intake.id = calculated.id\n\n    RETURNING intake.*\n),\n\nupserted_handoff AS (\n    INSERT INTO human_handoff_tasks (\n        clinic_id,\n        patient_id,\n        appointment_id,\n        task_type,\n        source_type,\n        source_record_id,\n        priority,\n        status,\n        reason,\n        due_at\n    )\n    SELECT\n        intake.clinic_id,\n        intake.patient_id,\n        intake.appointment_id,\n        'clinical_triage',\n        'clinical_intake',\n        intake.id,\n\n        CASE intake.risk_level\n            WHEN 'urgent' THEN 'urgent'\n            WHEN 'high' THEN 'high'\n            ELSE 'normal'\n        END,\n\n        'open',\n\n        CONCAT(\n            'پاسخ‌های جدید در پرسش تخصصی اولیه ثبت شد. سطح ریسک: ',\n            intake.risk_level,\n            '. شرح بیمار: ',\n            intake.chief_complaint\n        ),\n\n        CASE intake.risk_level\n            WHEN 'urgent' THEN NOW()\n            WHEN 'high' THEN NOW() + INTERVAL '1 hour'\n            ELSE NOW() + INTERVAL '4 hours'\n        END\n\n    FROM updated_case intake\n    WHERE intake.risk_level IN ('urgent', 'high')\n\n    ON CONFLICT (\n        source_type,\n        source_record_id,\n        task_type\n    )\n    WHERE source_record_id IS NOT NULL\n\n    DO UPDATE SET\n        priority = EXCLUDED.priority,\n        reason = EXCLUDED.reason,\n        due_at = LEAST(\n            COALESCE(\n                human_handoff_tasks.due_at,\n                EXCLUDED.due_at\n            ),\n            EXCLUDED.due_at\n        ),\n        status = CASE\n            WHEN human_handoff_tasks.status = 'cancelled'\n                THEN 'open'\n            ELSE human_handoff_tasks.status\n        END,\n        updated_at = NOW()\n\n    RETURNING *\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM case_context\n        )\n            THEN FALSE\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM invalid_codes\n        )\n            THEN FALSE\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM updated_case\n        )\n            THEN FALSE\n\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM case_context\n        )\n            THEN 'clinical_intake_case_not_found'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM invalid_codes\n        )\n            THEN 'invalid_question_codes'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM updated_case\n            WHERE risk_level = 'urgent'\n        )\n            THEN 'urgent_clinical_intake_updated'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM updated_case\n            WHERE risk_level = 'high'\n        )\n            THEN 'high_risk_clinical_intake_updated'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM remaining_templates\n            WHERE required = TRUE\n        )\n            THEN 'clinical_intake_answers_saved_more_information_required'\n\n        ELSE 'clinical_intake_answers_completed'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM case_context\n        )\n            THEN 'پرونده مطابق کلینیک و شماره موبایل پیدا نشد.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM invalid_codes\n        )\n            THEN 'یک یا چند کد سؤال برای این پرونده معتبر نیست.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM updated_case\n            WHERE risk_level = 'urgent'\n        )\n            THEN 'پاسخ‌ها ثبت شد. وضعیت نیازمند ارزیابی فوری است و نباید منتظر پاسخ خودکار ماند.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM updated_case\n            WHERE risk_level = 'high'\n        )\n            THEN 'پاسخ‌ها ثبت و پرونده برای بررسی سریع انسانی ارجاع شد.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM remaining_templates\n            WHERE required = TRUE\n        )\n            THEN 'پاسخ‌ها ثبت شد و هنوز اطلاعات تکمیلی لازم است.'\n\n        ELSE 'پاسخ‌های لازم ثبت شد و پرونده آماده مسیریابی است.'\n    END AS message,\n\n    (\n        SELECT JSONB_AGG(question_code)\n        FROM invalid_codes\n    ) AS invalid_question_codes,\n\n    (\n        SELECT id\n        FROM updated_case\n    ) AS clinical_intake_case_id,\n\n    (\n        SELECT risk_level\n        FROM updated_case\n    ) AS risk_level,\n\n    (\n        SELECT recommended_route\n        FROM updated_case\n    ) AS recommended_route,\n\n    (\n        SELECT status\n        FROM updated_case\n    ) AS case_status,\n\n    (\n        SELECT id\n        FROM upserted_handoff\n    ) AS handoff_task_id,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'question_template_id',\n                        id,\n                    'question_code',\n                        question_code,\n                    'question_text',\n                        question_text_fa,\n                    'answer_type',\n                        answer_type,\n                    'options',\n                        options_json,\n                    'required',\n                        required,\n                    'risk_if_true',\n                        risk_if_true\n                )\n                ORDER BY sort_order, id\n            )\n            FROM (\n                SELECT *\n                FROM remaining_templates\n                ORDER BY\n                    required DESC,\n                    sort_order,\n                    id\n                LIMIT 8\n            ) next_question_rows\n        ),\n        '[]'::JSONB\n    ) AS next_questions,\n\n    CASE\n        WHEN EXISTS (\n            SELECT 1\n            FROM updated_case\n            WHERE risk_level = 'urgent'\n        )\n            THEN 'seek_immediate_local_emergency_help_and_human_review'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM updated_case\n            WHERE risk_level = 'high'\n        )\n            THEN 'human_review'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM remaining_templates\n            WHERE required = TRUE\n        )\n            THEN 'collect_more_answers'\n\n        ELSE 'route_clinical_intake'\n    END AS next_action\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.clinical_intake_case_id,\n  $json.mobile,\n  $json.answers_json\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "a3fc3fa0-ad6e-4397-98ec-4b1ae178cec1",
+      "name": "Save Answers and Reassess Intake"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: 'invalid_request',\n    message: 'پاسخ‌های ارسالی ناقص یا نامعتبر هستند.',\n    errors: $json.errors ?? [],\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "7ea8d987-99c7-4552-a04e-c795cd25a7f6",
+      "name": "Return Intake Answer Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## ثبت پاسخ‌ها و ارزیابی مجدد\n\nورودی `answers` یک آرایه است:\n\n`[{\"question_code\":\"severity\",\"answer\":6}]`\n\nپاسخ‌ها Upsert می‌شوند؛ بنابراین بیمار می‌تواند پاسخ قبلی را اصلاح کند.\n\nهر پاسخ پرریسک، مسیر پرونده را به ارجاع انسانی تغییر می‌دهد. این ارزیابی تشخیص پزشکی نیست.\n\nاصلاح V2:\nپاسخ‌های همین درخواست در next_questions دوباره نمایش داده نمی‌شوند.",
+        "height": 390,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -300
+      ],
+      "id": "79a7c7f9-e16c-4d60-ab8c-b6e2ab56c184",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Clinical Intake Answers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Clinical Intake Answers": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Intake Answers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Submit Clinical Intake Answers": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Intake Answers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Intake Answers": {
+      "main": [
+        [
+          {
+            "node": "Are Intake Answers Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Are Intake Answers Valid?": {
+      "main": [
+        [
+          {
+            "node": "Save Answers and Reassess Intake",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Intake Answer Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

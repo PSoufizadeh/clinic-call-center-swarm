@@ -1,0 +1,261 @@
+{
+  "name": "85 - API - Process Message Delivery Status - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "cf6dc835-89e5-493f-ac12-f05258fd926d",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "db485107-2e21-4bec-8ef5-c26086e15882",
+              "name": "outbound_message_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "bea232e3-04a4-43a1-9067-9239a4253ec2",
+              "name": "provider_message_id",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "04573a87-de4b-485b-8b5d-28407476465b",
+              "name": "channel",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "2f9f834c-6921-4394-a7e0-51a196da846a",
+              "name": "event_type",
+              "value": "delivered",
+              "type": "string"
+            },
+            {
+              "id": "5ed7ba78-169b-427d-8f50-9559a1b05296",
+              "name": "event_at",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "926aea71-c277-4836-8fab-3d7f1d0a524d",
+              "name": "error_code",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "48e92aa5-0c67-4b88-8ed8-ca1ddff287cb",
+              "name": "error_message",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "146afa0f-e73f-4724-a183-c5e2b31d05da",
+              "name": "raw_event",
+              "value": "{}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "fceb49c9-ed95-48d0-a9de-de73c65ffc46",
+      "name": "Manual Delivery Event"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/communications/messages/delivery-status",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "f1502ece-0ffd-4f0c-87a8-9e4f01ff60d6",
+      "name": "Webhook - Delivery Status"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input=$json.body??$json;\nconst text=v=>v===null||v===undefined?'':String(v).trim();\n\nconst outbound_message_id=Number(input.outbound_message_id??input.message_id??0);\nconst provider_message_id=text(input.provider_message_id);\nconst channel=text(input.channel).toLowerCase();\nconst event_type=text(input.event_type||input.status||'unknown').toLowerCase();\nconst event_at=text(input.event_at)||new Date().toISOString();\nconst error_code=text(input.error_code);\nconst error_message=text(input.error_message);\n\nlet raw_event=input.raw_event??input;\ntry{if(typeof raw_event==='string')raw_event=JSON.parse(raw_event||'{}');}catch{raw_event={raw:raw_event};}\n\nconst events=['accepted','sent','delivered','read','failed','undeliverable','rejected','unknown'];\nconst channels=['whatsapp','sms','email','phone','web_push','in_app'];\nconst errors=[];\n\nif((!Number.isInteger(outbound_message_id)||outbound_message_id<1)&&!provider_message_id){\n  errors.push({field:'message_reference',message:'شناسه داخلی یا Provider Message ID الزامی است.'});\n}\nif(!channels.includes(channel))errors.push({field:'channel',message:'کانال معتبر نیست.'});\nif(!events.includes(event_type))errors.push({field:'event_type',message:'نوع رویداد معتبر نیست.'});\nif(Number.isNaN(Date.parse(event_at)))errors.push({field:'event_at',message:'زمان رویداد معتبر نیست.'});\n\nreturn [{json:{\n  outbound_message_id,provider_message_id,channel,event_type,event_at,\n  error_code,error_message,raw_event_text:JSON.stringify(raw_event),\n  validation_status:errors.length?'invalid':'valid',errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "862dc630-d98c-4d29-ba19-794185538c93",
+      "name": "Normalize and Validate Delivery Event"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0c70f199-52c2-4d12-bcc5-17350c8b7f4a",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "150d6603-f250-4069-81e1-80cf1f7f6ee5",
+      "name": "Is Delivery Event Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH r AS (\n  SELECT NULLIF($1::BIGINT,0) message_id,NULLIF($2::TEXT,'') provider_message_id,\n         $3::TEXT channel,$4::TEXT event_type,$5::TIMESTAMPTZ event_at,\n         NULLIF($6::TEXT,'') error_code,NULLIF($7::TEXT,'') error_message,\n         $8::JSONB raw_event\n),\nm AS (\n  SELECT om.*\n  FROM outbound_messages om,r\n  WHERE (r.message_id IS NOT NULL AND om.id=r.message_id)\n     OR (r.provider_message_id IS NOT NULL AND om.provider_message_id=r.provider_message_id)\n  ORDER BY CASE WHEN r.message_id IS NOT NULL AND om.id=r.message_id THEN 0 ELSE 1 END\n  LIMIT 1\n),\nevent AS (\n  INSERT INTO communication_delivery_events(\n    outbound_message_id,provider_message_id,channel,event_type,event_at,\n    error_code,error_message,raw_event\n  )\n  SELECT m.id,COALESCE(r.provider_message_id,m.provider_message_id),r.channel,\n         r.event_type,r.event_at,r.error_code,r.error_message,r.raw_event\n  FROM m,r\n  RETURNING *\n),\nupdated AS (\n  UPDATE outbound_messages om\n  SET status=CASE r.event_type\n        WHEN 'accepted' THEN 'accepted'\n        WHEN 'sent' THEN 'sent'\n        WHEN 'delivered' THEN 'delivered'\n        WHEN 'read' THEN 'read'\n        WHEN 'failed' THEN 'failed'\n        WHEN 'undeliverable' THEN 'failed'\n        WHEN 'rejected' THEN 'failed'\n        ELSE om.status END,\n      provider_message_id=COALESCE(r.provider_message_id,om.provider_message_id),\n      accepted_at=CASE WHEN r.event_type='accepted' THEN r.event_at ELSE om.accepted_at END,\n      sent_at=CASE WHEN r.event_type='sent' THEN r.event_at ELSE om.sent_at END,\n      delivered_at=CASE WHEN r.event_type='delivered' THEN r.event_at ELSE om.delivered_at END,\n      read_at=CASE WHEN r.event_type='read' THEN r.event_at ELSE om.read_at END,\n      failed_at=CASE WHEN r.event_type IN ('failed','undeliverable','rejected') THEN r.event_at ELSE om.failed_at END,\n      last_error_code=CASE WHEN r.event_type IN ('failed','undeliverable','rejected') THEN r.error_code ELSE om.last_error_code END,\n      last_error_message=CASE WHEN r.event_type IN ('failed','undeliverable','rejected') THEN r.error_message ELSE om.last_error_message END,\n      next_attempt_at=CASE WHEN r.event_type IN ('failed','undeliverable','rejected') THEN NOW()+INTERVAL '15 minutes' ELSE om.next_attempt_at END,\n      updated_at=NOW()\n  FROM r,m\n  WHERE om.id=m.id\n  RETURNING om.*\n)\nSELECT\n  EXISTS(SELECT 1 FROM m) success,\n  CASE WHEN NOT EXISTS(SELECT 1 FROM m) THEN 'outbound_message_not_found'\n       ELSE 'delivery_status_processed' END result,\n  (SELECT id FROM updated) outbound_message_id,\n  (SELECT status FROM updated) message_status,\n  (SELECT id FROM event) delivery_event_id,\n  (SELECT provider_message_id FROM updated) provider_message_id;",
+        "options": {
+          "queryReplacement": "={{ [ $json.outbound_message_id,$json.provider_message_id,$json.channel,$json.event_type,$json.event_at,$json.error_code,$json.error_message,$json.raw_event_text ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "581ffd95-a7a8-4b15-86fc-15db9fb566dd",
+      "name": "Process Delivery Status"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'رویداد Delivery نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "258201ba-7100-4234-937d-2df35f568edf",
+      "name": "Return Delivery Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## Callback وضعیت پیام\n\nProvider یا Adapter این Webhook را فراخوانی می‌کند.\n\nوضعیت‌های accepted، sent، delivered، read و failed ثبت می‌شوند.",
+        "height": 330,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -260
+      ],
+      "id": "73e408eb-8aa0-4577-9d65-d678c3f10320",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Delivery Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Delivery Event": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Delivery Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Delivery Status": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Delivery Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Delivery Event": {
+      "main": [
+        [
+          {
+            "node": "Is Delivery Event Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Delivery Event Valid?": {
+      "main": [
+        [
+          {
+            "node": "Process Delivery Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Delivery Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

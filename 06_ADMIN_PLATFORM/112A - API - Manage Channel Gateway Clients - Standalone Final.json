@@ -1,0 +1,321 @@
+{
+  "name": "112A - API - Manage Channel Gateway Clients - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "982193c2-2bf0-44c2-83e7-c88811a62d0a",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ca22a18b-94aa-48d4-b3c6-a5528df0cd2f",
+              "name": "action",
+              "value": "list",
+              "type": "string"
+            },
+            {
+              "id": "9e68e1a7-f464-44d0-9f28-eeb9831bd500",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "aebc575e-cfd1-4177-9d47-3678bc913223",
+              "name": "gateway_client_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "b47c33fb-91a7-456d-873c-5568b65c3869",
+              "name": "client_name",
+              "value": "webchat-demo",
+              "type": "string"
+            },
+            {
+              "id": "c9619594-ed5a-4253-a9ff-34d6152bc05c",
+              "name": "channel",
+              "value": "webchat",
+              "type": "string"
+            },
+            {
+              "id": "8ee74823-40d9-49ea-b300-f3a797722f5d",
+              "name": "provider_name",
+              "value": "internal",
+              "type": "string"
+            },
+            {
+              "id": "57d88ae0-fa12-4da4-982a-af274dbd0a62",
+              "name": "auth_mode",
+              "value": "development_none",
+              "type": "string"
+            },
+            {
+              "id": "d7b242ab-f5d4-42db-8f43-786664a3cac0",
+              "name": "api_key",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "471122a5-d604-4a2c-bcda-765822f54011",
+              "name": "signature_verifier_url",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "543cdd85-a097-4e4f-be4d-30f0c3abb4be",
+              "name": "signature_credential_reference",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "48f4b33c-cbd4-46fa-a612-a13a2aa6587a",
+              "name": "allowed_ip_addresses",
+              "value": "[]",
+              "type": "string"
+            },
+            {
+              "id": "43df94cc-d24a-46b4-9d21-6a3b4792feef",
+              "name": "rate_limit_requests",
+              "value": 120,
+              "type": "number"
+            },
+            {
+              "id": "3511c6f1-7d48-43c9-a22a-2446866ac67e",
+              "name": "rate_limit_window_seconds",
+              "value": 60,
+              "type": "number"
+            },
+            {
+              "id": "ed86ac13-76cd-4ed0-b0dd-dc599dc4f537",
+              "name": "replay_window_seconds",
+              "value": 86400,
+              "type": "number"
+            },
+            {
+              "id": "e7f0325b-8a51-4263-8cc6-5101d22a4899",
+              "name": "metadata",
+              "value": "{}",
+              "type": "string"
+            },
+            {
+              "id": "bd74b4af-04a3-4d1b-b670-928e9fe8ebf9",
+              "name": "actor_name",
+              "value": "مدیر سیستم",
+              "type": "string"
+            },
+            {
+              "id": "15aa5c5d-20ea-4b2c-822d-038c03fa40e8",
+              "name": "limit",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "5b540e9d-3431-403f-9ffc-d3fc399b5f20",
+              "name": "confirm_action",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "fa67d39b-93b2-418f-ab07-17fc572c9a44",
+      "name": "Manual Gateway Client Management"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/gateway/clients/manage",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "92ab238c-a50b-4162-9a4c-06c174e80461",
+      "name": "Webhook - Manage Gateway Clients"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst action = text(input.action || 'list').toLowerCase();\nconst clinic_name = text(input.clinic_name);\nconst gateway_client_id =\n  Number(input.gateway_client_id ?? 0);\nconst client_name = text(input.client_name);\nconst channel = text(input.channel).toLowerCase();\nconst provider_name = text(input.provider_name);\nconst auth_mode =\n  text(input.auth_mode || 'api_key').toLowerCase();\nconst api_key = text(input.api_key);\nconst signature_verifier_url =\n  text(input.signature_verifier_url);\nconst signature_credential_reference =\n  text(input.signature_credential_reference);\n\nlet allowed_ip_addresses =\n  input.allowed_ip_addresses ?? [];\n\nlet metadata = input.metadata ?? {};\n\ntry {\n  if (typeof allowed_ip_addresses === 'string') {\n    allowed_ip_addresses =\n      JSON.parse(allowed_ip_addresses || '[]');\n  }\n} catch {\n  allowed_ip_addresses = null;\n}\n\ntry {\n  if (typeof metadata === 'string') {\n    metadata = JSON.parse(metadata || '{}');\n  }\n} catch {\n  metadata = null;\n}\n\nconst rate_limit_requests =\n  Number(input.rate_limit_requests ?? 120);\nconst rate_limit_window_seconds =\n  Number(input.rate_limit_window_seconds ?? 60);\nconst replay_window_seconds =\n  Number(input.replay_window_seconds ?? 86400);\nconst actor_name = text(input.actor_name);\nconst limit = Number(input.limit ?? 100);\nconst confirm_action = bool(input.confirm_action);\n\nconst actions = [\n  'create',\n  'update',\n  'rotate_api_key',\n  'activate',\n  'deactivate',\n  'get',\n  'list',\n];\n\nconst channels = [\n  'whatsapp',\n  'sms',\n  'phone',\n  'telegram',\n  'webchat',\n  'manual',\n  'api',\n  'email',\n  'web_push',\n  'in_app',\n];\n\nconst authModes = [\n  'api_key',\n  'provider_signature',\n  'development_none',\n];\n\nconst errors = [];\n\nif (!actions.includes(action)) {\n  errors.push({\n    field: 'action',\n    message: 'اقدام معتبر نیست.',\n  });\n}\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (\n  !Number.isInteger(gateway_client_id) ||\n  gateway_client_id < 0\n) {\n  errors.push({\n    field: 'gateway_client_id',\n    message: 'شناسه Gateway Client معتبر نیست.',\n  });\n}\n\nif (\n  ['create', 'update', 'rotate_api_key', 'activate', 'deactivate', 'get']\n    .includes(action) &&\n  gateway_client_id < 1 &&\n  !client_name\n) {\n  errors.push({\n    field: 'client_reference',\n    message: 'شناسه یا نام Client الزامی است.',\n  });\n}\n\nif (\n  action === 'create' &&\n  !channels.includes(channel)\n) {\n  errors.push({\n    field: 'channel',\n    message: 'کانال معتبر نیست.',\n  });\n}\n\nif (!authModes.includes(auth_mode)) {\n  errors.push({\n    field: 'auth_mode',\n    message: 'حالت Authentication معتبر نیست.',\n  });\n}\n\nif (\n  action === 'create' &&\n  auth_mode === 'api_key' &&\n  api_key.length < 16\n) {\n  errors.push({\n    field: 'api_key',\n    message: 'API Key باید حداقل 16 کاراکتر باشد.',\n  });\n}\n\nif (\n  action === 'rotate_api_key' &&\n  api_key.length < 16\n) {\n  errors.push({\n    field: 'api_key',\n    message: 'API Key جدید باید حداقل 16 کاراکتر باشد.',\n  });\n}\n\nif (\n  auth_mode === 'provider_signature' &&\n  action === 'create' &&\n  !signature_credential_reference\n) {\n  errors.push({\n    field: 'signature_credential_reference',\n    message: 'مرجع Credential امضای Provider الزامی است.',\n  });\n}\n\nif (\n  signature_verifier_url &&\n  !/^https?:\\/\\/.+/i.test(signature_verifier_url)\n) {\n  errors.push({\n    field: 'signature_verifier_url',\n    message: 'آدرس Signature Verifier معتبر نیست.',\n  });\n}\n\nif (\n  !Array.isArray(allowed_ip_addresses) ||\n  allowed_ip_addresses.some(\n    (value) =>\n      typeof value !== 'string' ||\n      value.trim().length === 0\n  )\n) {\n  errors.push({\n    field: 'allowed_ip_addresses',\n    message: 'لیست IPهای مجاز معتبر نیست.',\n  });\n\n  allowed_ip_addresses = [];\n}\n\nif (\n  !metadata ||\n  Array.isArray(metadata) ||\n  typeof metadata !== 'object'\n) {\n  errors.push({\n    field: 'metadata',\n    message: 'metadata باید یک شیء JSON باشد.',\n  });\n\n  metadata = {};\n}\n\nif (\n  !Number.isInteger(rate_limit_requests) ||\n  rate_limit_requests < 1 ||\n  rate_limit_requests > 100000\n) {\n  errors.push({\n    field: 'rate_limit_requests',\n    message: 'حد درخواست معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(rate_limit_window_seconds) ||\n  rate_limit_window_seconds < 1 ||\n  rate_limit_window_seconds > 86400\n) {\n  errors.push({\n    field: 'rate_limit_window_seconds',\n    message: 'بازه Rate Limit معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(replay_window_seconds) ||\n  replay_window_seconds < 60 ||\n  replay_window_seconds > 604800\n) {\n  errors.push({\n    field: 'replay_window_seconds',\n    message: 'Replay Window معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(limit) ||\n  limit < 1 ||\n  limit > 500\n) {\n  errors.push({\n    field: 'limit',\n    message: 'Limit معتبر نیست.',\n  });\n}\n\nif (\n  !['get', 'list'].includes(action) &&\n  !actor_name\n) {\n  errors.push({\n    field: 'actor_name',\n    message: 'نام انجام‌دهنده الزامی است.',\n  });\n}\n\nif (\n  !['get', 'list'].includes(action) &&\n  confirm_action !== true\n) {\n  errors.push({\n    field: 'confirm_action',\n    message: 'اقدام باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    action,\n    clinic_name,\n    gateway_client_id,\n    client_name,\n    channel,\n    provider_name,\n    auth_mode,\n    api_key,\n    signature_verifier_url,\n    signature_credential_reference,\n    allowed_ip_addresses,\n    allowed_ip_addresses_text:\n      JSON.stringify(allowed_ip_addresses),\n    rate_limit_requests,\n    rate_limit_window_seconds,\n    replay_window_seconds,\n    metadata,\n    metadata_text:\n      JSON.stringify(metadata),\n    actor_name,\n    limit,\n    confirm_action,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "ac5c1fba-f89f-4303-9265-9655ef9b4f85",
+      "name": "Normalize and Validate Gateway Client"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "43e5b240-842a-4ff2-8bd1-ccf5ede09426",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "33f48af9-306d-4f85-aef6-c8c694e34467",
+      "name": "Is Gateway Client Request Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS action,\n        $2::TEXT AS clinic_name,\n        NULLIF($3::BIGINT, 0) AS gateway_client_id,\n        NULLIF($4::TEXT, '') AS client_name,\n        NULLIF($5::TEXT, '') AS channel,\n        NULLIF($6::TEXT, '') AS provider_name,\n        $7::TEXT AS auth_mode,\n        NULLIF($8::TEXT, '') AS api_key,\n        NULLIF($9::TEXT, '') AS signature_verifier_url,\n        NULLIF($10::TEXT, '') AS signature_credential_reference,\n        $11::JSONB AS allowed_ip_addresses_json,\n        $12::INTEGER AS rate_limit_requests,\n        $13::INTEGER AS rate_limit_window_seconds,\n        $14::INTEGER AS replay_window_seconds,\n        $15::JSONB AS metadata,\n        NULLIF($16::TEXT, '') AS actor_name,\n        $17::INTEGER AS result_limit\n),\n\nclinic_context AS (\n    SELECT\n        clinic.id AS clinic_id,\n        request.action,\n        request.gateway_client_id,\n        request.client_name,\n        request.channel,\n        request.provider_name,\n        request.auth_mode,\n        request.api_key,\n        request.signature_verifier_url,\n        request.signature_credential_reference,\n        ARRAY(\n            SELECT JSONB_ARRAY_ELEMENTS_TEXT(\n                request.allowed_ip_addresses_json\n            )\n        ) AS allowed_ip_addresses,\n        request.rate_limit_requests,\n        request.rate_limit_window_seconds,\n        request.replay_window_seconds,\n        request.metadata,\n        request.actor_name,\n        request.result_limit\n    FROM request_data request\n    INNER JOIN clinics clinic\n        ON clinic.name = request.clinic_name\n       AND clinic.is_active = TRUE\n    LIMIT 1\n),\n\ntarget_client AS (\n    SELECT client.*\n    FROM channel_gateway_clients client\n    INNER JOIN clinic_context context\n        ON client.clinic_id =\n           context.clinic_id\n    WHERE (\n            context.gateway_client_id IS NOT NULL\n            AND client.id =\n                context.gateway_client_id\n          )\n       OR (\n            context.gateway_client_id IS NULL\n            AND context.client_name IS NOT NULL\n            AND client.client_name =\n                context.client_name\n            AND (\n                  context.channel IS NULL\n                  OR client.channel =\n                     context.channel\n                )\n          )\n    ORDER BY client.id\n    LIMIT 1\n),\n\ninserted_client AS (\n    INSERT INTO channel_gateway_clients (\n        clinic_id,\n        client_name,\n        channel,\n        provider_name,\n        auth_mode,\n        api_key_hash,\n        signature_verifier_url,\n        signature_credential_reference,\n        allowed_ip_addresses,\n        rate_limit_requests,\n        rate_limit_window_seconds,\n        replay_window_seconds,\n        enabled,\n        metadata,\n        updated_at\n    )\n    SELECT\n        context.clinic_id,\n        context.client_name,\n        context.channel,\n        context.provider_name,\n        context.auth_mode,\n        CASE\n            WHEN context.api_key IS NOT NULL\n                THEN ENCODE(\n                    DIGEST(\n                        context.api_key,\n                        'sha256'\n                    ),\n                    'hex'\n                )\n            ELSE NULL\n        END,\n        context.signature_verifier_url,\n        context.signature_credential_reference,\n        context.allowed_ip_addresses,\n        context.rate_limit_requests,\n        context.rate_limit_window_seconds,\n        context.replay_window_seconds,\n        FALSE,\n        context.metadata,\n        NOW()\n    FROM clinic_context context\n    WHERE context.action = 'create'\n      AND NOT EXISTS (\n            SELECT 1\n            FROM target_client\n          )\n    RETURNING *\n),\n\nupdated_client AS (\n    UPDATE channel_gateway_clients client\n    SET\n        client_name = CASE\n            WHEN context.action = 'update'\n             AND context.client_name IS NOT NULL\n                THEN context.client_name\n            ELSE client.client_name\n        END,\n\n        channel = CASE\n            WHEN context.action = 'update'\n             AND context.channel IS NOT NULL\n                THEN context.channel\n            ELSE client.channel\n        END,\n\n        provider_name = CASE\n            WHEN context.action = 'update'\n                THEN COALESCE(\n                    context.provider_name,\n                    client.provider_name\n                )\n            ELSE client.provider_name\n        END,\n\n        auth_mode = CASE\n            WHEN context.action = 'update'\n                THEN context.auth_mode\n            ELSE client.auth_mode\n        END,\n\n        api_key_hash = CASE\n            WHEN context.action = 'rotate_api_key'\n                THEN ENCODE(\n                    DIGEST(\n                        context.api_key,\n                        'sha256'\n                    ),\n                    'hex'\n                )\n            ELSE client.api_key_hash\n        END,\n\n        signature_verifier_url = CASE\n            WHEN context.action = 'update'\n                THEN COALESCE(\n                    context.signature_verifier_url,\n                    client.signature_verifier_url\n                )\n            ELSE client.signature_verifier_url\n        END,\n\n        signature_credential_reference = CASE\n            WHEN context.action = 'update'\n                THEN COALESCE(\n                    context.signature_credential_reference,\n                    client.signature_credential_reference\n                )\n            ELSE client.signature_credential_reference\n        END,\n\n        allowed_ip_addresses = CASE\n            WHEN context.action = 'update'\n                THEN context.allowed_ip_addresses\n            ELSE client.allowed_ip_addresses\n        END,\n\n        rate_limit_requests = CASE\n            WHEN context.action = 'update'\n                THEN context.rate_limit_requests\n            ELSE client.rate_limit_requests\n        END,\n\n        rate_limit_window_seconds = CASE\n            WHEN context.action = 'update'\n                THEN context.rate_limit_window_seconds\n            ELSE client.rate_limit_window_seconds\n        END,\n\n        replay_window_seconds = CASE\n            WHEN context.action = 'update'\n                THEN context.replay_window_seconds\n            ELSE client.replay_window_seconds\n        END,\n\n        enabled = CASE\n            WHEN context.action = 'activate'\n                THEN TRUE\n            WHEN context.action = 'deactivate'\n                THEN FALSE\n            ELSE client.enabled\n        END,\n\n        metadata = CASE\n            WHEN context.action = 'update'\n                THEN client.metadata ||\n                     context.metadata\n            ELSE client.metadata\n        END,\n\n        updated_at = NOW()\n\n    FROM clinic_context context\n    WHERE client.id = (\n            SELECT id\n            FROM target_client\n          )\n      AND context.action IN (\n            'update',\n            'rotate_api_key',\n            'activate',\n            'deactivate'\n          )\n    RETURNING client.*\n),\n\neffective_client AS (\n    SELECT inserted.*\n    FROM inserted_client inserted\n\n    UNION ALL\n\n    SELECT updated.*\n    FROM updated_client updated\n\n    UNION ALL\n\n    SELECT target.*\n    FROM target_client target\n    CROSS JOIN clinic_context context\n    WHERE context.action = 'get'\n\n    LIMIT 1\n),\n\nlisted_clients AS (\n    SELECT\n        client.id,\n        client.clinic_id,\n        client.client_name,\n        client.channel,\n        client.provider_name,\n        client.auth_mode,\n        client.signature_verifier_url,\n        client.signature_credential_reference,\n        client.allowed_ip_addresses,\n        client.rate_limit_requests,\n        client.rate_limit_window_seconds,\n        client.replay_window_seconds,\n        client.enabled,\n        client.metadata,\n        client.created_at,\n        client.updated_at,\n\n        CASE\n            WHEN client.api_key_hash IS NOT NULL\n                THEN TRUE\n            ELSE FALSE\n        END AS api_key_configured\n\n    FROM channel_gateway_clients client\n    INNER JOIN clinic_context context\n        ON client.clinic_id =\n           context.clinic_id\n    WHERE context.action = 'list'\n    ORDER BY\n        client.channel,\n        client.client_name,\n        client.id\n    LIMIT (\n        SELECT result_limit\n        FROM clinic_context\n    )\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN FALSE\n\n        WHEN context.action = 'create'\n         AND EXISTS (\n            SELECT 1\n            FROM target_client\n         )\n            THEN FALSE\n\n        WHEN context.action IN (\n            'update',\n            'rotate_api_key',\n            'activate',\n            'deactivate',\n            'get'\n        )\n         AND NOT EXISTS (\n            SELECT 1\n            FROM target_client\n         )\n            THEN FALSE\n\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN 'clinic_not_found'\n\n        WHEN context.action = 'create'\n         AND EXISTS (\n            SELECT 1\n            FROM target_client\n         )\n            THEN 'gateway_client_already_exists'\n\n        WHEN context.action IN (\n            'update',\n            'rotate_api_key',\n            'activate',\n            'deactivate',\n            'get'\n        )\n         AND NOT EXISTS (\n            SELECT 1\n            FROM target_client\n         )\n            THEN 'gateway_client_not_found'\n\n        WHEN context.action = 'create'\n            THEN 'gateway_client_created'\n\n        WHEN context.action = 'update'\n            THEN 'gateway_client_updated'\n\n        WHEN context.action = 'rotate_api_key'\n            THEN 'gateway_client_api_key_rotated'\n\n        WHEN context.action = 'activate'\n            THEN 'gateway_client_activated'\n\n        WHEN context.action = 'deactivate'\n            THEN 'gateway_client_deactivated'\n\n        WHEN context.action = 'get'\n            THEN 'gateway_client_loaded'\n\n        ELSE 'gateway_clients_listed'\n    END AS result,\n\n    (\n        SELECT JSONB_BUILD_OBJECT(\n            'id',\n                effective.id,\n            'clinic_id',\n                effective.clinic_id,\n            'client_name',\n                effective.client_name,\n            'channel',\n                effective.channel,\n            'provider_name',\n                effective.provider_name,\n            'auth_mode',\n                effective.auth_mode,\n            'signature_verifier_url',\n                effective.signature_verifier_url,\n            'signature_credential_reference',\n                effective.signature_credential_reference,\n            'allowed_ip_addresses',\n                effective.allowed_ip_addresses,\n            'rate_limit_requests',\n                effective.rate_limit_requests,\n            'rate_limit_window_seconds',\n                effective.rate_limit_window_seconds,\n            'replay_window_seconds',\n                effective.replay_window_seconds,\n            'enabled',\n                effective.enabled,\n            'metadata',\n                effective.metadata,\n            'api_key_configured',\n                effective.api_key_hash IS NOT NULL\n        )\n        FROM effective_client effective\n    ) AS gateway_client,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                TO_JSONB(listed)\n            )\n            FROM listed_clients listed\n        ),\n        '[]'::JSONB\n    ) AS gateway_clients\n\nFROM clinic_context context\n\nUNION ALL\n\nSELECT\n    FALSE,\n    'clinic_not_found',\n    NULL::JSONB,\n    '[]'::JSONB\n\nFROM request_data request\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM clinic_context\n);",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.action,\n  $json.clinic_name,\n  $json.gateway_client_id,\n  $json.client_name,\n  $json.channel,\n  $json.provider_name,\n  $json.auth_mode,\n  $json.api_key,\n  $json.signature_verifier_url,\n  $json.signature_credential_reference,\n  $json.allowed_ip_addresses_text,\n  $json.rate_limit_requests,\n  $json.rate_limit_window_seconds,\n  $json.replay_window_seconds,\n  $json.metadata_text,\n  $json.actor_name,\n  $json.limit\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "b83fa8c9-6ec6-4035-9d8d-3dfdd687b8e5",
+      "name": "Manage Channel Gateway Client"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات Gateway Client نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "30229b70-de58-44e3-bd12-90ad47f6ba54",
+      "name": "Return Gateway Client Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## مدیریت Gateway Client\n\nاقدام‌ها:\n- create\n- update\n- rotate_api_key\n- activate\n- deactivate\n- get\n- list\n\nClient جدید همیشه غیرفعال ساخته می‌شود و بعد از بررسی باید Activate شود.\n\nAPI Key خام هرگز در خروجی برگردانده نمی‌شود.",
+        "height": 420,
+        "width": 530
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -310
+      ],
+      "id": "28338e0f-58f4-45f2-93fc-9fb878c24ad7",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Gateway Client Management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Gateway Client Management": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Gateway Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Manage Gateway Clients": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Gateway Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Gateway Client": {
+      "main": [
+        [
+          {
+            "node": "Is Gateway Client Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Gateway Client Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Manage Channel Gateway Client",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Gateway Client Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

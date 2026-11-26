@@ -1,0 +1,67 @@
+{
+  "name": "34 - DB - Add Post Visit Followups",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "5aee5bd0-5432-4bb5-9a4c-8c8229a332c8",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS appointment_post_visit_followups (\n    id BIGSERIAL PRIMARY KEY,\n\n    appointment_id BIGINT NOT NULL\n        REFERENCES appointments(id)\n        ON DELETE CASCADE,\n\n    followup_stage TEXT NOT NULL\n        CHECK (\n            followup_stage IN (\n                'first_day',\n                'third_day',\n                'seventh_day',\n                'custom'\n            )\n        ),\n\n    followup_token TEXT NOT NULL UNIQUE,\n\n    status TEXT NOT NULL DEFAULT 'pending'\n        CHECK (\n            status IN (\n                'pending',\n                'completed',\n                'escalated',\n                'expired',\n                'cancelled'\n            )\n        ),\n\n    channel TEXT NOT NULL DEFAULT 'whatsapp'\n        CHECK (\n            channel IN (\n                'whatsapp',\n                'sms',\n                'phone',\n                'telegram',\n                'web',\n                'manual'\n            )\n        ),\n\n    request_created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    sent_at TIMESTAMPTZ,\n    expires_at TIMESTAMPTZ NOT NULL,\n\n    responded_at TIMESTAMPTZ,\n\n    recovery_status TEXT\n        CHECK (\n            recovery_status IS NULL\n            OR recovery_status IN (\n                'better',\n                'same',\n                'worse'\n            )\n        ),\n\n    pain_level INTEGER\n        CHECK (\n            pain_level IS NULL\n            OR pain_level BETWEEN 0 AND 10\n        ),\n\n    has_red_flag BOOLEAN,\n    red_flag_details TEXT,\n\n    has_medication_issue BOOLEAN,\n    medication_issue_details TEXT,\n\n    has_complaint BOOLEAN,\n    complaint_details TEXT,\n\n    satisfaction_score INTEGER\n        CHECK (\n            satisfaction_score IS NULL\n            OR satisfaction_score BETWEEN 1 AND 5\n        ),\n\n    patient_comment TEXT,\n\n    risk_level TEXT\n        CHECK (\n            risk_level IS NULL\n            OR risk_level IN (\n                'low',\n                'medium',\n                'high',\n                'urgent'\n            )\n        ),\n\n    needs_human_review BOOLEAN NOT NULL DEFAULT FALSE,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    UNIQUE (appointment_id, followup_stage),\n\n    CHECK (expires_at > request_created_at)\n);\n\nCREATE INDEX IF NOT EXISTS idx_post_visit_followups_pending\n    ON appointment_post_visit_followups(\n        status,\n        expires_at\n    );\n\nCREATE INDEX IF NOT EXISTS idx_post_visit_followups_appointment\n    ON appointment_post_visit_followups(\n        appointment_id,\n        followup_stage\n    );\n\nCREATE INDEX IF NOT EXISTS idx_post_visit_followups_risk\n    ON appointment_post_visit_followups(\n        needs_human_review,\n        risk_level,\n        responded_at\n    )\n    WHERE needs_human_review = TRUE;\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار پیگیری بیمار پس از مراجعه ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "d8273a71-1f30-41d7-9339-a933507824ab",
+      "name": "Create Post Visit Followup Structure"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nاین Workflow جدول `appointment_post_visit_followups` را ایجاد می‌کند.\n\nجدول، درخواست پیگیری، پاسخ بیمار، وضعیت بهبود، درد، مشکل دارویی، شکایت، رضایت و سطح ریسک را نگهداری می‌کند.\n\nبعد از اجرای موفق، Workflow را غیرفعال نگه دار.",
+        "height": 310,
+        "width": 450
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -540,
+        -250
+      ],
+      "id": "0c0ae546-b8e6-4834-8ac1-8cb774c5c783",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Post Visit Followup Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

@@ -1,0 +1,331 @@
+{
+  "name": "90 - Core - Queue Waitlist Offer Message - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "c54623f7-9efb-4730-a148-aa874b909d7d",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b158c0ce-1e33-48ed-8b16-276822166a88",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "f7835840-498a-4714-a990-7aa42f21e512",
+              "name": "mobile",
+              "value": "09000000000",
+              "type": "string"
+            },
+            {
+              "id": "6f2d7a04-0aea-475d-bf47-bbb0f9d7d9c8",
+              "name": "channel",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "1b6a6b01-fb12-4c9b-85ce-4488128332df",
+              "name": "offer_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "5c972e39-864e-431a-915a-887098f8d91b",
+              "name": "offer_token",
+              "value": "sample-token",
+              "type": "string"
+            },
+            {
+              "id": "228b5e89-fa83-4c6d-81ea-5900f4cc7b61",
+              "name": "waitlist_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "64dfd6de-c147-4a43-bcf3-20c9d3956a18",
+              "name": "doctor_name",
+              "value": "دکتر آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "a0886530-2808-4c45-9d90-88e4d43ee656",
+              "name": "service_name",
+              "value": "ویزیت عمومی",
+              "type": "string"
+            },
+            {
+              "id": "7f1aa7bd-6328-44ba-892d-6b89164eb9e5",
+              "name": "offered_date",
+              "value": "2026-08-10",
+              "type": "string"
+            },
+            {
+              "id": "2c8f8079-3a5c-458a-a64d-aea9e8aa792c",
+              "name": "offered_start_time",
+              "value": "10:00",
+              "type": "string"
+            },
+            {
+              "id": "b7ef0a4a-c037-4443-9466-a6d99f2b54b1",
+              "name": "offered_end_time",
+              "value": "10:20",
+              "type": "string"
+            },
+            {
+              "id": "a263d0b7-58fd-494f-90df-231b41b6dda2",
+              "name": "offer_expires_at",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "65c4125e-509c-4d66-8280-ee92f8571466",
+              "name": "webhook_base_url",
+              "value": "http://localhost:5678/webhook",
+              "type": "string"
+            },
+            {
+              "id": "b7efe09b-b7dc-418a-a5e5-61b4d3af8fe3",
+              "name": "confirm_queue",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "ef5b4266-5a3b-462f-9d83-085d79c39de8",
+      "name": "Manual Waitlist Offer Message"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/communications/waitlist/queue-offer",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "7e8f5bbc-ab93-445a-a6c1-860e5825abdb",
+      "name": "Webhook - Queue Waitlist Offer"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input=$json.body??$json;\nconst text=v=>v===null||v===undefined?'':String(v).trim();\nconst bool=v=>typeof v==='boolean'?v:['true','1','yes','on'].includes(text(v).toLowerCase());\n\nconst clinic_name=text(input.clinic_name);\nconst mobile=text(input.mobile);\nconst channel=text(input.channel||'whatsapp').toLowerCase();\nconst offer_id=Number(input.offer_id);\nconst offer_token=text(input.offer_token);\nconst waitlist_id=Number(input.waitlist_id??0);\nconst doctor_name=text(input.doctor_name);\nconst service_name=text(input.service_name);\nconst offered_date=text(input.offered_date);\nconst offered_start_time=text(input.offered_start_time);\nconst offered_end_time=text(input.offered_end_time);\nconst offer_expires_at=text(input.offer_expires_at);\nconst webhook_base_url=text(input.webhook_base_url||'http://localhost:5678/webhook').replace(/\\/+$/,'');\nconst confirm_queue=bool(input.confirm_queue);\nconst errors=[];\n\nif(!clinic_name)errors.push({field:'clinic_name',message:'نام کلینیک الزامی است.'});\nif(!/^\\+?[0-9]{8,15}$/.test(mobile))errors.push({field:'mobile',message:'شماره موبایل معتبر نیست.'});\nif(!['whatsapp','sms','email','phone','web_push','in_app'].includes(channel))errors.push({field:'channel',message:'کانال معتبر نیست.'});\nif(!Number.isInteger(offer_id)||offer_id<1)errors.push({field:'offer_id',message:'شناسه پیشنهاد معتبر نیست.'});\nif(!offer_token)errors.push({field:'offer_token',message:'توکن پیشنهاد الزامی است.'});\nif(!Number.isInteger(waitlist_id)||waitlist_id<0)errors.push({field:'waitlist_id',message:'شناسه لیست انتظار معتبر نیست.'});\nif(!doctor_name)errors.push({field:'doctor_name',message:'نام پزشک الزامی است.'});\nif(!service_name)errors.push({field:'service_name',message:'نام خدمت الزامی است.'});\nif(!/^\\d{4}-\\d{2}-\\d{2}$/.test(offered_date))errors.push({field:'offered_date',message:'تاریخ پیشنهاد باید YYYY-MM-DD باشد.'});\nif(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(offered_start_time))errors.push({field:'offered_start_time',message:'ساعت شروع معتبر نیست.'});\nif(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(offered_end_time))errors.push({field:'offered_end_time',message:'ساعت پایان معتبر نیست.'});\nif(offer_expires_at&&Number.isNaN(Date.parse(offer_expires_at)))errors.push({field:'offer_expires_at',message:'زمان انقضا معتبر نیست.'});\nif(!/^https?:\\/\\/.+/i.test(webhook_base_url))errors.push({field:'webhook_base_url',message:'آدرس Webhook معتبر نیست.'});\nif(confirm_queue!==true)errors.push({field:'confirm_queue',message:'ثبت پیام باید تأیید شود.'});\n\nreturn [{json:{\n clinic_name,mobile,channel,offer_id,offer_token,waitlist_id,doctor_name,\n service_name,offered_date,offered_start_time,offered_end_time,offer_expires_at,\n webhook_base_url,queue_url:`${webhook_base_url}/clinic/communications/messages/queue`,\n confirm_queue,validation_status:errors.length?'invalid':'valid',errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "d6dee2e1-cc7f-45b2-b4a9-033fbe7a3f3e",
+      "name": "Normalize and Validate Waitlist Message"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "23f87661-a914-4684-ad81-431a93653b64",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "09d9320c-da52-4086-b970-1bcac5883f6a",
+      "name": "Is Waitlist Message Valid?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item=$json;\nconst expiry=item.offer_expires_at\n ? `مهلت پاسخ: ${item.offer_expires_at}`\n : 'این پیشنهاد برای مدت محدودی معتبر است.';\n\nconst message=[\n  `یک زمان آزاد در ${item.clinic_name} برای شما موجود شده است.`,\n  `پزشک: ${item.doctor_name}`,\n  `خدمت: ${item.service_name}`,\n  `تاریخ: ${item.offered_date}`,\n  `ساعت: ${item.offered_start_time} تا ${item.offered_end_time}`,\n  expiry,\n  '',\n  'لطفاً پذیرش یا رد پیشنهاد را اعلام کنید.',\n  `کد پیشنهاد: ${item.offer_token}`\n].join('\\n');\n\nreturn [{json:{\n  queue_url:item.queue_url,\n  queue_payload:{\n    clinic_name:item.clinic_name,\n    mobile:item.mobile,\n    channel:item.channel,\n    purpose:'waitlist_offer',\n    message_type:'template',\n    template_code:'waitlist_slot_offer',\n    language:'fa',\n    subject:'',\n    message_text:message,\n    payload:{\n      offer_id:item.offer_id,\n      offer_token:item.offer_token,\n      waitlist_id:item.waitlist_id||null,\n      doctor_name:item.doctor_name,\n      service_name:item.service_name,\n      offered_date:item.offered_date,\n      offered_start_time:item.offered_start_time,\n      offered_end_time:item.offered_end_time,\n      offer_expires_at:item.offer_expires_at||null,\n      response_endpoint:'clinic/waitlist/process-offer-response'\n    },\n    related_entity_type:'waitlist_offer',\n    related_entity_id:item.offer_id,\n    request_reference:`waitlist-offer:${item.offer_id}`,\n    idempotency_key:`waitlist-offer:${item.offer_id}`,\n    priority:7,\n    scheduled_at:new Date().toISOString(),\n    max_attempts:5,\n    webhook_base_url:item.webhook_base_url,\n    confirm_queue:true\n  }\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "f9e11d06-f89b-40ca-9975-2c0c4a39de79",
+      "name": "Build Waitlist Offer Message"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.queue_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.queue_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        352,
+        -48
+      ],
+      "id": "b688b2ab-92b6-44a5-84ec-87160de81371",
+      "name": "Queue Waitlist Offer Message",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات پیام پیشنهاد لیست انتظار نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "4632f051-740c-4936-942e-20d462ba3f0f",
+      "name": "Return Waitlist Message Error"
+    },
+    {
+      "parameters": {
+        "content": "## اتصال Workflow 23 به موتور پیام\n\nخروجی پیشنهاد زمان آزاد از Workflow 23 را به این Workflow بده.\n\nتوکن و شناسه Offer در Payload پیام ثبت می‌شوند.",
+        "height": 330,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -260
+      ],
+      "id": "2074549b-8e35-41a7-bc31-fb0a6c22aaa3",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Waitlist Offer Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Waitlist Offer Message": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Waitlist Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Queue Waitlist Offer": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Waitlist Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Waitlist Message": {
+      "main": [
+        [
+          {
+            "node": "Is Waitlist Message Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Waitlist Message Valid?": {
+      "main": [
+        [
+          {
+            "node": "Build Waitlist Offer Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Waitlist Message Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Waitlist Offer Message": {
+      "main": [
+        [
+          {
+            "node": "Queue Waitlist Offer Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

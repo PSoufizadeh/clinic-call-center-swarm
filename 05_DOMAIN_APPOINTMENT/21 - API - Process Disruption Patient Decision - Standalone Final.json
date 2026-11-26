@@ -1,0 +1,720 @@
+{
+  "name": "21 - API - Process Disruption Patient Decision - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1320,
+        176
+      ],
+      "id": "cac4b754-c70f-4cf1-8ea6-198c2250eb1f",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4839b7df-8369-4695-beb1-950de1a2457b",
+              "name": "disruption_case_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "66ea1707-7f24-4840-b31f-2cedaf87fd6d",
+              "name": "mobile",
+              "value": "09000000000",
+              "type": "string"
+            },
+            {
+              "id": "65101f94-fe3d-4aee-a640-7d1b2308909a",
+              "name": "decision",
+              "value": "more_options",
+              "type": "string"
+            },
+            {
+              "id": "979ed24e-bdf6-464d-acf0-3ebfaa31f358",
+              "name": "option_number",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "3171fa25-962d-48dc-a890-71c94802f36c",
+              "name": "decision_note",
+              "value": "درخواست بیمار در فرایند تغییر برنامه پزشک",
+              "type": "string"
+            },
+            {
+              "id": "fc8f1b2f-c0aa-4326-b16f-eb8e2c9f27ba",
+              "name": "options_per_patient",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "dff01606-371b-4a31-b945-dccaa93586c8",
+              "name": "additional_search_days",
+              "value": 14,
+              "type": "number"
+            },
+            {
+              "id": "e07b0326-9bad-4afb-bc2c-4c5b93e0338f",
+              "name": "confirm_decision",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1080,
+        176
+      ],
+      "id": "4bfc3827-e916-436c-9acc-f8e1d98d6b11",
+      "name": "Manual Patient Decision Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/disruptions/process-patient-decision",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1080,
+        -96
+      ],
+      "id": "76595872-f55b-4c18-b74b-9b479a606282",
+      "name": "Webhook - Process Patient Decision"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst disruption_case_id = Number(input.disruption_case_id);\nconst mobile = text(input.mobile);\nconst decision = text(input.decision).toLowerCase();\nconst option_number = Number(input.option_number ?? 0);\nconst decision_note = text(input.decision_note);\n\nconst options_per_patient = Number(input.options_per_patient ?? 3);\nconst additional_search_days = Number(input.additional_search_days ?? 14);\n\nconst confirm_decision = toBoolean(input.confirm_decision);\n\nconst allowedDecisions = [\n  'reschedule',\n  'cancel',\n  'waitlist',\n  'more_options',\n];\n\nconst errors = [];\n\nif (\n  !Number.isInteger(disruption_case_id) ||\n  disruption_case_id < 1\n) {\n  errors.push({\n    field: 'disruption_case_id',\n    message: 'disruption_case_id باید یک عدد صحیح بزرگ‌تر از صفر باشد.',\n  });\n}\n\nif (!mobile) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل بیمار الزامی است.',\n  });\n}\n\nif (mobile && !/^\\+?[0-9]{8,15}$/.test(mobile)) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل باید فقط شامل اعداد و در صورت نیاز علامت + باشد.',\n  });\n}\n\nif (!allowedDecisions.includes(decision)) {\n  errors.push({\n    field: 'decision',\n    message:\n      'decision باید reschedule، cancel، waitlist یا more_options باشد.',\n  });\n}\n\nif (\n  decision === 'reschedule' &&\n  (\n    !Number.isInteger(option_number) ||\n    option_number < 1\n  )\n) {\n  errors.push({\n    field: 'option_number',\n    message: 'برای جابه‌جایی، شماره گزینه انتخاب‌شده الزامی است.',\n  });\n}\n\nif (\n  !Number.isInteger(options_per_patient) ||\n  options_per_patient < 1 ||\n  options_per_patient > 5\n) {\n  errors.push({\n    field: 'options_per_patient',\n    message: 'options_per_patient باید یک عدد صحیح بین 1 و 5 باشد.',\n  });\n}\n\nif (\n  !Number.isInteger(additional_search_days) ||\n  additional_search_days < 1 ||\n  additional_search_days > 60\n) {\n  errors.push({\n    field: 'additional_search_days',\n    message: 'additional_search_days باید یک عدد صحیح بین 1 و 60 باشد.',\n  });\n}\n\nif (decision_note.length > 500) {\n  errors.push({\n    field: 'decision_note',\n    message: 'یادداشت تصمیم نباید بیشتر از 500 کاراکتر باشد.',\n  });\n}\n\nif (confirm_decision !== true) {\n  errors.push({\n    field: 'confirm_decision',\n    message: 'تصمیم بیمار باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [\n  {\n    json: {\n      disruption_case_id,\n      mobile,\n      decision,\n      option_number,\n      decision_note,\n      options_per_patient,\n      additional_search_days,\n      confirm_decision,\n      validation_status: errors.length === 0 ? 'valid' : 'invalid',\n      errors,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -808,
+        48
+      ],
+      "id": "33818d66-8c8a-4548-b18d-713359257bcc",
+      "name": "Normalize and Validate Patient Decision"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dd25e95d-fb5b-45a2-b3cd-4164dc6effd2",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -568,
+        48
+      ],
+      "id": "2853c727-9053-4c3f-b4e7-07718f0306c2",
+      "name": "Is Patient Decision Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS disruption_case_id,\n        $2::TEXT AS mobile,\n        $3::TEXT AS decision,\n        $4::INTEGER AS option_number,\n        $5::TEXT AS decision_note,\n\n        LEAST(\n            GREATEST($6::INTEGER, 1),\n            5\n        ) AS options_per_patient,\n\n        LEAST(\n            GREATEST($7::INTEGER, 1),\n            60\n        ) AS additional_search_days\n),\n\ncase_context AS (\n    SELECT\n        dc.id AS disruption_case_id,\n        dc.exception_id,\n        dc.appointment_id,\n        dc.status AS case_status,\n        dc.proposed_slots,\n\n        a.clinic_id,\n        a.doctor_id,\n        a.patient_id,\n        a.service_id,\n\n        a.starts_at AS original_starts_at,\n        a.ends_at AS original_ends_at,\n        a.status AS appointment_status,\n        a.google_calendar_event_id\n            AS old_calendar_event_id,\n\n        se.ends_at AS exception_ends_at,\n        se.reason AS exception_reason,\n\n        c.name AS clinic_name,\n        c.timezone,\n\n        d.full_name AS doctor_name,\n        d.buffer_minutes,\n\n        p.full_name AS patient_name,\n        p.mobile,\n\n        s.name AS service_name,\n        s.duration_minutes,\n\n        r.decision,\n        r.option_number,\n        r.decision_note,\n        r.options_per_patient,\n        r.additional_search_days\n\n    FROM appointment_disruption_cases dc\n\n    INNER JOIN request_data r\n        ON r.disruption_case_id = dc.id\n\n    INNER JOIN appointments a\n        ON a.id = dc.appointment_id\n\n    INNER JOIN schedule_exceptions se\n        ON se.id = dc.exception_id\n\n    INNER JOIN clinics c\n        ON c.id = a.clinic_id\n       AND c.is_active = TRUE\n\n    INNER JOIN doctors d\n        ON d.id = a.doctor_id\n       AND d.is_active = TRUE\n\n    INNER JOIN patients p\n        ON p.id = a.patient_id\n       AND p.mobile = r.mobile\n\n    INNER JOIN services s\n        ON s.id = a.service_id\n       AND s.is_active = TRUE\n\n    WHERE dc.status IN (\n        'awaiting_reschedule_consent',\n        'awaiting_waitlist_consent'\n    )\n\n    LIMIT 1\n),\n\nselected_slot AS (\n    SELECT\n        cc.*,\n\n        (slot_item ->> 'option_number')::INTEGER\n            AS selected_option_number,\n\n        (slot_item ->> 'starts_at')::TIMESTAMPTZ\n            AS selected_starts_at,\n\n        (slot_item ->> 'ends_at')::TIMESTAMPTZ\n            AS selected_ends_at\n\n    FROM case_context cc\n\n    CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(\n        cc.proposed_slots\n    ) AS slot_item\n\n    WHERE cc.decision = 'reschedule'\n      AND (\n            slot_item ->> 'option_number'\n      )::INTEGER = cc.option_number\n\n    LIMIT 1\n),\n\nselected_slot_state AS (\n    SELECT\n        ss.*,\n\n        EXISTS (\n            SELECT 1\n            FROM schedule_exceptions se\n\n            WHERE se.doctor_id = ss.doctor_id\n              AND se.is_active = TRUE\n              AND se.exception_type = 'unavailable'\n\n              AND se.starts_at < ss.selected_ends_at\n              AND se.ends_at > ss.selected_starts_at\n        ) AS is_blocked,\n\n        EXISTS (\n            SELECT 1\n            FROM appointments existing\n\n            WHERE existing.doctor_id = ss.doctor_id\n              AND existing.id <> ss.appointment_id\n\n              AND existing.status IN (\n                  'pending',\n                  'confirmed'\n              )\n\n              AND existing.starts_at <\n                    ss.selected_ends_at\n\n              AND existing.ends_at >\n                    ss.selected_starts_at\n        ) AS has_conflict\n\n    FROM selected_slot ss\n),\n\ncandidate_dates AS (\n    SELECT\n        cc.*,\n        generated_day::DATE AS candidate_date\n\n    FROM case_context cc\n\n    CROSS JOIN LATERAL GENERATE_SERIES(\n        GREATEST(\n            (\n                cc.exception_ends_at\n                AT TIME ZONE cc.timezone\n            )::DATE,\n\n            (\n                NOW()\n                AT TIME ZONE cc.timezone\n            )::DATE\n        ),\n\n        GREATEST(\n            (\n                cc.exception_ends_at\n                AT TIME ZONE cc.timezone\n            )::DATE,\n\n            (\n                NOW()\n                AT TIME ZONE cc.timezone\n            )::DATE\n        )\n        + cc.additional_search_days,\n\n        INTERVAL '1 day'\n    ) AS generated_day\n\n    WHERE cc.decision = 'more_options'\n),\n\ngenerated_more_slots AS (\n    SELECT\n        cd.*,\n\n        slot.slot_start_local,\n\n        slot.slot_start_local\n            AT TIME ZONE cd.timezone\n            AS candidate_starts_at,\n\n        (\n            slot.slot_start_local\n            + MAKE_INTERVAL(\n                mins => cd.duration_minutes\n            )\n        ) AT TIME ZONE cd.timezone\n            AS candidate_ends_at\n\n    FROM candidate_dates cd\n\n    INNER JOIN doctor_schedules ds\n        ON ds.doctor_id = cd.doctor_id\n       AND ds.is_active = TRUE\n\n       AND ds.weekday =\n            EXTRACT(\n                ISODOW FROM cd.candidate_date\n            )::INTEGER\n\n       AND (\n            ds.valid_from IS NULL\n            OR ds.valid_from <= cd.candidate_date\n       )\n\n       AND (\n            ds.valid_to IS NULL\n            OR ds.valid_to >= cd.candidate_date\n       )\n\n    CROSS JOIN LATERAL GENERATE_SERIES(\n        cd.candidate_date + ds.start_time,\n\n        cd.candidate_date\n            + ds.end_time\n            - MAKE_INTERVAL(\n                mins => cd.duration_minutes\n            ),\n\n        MAKE_INTERVAL(\n            mins =>\n                cd.duration_minutes\n                + cd.buffer_minutes\n        )\n    ) AS slot(slot_start_local)\n),\n\navailable_more_slots AS (\n    SELECT\n        gs.*\n\n    FROM generated_more_slots gs\n\n    WHERE gs.candidate_starts_at > NOW()\n      AND gs.candidate_starts_at >=\n            gs.exception_ends_at\n\n      AND NOT EXISTS (\n          SELECT 1\n          FROM schedule_exceptions se\n\n          WHERE se.doctor_id = gs.doctor_id\n            AND se.is_active = TRUE\n            AND se.exception_type = 'unavailable'\n\n            AND se.starts_at <\n                  gs.candidate_ends_at\n\n            AND se.ends_at >\n                  gs.candidate_starts_at\n      )\n\n      AND NOT EXISTS (\n          SELECT 1\n          FROM appointments existing\n\n          WHERE existing.doctor_id =\n                gs.doctor_id\n\n            AND existing.id <>\n                gs.appointment_id\n\n            AND existing.status IN (\n                'pending',\n                'confirmed'\n            )\n\n            AND existing.starts_at <\n                  gs.candidate_ends_at\n\n            AND existing.ends_at >\n                  gs.candidate_starts_at\n      )\n\n      AND NOT EXISTS (\n          SELECT 1\n          FROM JSONB_ARRAY_ELEMENTS(\n              gs.proposed_slots\n          ) old_slot\n\n          WHERE (\n                old_slot ->> 'starts_at'\n          )::TIMESTAMPTZ =\n                gs.candidate_starts_at\n      )\n),\n\nranked_more_slots AS (\n    SELECT\n        available.*,\n\n        ROW_NUMBER() OVER (\n            ORDER BY\n                available.candidate_starts_at\n        ) AS slot_rank\n\n    FROM available_more_slots available\n),\n\nlimited_more_slots AS (\n    SELECT *\n    FROM ranked_more_slots\n    WHERE slot_rank <= options_per_patient\n),\n\nmore_slot_summary AS (\n    SELECT\n        COUNT(*)::INTEGER\n            AS proposed_slot_count,\n\n        COALESCE(\n            JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'option_number',\n                        slot_rank,\n\n                    'appointment_date',\n                        TO_CHAR(\n                            candidate_starts_at\n                            AT TIME ZONE timezone,\n                            'YYYY-MM-DD'\n                        ),\n\n                    'start_time',\n                        TO_CHAR(\n                            candidate_starts_at\n                            AT TIME ZONE timezone,\n                            'HH24:MI'\n                        ),\n\n                    'end_time',\n                        TO_CHAR(\n                            candidate_ends_at\n                            AT TIME ZONE timezone,\n                            'HH24:MI'\n                        ),\n\n                    'starts_at',\n                        candidate_starts_at,\n\n                    'ends_at',\n                        candidate_ends_at\n                )\n                ORDER BY candidate_starts_at\n            ),\n            '[]'::JSONB\n        ) AS proposed_slots\n\n    FROM limited_more_slots\n),\n\nrescheduled_appointment AS (\n    UPDATE appointments a\n\n    SET\n        starts_at = selected.selected_starts_at,\n        ends_at = selected.selected_ends_at,\n\n        reschedule_count =\n            COALESCE(\n                a.reschedule_count,\n                0\n            ) + 1,\n\n        rescheduled_at = NOW(),\n\n        last_reschedule_reason =\n            COALESCE(\n                NULLIF(\n                    selected.decision_note,\n                    ''\n                ),\n                'جابه‌جایی پس از تغییر برنامه پزشک'\n            ),\n\n        google_calendar_event_id = NULL,\n        updated_at = NOW()\n\n    FROM selected_slot_state selected\n\n    WHERE selected.decision = 'reschedule'\n      AND a.id = selected.appointment_id\n\n      AND a.status IN (\n          'pending',\n          'confirmed'\n      )\n\n      AND selected.selected_starts_at > NOW()\n      AND selected.is_blocked = FALSE\n      AND selected.has_conflict = FALSE\n\n    RETURNING\n        a.id AS appointment_id,\n        a.starts_at AS new_starts_at,\n        a.ends_at AS new_ends_at,\n        a.status,\n        a.reschedule_count,\n        a.rescheduled_at\n),\n\nreschedule_history AS (\n    INSERT INTO appointment_reschedule_history (\n        appointment_id,\n        old_starts_at,\n        old_ends_at,\n        new_starts_at,\n        new_ends_at,\n        reason,\n        source\n    )\n\n    SELECT\n        cc.appointment_id,\n        cc.original_starts_at,\n        cc.original_ends_at,\n        ra.new_starts_at,\n        ra.new_ends_at,\n\n        COALESCE(\n            NULLIF(cc.decision_note, ''),\n            'جابه‌جایی پس از تغییر برنامه پزشک'\n        ),\n\n        'disruption_management'\n\n    FROM case_context cc\n\n    INNER JOIN rescheduled_appointment ra\n        ON ra.appointment_id =\n           cc.appointment_id\n\n    RETURNING id AS history_id\n),\n\nrescheduled_case AS (\n    UPDATE appointment_disruption_cases dc\n\n    SET\n        status = 'rescheduled',\n        patient_decision = 'reschedule',\n\n        selected_starts_at =\n            ra.new_starts_at,\n\n        selected_ends_at =\n            ra.new_ends_at,\n\n        decision_note =\n            cc.decision_note,\n\n        responded_at = NOW(),\n        resolved_at = NOW(),\n        updated_at = NOW()\n\n    FROM case_context cc\n\n    INNER JOIN rescheduled_appointment ra\n        ON ra.appointment_id =\n           cc.appointment_id\n\n    WHERE dc.id = cc.disruption_case_id\n\n    RETURNING\n        dc.id AS disruption_case_id,\n        dc.status AS case_status\n),\n\ncancelled_appointment AS (\n    UPDATE appointments a\n\n    SET\n        status = 'cancelled',\n\n        cancellation_reason =\n            COALESCE(\n                NULLIF(\n                    cc.decision_note,\n                    ''\n                ),\n                'لغو نوبت پس از تغییر برنامه پزشک'\n            ),\n\n        cancelled_at = NOW(),\n        updated_at = NOW()\n\n    FROM case_context cc\n\n    WHERE cc.decision = 'cancel'\n      AND a.id = cc.appointment_id\n\n      AND a.status IN (\n          'pending',\n          'confirmed'\n      )\n\n    RETURNING\n        a.id AS appointment_id,\n        a.status,\n        a.cancellation_reason,\n        a.cancelled_at\n),\n\ncancelled_case AS (\n    UPDATE appointment_disruption_cases dc\n\n    SET\n        status = 'cancelled',\n        patient_decision = 'cancel',\n\n        decision_note =\n            cc.decision_note,\n\n        responded_at = NOW(),\n        resolved_at = NOW(),\n        updated_at = NOW()\n\n    FROM case_context cc\n\n    INNER JOIN cancelled_appointment ca\n        ON ca.appointment_id =\n           cc.appointment_id\n\n    WHERE dc.id = cc.disruption_case_id\n\n    RETURNING\n        dc.id AS disruption_case_id,\n        dc.status AS case_status\n),\n\ninserted_waitlist AS (\n    INSERT INTO appointment_waitlist (\n        clinic_id,\n        doctor_id,\n        patient_id,\n        service_id,\n\n        original_appointment_id,\n        disruption_case_id,\n\n        desired_from,\n        desired_to,\n\n        status,\n        priority,\n        consent_given_at,\n\n        notes,\n        source\n    )\n\n    SELECT\n        cc.clinic_id,\n        cc.doctor_id,\n        cc.patient_id,\n        cc.service_id,\n\n        cc.appointment_id,\n        cc.disruption_case_id,\n\n        GREATEST(\n            cc.exception_ends_at,\n            NOW()\n        ),\n\n        GREATEST(\n            cc.exception_ends_at,\n            NOW()\n        ) + INTERVAL '30 days',\n\n        'active',\n        50,\n        NOW(),\n\n        cc.decision_note,\n        'disruption_management'\n\n    FROM case_context cc\n\n    WHERE cc.decision = 'waitlist'\n\n    ON CONFLICT DO NOTHING\n\n    RETURNING\n        id AS waitlist_id,\n        disruption_case_id,\n        status AS waitlist_status\n),\n\neffective_waitlist AS (\n    SELECT\n        iw.waitlist_id,\n        iw.disruption_case_id,\n        iw.waitlist_status\n\n    FROM inserted_waitlist iw\n\n    UNION ALL\n\n    SELECT\n        aw.id AS waitlist_id,\n        aw.disruption_case_id,\n        aw.status AS waitlist_status\n\n    FROM appointment_waitlist aw\n\n    INNER JOIN case_context cc\n        ON cc.disruption_case_id =\n           aw.disruption_case_id\n\n    WHERE cc.decision = 'waitlist'\n      AND aw.status = 'active'\n\n      AND NOT EXISTS (\n          SELECT 1\n          FROM inserted_waitlist\n      )\n\n    LIMIT 1\n),\n\nwaitlisted_appointment AS (\n    UPDATE appointments a\n\n    SET\n        status = 'cancelled',\n\n        cancellation_reason =\n            COALESCE(\n                NULLIF(\n                    cc.decision_note,\n                    ''\n                ),\n                'ورود بیمار به لیست انتظار پس از تغییر برنامه پزشک'\n            ),\n\n        cancelled_at = NOW(),\n        updated_at = NOW()\n\n    FROM case_context cc\n\n    INNER JOIN effective_waitlist ew\n        ON ew.disruption_case_id =\n           cc.disruption_case_id\n\n    WHERE a.id = cc.appointment_id\n      AND a.status IN (\n          'pending',\n          'confirmed'\n      )\n\n    RETURNING\n        a.id AS appointment_id,\n        a.status,\n        a.cancellation_reason,\n        a.cancelled_at\n),\n\nwaitlisted_case AS (\n    UPDATE appointment_disruption_cases dc\n\n    SET\n        status = 'waitlisted',\n        patient_decision = 'waitlist',\n\n        decision_note =\n            cc.decision_note,\n\n        responded_at = NOW(),\n        resolved_at = NOW(),\n        updated_at = NOW()\n\n    FROM case_context cc\n\n    INNER JOIN effective_waitlist ew\n        ON ew.disruption_case_id =\n           cc.disruption_case_id\n\n    INNER JOIN waitlisted_appointment wa\n        ON wa.appointment_id =\n           cc.appointment_id\n\n    WHERE dc.id = cc.disruption_case_id\n\n    RETURNING\n        dc.id AS disruption_case_id,\n        dc.status AS case_status\n),\n\nmore_options_case AS (\n    UPDATE appointment_disruption_cases dc\n\n    SET\n        status = CASE\n            WHEN summary.proposed_slot_count > 0\n                THEN 'awaiting_reschedule_consent'\n            ELSE 'awaiting_waitlist_consent'\n        END,\n\n        proposed_slots =\n            summary.proposed_slots,\n\n        patient_decision = NULL,\n        selected_starts_at = NULL,\n        selected_ends_at = NULL,\n\n        decision_note =\n            cc.decision_note,\n\n        responded_at = NOW(),\n        updated_at = NOW()\n\n    FROM case_context cc\n\n    CROSS JOIN more_slot_summary summary\n\n    WHERE cc.decision = 'more_options'\n      AND dc.id = cc.disruption_case_id\n\n    RETURNING\n        dc.id AS disruption_case_id,\n        dc.status AS case_status,\n        dc.proposed_slots\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM case_context\n        )\n            THEN FALSE\n\n        WHEN r.decision = 'reschedule'\n             AND NOT EXISTS (\n                SELECT 1\n                FROM selected_slot\n             )\n            THEN FALSE\n\n        WHEN r.decision = 'reschedule'\n             AND EXISTS (\n                SELECT 1\n                FROM selected_slot_state\n                WHERE is_blocked = TRUE\n                   OR has_conflict = TRUE\n                   OR selected_starts_at <= NOW()\n             )\n            THEN FALSE\n\n        WHEN r.decision = 'reschedule'\n             AND EXISTS (\n                SELECT 1\n                FROM rescheduled_appointment\n             )\n            THEN TRUE\n\n        WHEN r.decision = 'cancel'\n             AND EXISTS (\n                SELECT 1\n                FROM cancelled_appointment\n             )\n            THEN TRUE\n\n        WHEN r.decision = 'waitlist'\n             AND EXISTS (\n                SELECT 1\n                FROM waitlisted_case\n             )\n            THEN TRUE\n\n        WHEN r.decision = 'more_options'\n             AND EXISTS (\n                SELECT 1\n                FROM more_options_case\n             )\n            THEN TRUE\n\n        ELSE FALSE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM case_context\n        )\n            THEN 'disruption_case_not_found'\n\n        WHEN r.decision = 'reschedule'\n             AND NOT EXISTS (\n                SELECT 1\n                FROM selected_slot\n             )\n            THEN 'invalid_option_number'\n\n        WHEN r.decision = 'reschedule'\n             AND EXISTS (\n                SELECT 1\n                FROM selected_slot_state\n                WHERE is_blocked = TRUE\n             )\n            THEN 'selected_slot_blocked'\n\n        WHEN r.decision = 'reschedule'\n             AND EXISTS (\n                SELECT 1\n                FROM selected_slot_state\n                WHERE has_conflict = TRUE\n             )\n            THEN 'selected_slot_unavailable'\n\n        WHEN r.decision = 'reschedule'\n             AND EXISTS (\n                SELECT 1\n                FROM rescheduled_appointment\n             )\n            THEN 'rescheduled'\n\n        WHEN r.decision = 'cancel'\n             AND EXISTS (\n                SELECT 1\n                FROM cancelled_appointment\n             )\n            THEN 'cancelled'\n\n        WHEN r.decision = 'waitlist'\n             AND EXISTS (\n                SELECT 1\n                FROM waitlisted_case\n             )\n            THEN 'waitlisted'\n\n        WHEN r.decision = 'more_options'\n             AND (\n                SELECT proposed_slot_count\n                FROM more_slot_summary\n             ) > 0\n            THEN 'more_options_ready'\n\n        WHEN r.decision = 'more_options'\n             AND EXISTS (\n                SELECT 1\n                FROM more_options_case\n             )\n            THEN 'no_more_options_available'\n\n        ELSE 'decision_conflict'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM case_context\n        )\n            THEN 'پرونده فعال مطابق شناسه و شماره موبایل واردشده پیدا نشد.'\n\n        WHEN r.decision = 'reschedule'\n             AND NOT EXISTS (\n                SELECT 1\n                FROM selected_slot\n             )\n            THEN 'شماره گزینه انتخاب‌شده در پیشنهادهای این پرونده وجود ندارد.'\n\n        WHEN r.decision = 'reschedule'\n             AND EXISTS (\n                SELECT 1\n                FROM selected_slot_state\n                WHERE is_blocked = TRUE\n             )\n            THEN 'زمان انتخاب‌شده اکنون در برنامه پزشک مسدود است.'\n\n        WHEN r.decision = 'reschedule'\n             AND EXISTS (\n                SELECT 1\n                FROM selected_slot_state\n                WHERE has_conflict = TRUE\n             )\n            THEN 'زمان انتخاب‌شده دیگر در دسترس نیست.'\n\n        WHEN r.decision = 'reschedule'\n             AND EXISTS (\n                SELECT 1\n                FROM rescheduled_appointment\n             )\n            THEN 'زمان جایگزین بیمار ثبت شد.'\n\n        WHEN r.decision = 'cancel'\n             AND EXISTS (\n                SELECT 1\n                FROM cancelled_appointment\n             )\n            THEN 'نوبت بیمار لغو شد.'\n\n        WHEN r.decision = 'waitlist'\n             AND EXISTS (\n                SELECT 1\n                FROM waitlisted_case\n             )\n            THEN 'نوبت قبلی لغو و بیمار با رضایت خود وارد لیست انتظار شد.'\n\n        WHEN r.decision = 'more_options'\n             AND (\n                SELECT proposed_slot_count\n                FROM more_slot_summary\n             ) > 0\n            THEN 'گزینه‌های جایگزین جدید برای بیمار آماده شدند.'\n\n        WHEN r.decision = 'more_options'\n             AND EXISTS (\n                SELECT 1\n                FROM more_options_case\n             )\n            THEN 'در بازه جست‌وجوی جدید زمان آزادی پیدا نشد؛ رضایت بیمار برای ورود به لیست انتظار لازم است.'\n\n        ELSE 'وضعیت پرونده یا نوبت در فاصله بررسی تا ثبت تغییر کرده است.'\n    END AS message,\n\n    r.decision AS action,\n\n    (\n        SELECT disruption_case_id\n        FROM case_context\n    ) AS disruption_case_id,\n\n    (\n        SELECT appointment_id\n        FROM case_context\n    ) AS appointment_id,\n\n    (\n        SELECT patient_name\n        FROM case_context\n    ) AS patient_name,\n\n    (\n        SELECT mobile\n        FROM case_context\n    ) AS mobile,\n\n    (\n        SELECT doctor_name\n        FROM case_context\n    ) AS doctor_name,\n\n    (\n        SELECT service_name\n        FROM case_context\n    ) AS service_name,\n\n    (\n        SELECT old_calendar_event_id\n        FROM case_context\n    ) AS old_calendar_event_id,\n\n    (\n        SELECT new_starts_at\n        FROM rescheduled_appointment\n    ) AS new_starts_at,\n\n    (\n        SELECT new_ends_at\n        FROM rescheduled_appointment\n    ) AS new_ends_at,\n\n    (\n        SELECT TO_CHAR(\n            new_starts_at\n            AT TIME ZONE cc.timezone,\n            'YYYY-MM-DD HH24:MI'\n        )\n        FROM rescheduled_appointment ra\n        CROSS JOIN case_context cc\n    ) AS new_appointment_start,\n\n    (\n        SELECT waitlist_id\n        FROM effective_waitlist\n        LIMIT 1\n    ) AS waitlist_id,\n\n    CASE\n        WHEN r.decision = 'more_options'\n            THEN (\n                SELECT proposed_slot_count\n                FROM more_slot_summary\n            )\n        ELSE NULL\n    END AS proposed_slot_count,\n\n    CASE\n        WHEN r.decision = 'more_options'\n            THEN (\n                SELECT proposed_slots\n                FROM more_options_case\n            )\n        ELSE NULL\n    END AS proposed_slots,\n\n    CASE\n        WHEN r.decision = 'reschedule'\n            THEN 'recreate'\n\n        WHEN r.decision IN (\n            'cancel',\n            'waitlist'\n        )\n            THEN 'delete'\n\n        ELSE 'none'\n    END AS calendar_action\n\nFROM request_data r;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.disruption_case_id,\n  $json.mobile,\n  $json.decision,\n  $json.option_number,\n  $json.decision_note,\n  $json.options_per_patient,\n  $json.additional_search_days\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -312,
+        -48
+      ],
+      "id": "a553899c-be2e-43e9-afe0-fa035b393d72",
+      "name": "Apply Patient Decision in Database"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3bc202ce-754c-4e69-a528-8ad9e0f4fc28",
+              "leftValue": "={{ $json.success === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -56,
+        -48
+      ],
+      "id": "8a54c25f-cad9-4c78-b31d-e1c225dd5bd9",
+      "name": "Was Patient Decision Applied?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "39ecc9af-07a0-48a3-85e4-6271b4c16cc7",
+              "leftValue": "={{ $json.calendar_action }}",
+              "rightValue": "none",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        200,
+        -144
+      ],
+      "id": "3bc9868d-2492-45d7-ae29-a2ef564a0f19",
+      "name": "Does Decision Need Calendar?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6cecdcb7-655d-4591-bf81-26f4aed9f64f",
+              "leftValue": "={{ Boolean($json.old_calendar_event_id) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        456,
+        -240
+      ],
+      "id": "ea162385-7122-4508-bb5e-0e0926312dc5",
+      "name": "Has Old Calendar Event?"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "YOUR_CALENDAR_ID",
+          "mode": "list",
+          "cachedResultName": "Clinic Demo - Dr Test"
+        },
+        "eventId": "={{ $('Apply Patient Decision in Database').first().json.old_calendar_event_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        712,
+        -336
+      ],
+      "id": "b8158720-1c38-4770-b6f1-afe949391886",
+      "name": "Delete Old Calendar Event",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const db = $('Apply Patient Decision in Database').first().json;\n\nconst hasOldEvent = Boolean(db.old_calendar_event_id);\n\nconst hasDeleteError =\n  Boolean($json.error) ||\n  Boolean($json.errorMessage) ||\n  $json.success === false;\n\nlet old_calendar_delete_status = 'not_required';\n\nif (hasOldEvent) {\n  old_calendar_delete_status = hasDeleteError\n    ? 'delete_failed'\n    : 'deleted';\n}\n\nreturn [\n  {\n    json: {\n      ...db,\n      old_calendar_delete_status,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        968,
+        -240
+      ],
+      "id": "66b5c7dc-1071-4596-9214-0481cee8e5af",
+      "name": "Build Calendar Delete Context"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fed8c507-7f1f-4703-b609-325e23068be6",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "reschedule",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1224,
+        -240
+      ],
+      "id": "14f24108-cada-4ece-b2b7-735a94822b5f",
+      "name": "Is Reschedule Decision?"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "YOUR_CALENDAR_ID",
+          "mode": "list",
+          "cachedResultName": "Clinic Demo - Dr Test"
+        },
+        "start": "={{ $('Build Calendar Delete Context').first().json.new_starts_at }}",
+        "end": "={{ $('Build Calendar Delete Context').first().json.new_ends_at }}",
+        "additionalFields": {
+          "summary": "={{ `نوبت ${$('Build Calendar Delete Context').first().json.patient_name} - ${$('Build Calendar Delete Context').first().json.service_name}` }}",
+          "description": "={{ `شناسه نوبت: ${$('Build Calendar Delete Context').first().json.appointment_id}\\nپزشک: ${$('Build Calendar Delete Context').first().json.doctor_name}\\nخدمت: ${$('Build Calendar Delete Context').first().json.service_name}\\nوضعیت: جابه‌جاشده پس از تغییر برنامه پزشک\\nمنبع ثبت: منشی هوشمند` }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        1480,
+        -336
+      ],
+      "id": "3d0ccad7-7371-4efc-9a32-0fb96ecadeaa",
+      "name": "Create Replacement Calendar Event",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0dbe64c6-32d9-419d-9deb-928099654960",
+              "leftValue": "={{ Boolean($json.id) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1736,
+        -336
+      ],
+      "id": "44486c4a-af86-4e59-8638-2b5c43793564",
+      "name": "Was Replacement Calendar Event Created?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE appointments\nSET\n    google_calendar_event_id = $1,\n    updated_at = NOW()\nWHERE id = $2\nRETURNING\n    id AS appointment_id,\n    google_calendar_event_id;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.id,\n  $('Build Calendar Delete Context').first().json.appointment_id\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1992,
+        -432
+      ],
+      "id": "397cb7cd-4e2b-45a8-a9d5-52176bccf2c1",
+      "name": "Save Replacement Calendar Event ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "const db = $('Build Calendar Delete Context').first().json;\nconst saved = $json;\n\nreturn [\n  {\n    json: {\n      ...db,\n      success: true,\n      result: 'rescheduled',\n      message: 'زمان جایگزین ثبت و Google Calendar به‌روزرسانی شد.',\n      google_calendar_event_id:\n        saved.google_calendar_event_id ?? null,\n      calendar_sync_status:\n        db.old_calendar_delete_status === 'delete_failed'\n          ? 'recreated_old_delete_failed'\n          : 'recreated',\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2248,
+        -432
+      ],
+      "id": "504362cd-4e89-4b12-9f14-dfa5733f4fee",
+      "name": "Return Reschedule Decision Success"
+    },
+    {
+      "parameters": {
+        "jsCode": "const db = $('Build Calendar Delete Context').first().json;\n\nreturn [\n  {\n    json: {\n      ...db,\n      success: true,\n      result: 'rescheduled',\n      message: 'زمان جایگزین در دیتابیس ثبت شد، اما ساخت رویداد جدید Google Calendar ناموفق بود.',\n      google_calendar_event_id: null,\n      calendar_sync_status: 'create_failed',\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1992,
+        -240
+      ],
+      "id": "bcf65a3d-7aaa-441f-96f2-102e060015f5",
+      "name": "Return Reschedule Calendar Warning"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json;\n\nreturn [\n  {\n    json: {\n      ...data,\n      calendar_sync_status:\n        data.old_calendar_delete_status,\n      calendar_sync_message:\n        data.old_calendar_delete_status === 'delete_failed'\n          ? 'تصمیم بیمار در دیتابیس ثبت شد، اما حذف رویداد قدیمی تقویم نیاز به بررسی دارد.'\n          : data.old_calendar_delete_status === 'deleted'\n            ? 'رویداد قدیمی Google Calendar حذف شد.'\n            : 'برای این نوبت شناسه رویداد تقویم ثبت نشده بود.',\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1480,
+        -144
+      ],
+      "id": "c1d4d6dd-7430-48c7-abeb-79c9d20d654d",
+      "name": "Return Cancel or Waitlist Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      ...$json,\n      calendar_sync_status: 'not_required',\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        456,
+        -48
+      ],
+      "id": "e9a052ed-5331-4cb6-ab20-570d2fbb323f",
+      "name": "Return More Options Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      result: $json.result ?? 'decision_failed',\n      message: $json.message ?? 'تصمیم بیمار اعمال نشد.',\n      disruption_case_id: $json.disruption_case_id ?? null,\n      appointment_id: $json.appointment_id ?? null,\n      action: $json.action ?? null,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        80
+      ],
+      "id": "99c56ccc-5099-4f57-becd-de1f94d7861e",
+      "name": "Return Patient Decision Rejection"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      result: 'invalid_request',\n      message: 'اطلاعات تصمیم بیمار ناقص یا نامعتبر است.',\n      errors: $json.errors ?? [],\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -312,
+        176
+      ],
+      "id": "e31b3b41-7cb8-4302-935f-08fc3c7a35b2",
+      "name": "Return Patient Decision Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## پردازش تصمیم بیمار\n\nشناسه پرونده را از خروجی Workflow شماره 20 بردار.\n\n**decisionهای مجاز:**\n- `reschedule`: انتخاب یکی از گزینه‌ها؛ `option_number` الزامی است.\n- `more_options`: جست‌وجوی گزینه‌های جدید؛ نوبت فعلی تغییر نمی‌کند.\n- `cancel`: لغو نوبت.\n- `waitlist`: لغو نوبت قبلی و ورود بیمار به لیست انتظار با رضایت.\n\nبرای تست امن، مقدار پیش‌فرض روی `more_options` قرار گرفته است.",
+        "height": 390,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1540,
+        -320
+      ],
+      "id": "69d697a3-36b8-4e1d-ad03-99902fed41f0",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Patient Decision Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Patient Decision Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Patient Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Process Patient Decision": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Patient Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Patient Decision": {
+      "main": [
+        [
+          {
+            "node": "Is Patient Decision Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Patient Decision Valid?": {
+      "main": [
+        [
+          {
+            "node": "Apply Patient Decision in Database",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Patient Decision Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply Patient Decision in Database": {
+      "main": [
+        [
+          {
+            "node": "Was Patient Decision Applied?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Was Patient Decision Applied?": {
+      "main": [
+        [
+          {
+            "node": "Does Decision Need Calendar?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Patient Decision Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Does Decision Need Calendar?": {
+      "main": [
+        [
+          {
+            "node": "Return More Options Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Has Old Calendar Event?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Old Calendar Event?": {
+      "main": [
+        [
+          {
+            "node": "Delete Old Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Calendar Delete Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Old Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Build Calendar Delete Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Calendar Delete Context": {
+      "main": [
+        [
+          {
+            "node": "Is Reschedule Decision?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Reschedule Decision?": {
+      "main": [
+        [
+          {
+            "node": "Create Replacement Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Cancel or Waitlist Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Replacement Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Was Replacement Calendar Event Created?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Was Replacement Calendar Event Created?": {
+      "main": [
+        [
+          {
+            "node": "Save Replacement Calendar Event ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Reschedule Calendar Warning",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Replacement Calendar Event ID": {
+      "main": [
+        [
+          {
+            "node": "Return Reschedule Decision Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

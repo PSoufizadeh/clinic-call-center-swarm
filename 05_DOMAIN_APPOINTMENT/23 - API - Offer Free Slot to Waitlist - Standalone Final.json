@@ -1,0 +1,261 @@
+{
+  "name": "23 - API - Offer Free Slot to Waitlist - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "91a851ae-5926-4b06-aee1-06de4f0126e8",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "030e7ce5-1937-4c20-b2e0-53d64a436b70",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "60938273-574e-4242-9df5-12d3ca0443a0",
+              "name": "doctor_name",
+              "value": "دکتر آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "96e67b72-06a4-4ec3-8b01-a8e7ad15a234",
+              "name": "service_name",
+              "value": "ویزیت عمومی",
+              "type": "string"
+            },
+            {
+              "id": "be840524-bebc-42e7-b4a5-acddc8bb2a7f",
+              "name": "target_date",
+              "value": "2026-08-10",
+              "type": "string"
+            },
+            {
+              "id": "aa748ede-de59-455d-9be3-7e1ec6a99cbf",
+              "name": "start_time",
+              "value": "09:00",
+              "type": "string"
+            },
+            {
+              "id": "cbc4983a-3819-4e56-bd95-77367e39beeb",
+              "name": "offer_expiry_minutes",
+              "value": 30,
+              "type": "number"
+            },
+            {
+              "id": "d819eb7c-5ec7-4c33-ab98-bba352369746",
+              "name": "source",
+              "value": "assistant",
+              "type": "string"
+            },
+            {
+              "id": "380d924d-3bc4-47dd-8752-ca20762d188f",
+              "name": "confirm_offer",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "6494f43f-44a4-4592-a86b-261624089be1",
+      "name": "Manual Waitlist Offer Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/waitlist/offer-free-slot",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "d108d0c5-d716-4d30-805f-7521514bec61",
+      "name": "Webhook - Offer Free Slot to Waitlist"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst clinic_name = text(input.clinic_name);\nconst doctor_name = text(input.doctor_name);\nconst service_name = text(input.service_name);\nconst target_date = text(input.target_date);\nconst start_time = text(input.start_time);\nconst offer_expiry_minutes = Number(input.offer_expiry_minutes ?? 30);\nconst source = text(input.source || 'assistant');\nconst confirm_offer = toBoolean(input.confirm_offer);\n\nconst errors = [];\n\nfunction isRealIsoDate(value) {\n  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;\n\n  const [year, month, day] = value.split('-').map(Number);\n  const parsed = new Date(Date.UTC(year, month - 1, day));\n\n  return (\n    parsed.getUTCFullYear() === year &&\n    parsed.getUTCMonth() === month - 1 &&\n    parsed.getUTCDate() === day\n  );\n}\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (!doctor_name) {\n  errors.push({\n    field: 'doctor_name',\n    message: 'نام پزشک الزامی است.',\n  });\n}\n\nif (!service_name) {\n  errors.push({\n    field: 'service_name',\n    message: 'نام خدمت الزامی است.',\n  });\n}\n\nif (!isRealIsoDate(target_date)) {\n  errors.push({\n    field: 'target_date',\n    message: 'تاریخ باید معتبر و با قالب YYYY-MM-DD باشد.',\n  });\n}\n\nif (!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(start_time)) {\n  errors.push({\n    field: 'start_time',\n    message: 'ساعت باید با قالب HH:MM باشد.',\n  });\n}\n\nif (\n  !Number.isInteger(offer_expiry_minutes) ||\n  offer_expiry_minutes < 5 ||\n  offer_expiry_minutes > 1440\n) {\n  errors.push({\n    field: 'offer_expiry_minutes',\n    message: 'زمان اعتبار پیشنهاد باید یک عدد صحیح بین 5 و 1440 دقیقه باشد.',\n  });\n}\n\nif (!['assistant', 'secretary', 'admin', 'system'].includes(source)) {\n  errors.push({\n    field: 'source',\n    message: 'source باید assistant، secretary، admin یا system باشد.',\n  });\n}\n\nif (confirm_offer !== true) {\n  errors.push({\n    field: 'confirm_offer',\n    message: 'ارسال پیشنهاد باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [\n  {\n    json: {\n      clinic_name,\n      doctor_name,\n      service_name,\n      target_date,\n      start_time,\n      offer_expiry_minutes,\n      source,\n      confirm_offer,\n      validation_status: errors.length === 0 ? 'valid' : 'invalid',\n      errors,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "6bfbb795-7a7a-4fbb-913c-ba5a4a93b80e",
+      "name": "Normalize and Validate Waitlist Offer"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "12f5d870-1b3e-4876-ad9e-0adf86ab8b80",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "b87b3f23-7ca2-47ee-a074-a2af17df2c0b",
+      "name": "Is Waitlist Offer Request Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        $2::TEXT AS doctor_name,\n        $3::TEXT AS service_name,\n        $4::DATE AS target_date,\n        $5::TIME AS start_time,\n        LEAST(\n            GREATEST($6::INTEGER, 5),\n            1440\n        ) AS offer_expiry_minutes,\n        $7::TEXT AS source\n),\n\nexpired_offers AS (\n    UPDATE appointment_waitlist_offers offer\n\n    SET\n        status = 'expired',\n        responded_at = COALESCE(\n            offer.responded_at,\n            NOW()\n        ),\n        updated_at = NOW()\n\n    WHERE offer.status = 'offered'\n      AND offer.expires_at <= NOW()\n\n    RETURNING\n        offer.waitlist_id\n),\n\nreactivated_waitlists AS (\n    UPDATE appointment_waitlist waitlist\n\n    SET\n        status = 'active',\n        updated_at = NOW()\n\n    FROM expired_offers expired\n\n    WHERE waitlist.id = expired.waitlist_id\n      AND waitlist.status = 'offered'\n\n      AND NOT EXISTS (\n          SELECT 1\n          FROM appointment_waitlist_offers active_offer\n\n          WHERE active_offer.waitlist_id = waitlist.id\n            AND active_offer.status = 'offered'\n            AND active_offer.expires_at > NOW()\n      )\n\n    RETURNING waitlist.id\n),\n\nexpiry_barrier AS (\n    SELECT COUNT(*)::INTEGER AS reactivated_count\n    FROM reactivated_waitlists\n),\n\nslot_context AS (\n    SELECT\n        c.id AS clinic_id,\n        c.name AS clinic_name,\n        c.timezone,\n\n        d.id AS doctor_id,\n        d.full_name AS doctor_name,\n        d.buffer_minutes,\n\n        s.id AS service_id,\n        s.name AS service_name,\n        s.duration_minutes,\n\n        r.target_date,\n        r.start_time,\n        r.offer_expiry_minutes,\n        r.source,\n\n        slot.slot_start_local\n            AT TIME ZONE c.timezone\n            AS offered_starts_at,\n\n        (\n            slot.slot_start_local\n            + MAKE_INTERVAL(\n                mins => s.duration_minutes\n            )\n        ) AT TIME ZONE c.timezone\n            AS offered_ends_at\n\n    FROM request_data r\n\n    CROSS JOIN expiry_barrier barrier\n\n    INNER JOIN clinics c\n        ON c.name = r.clinic_name\n       AND c.is_active = TRUE\n\n    INNER JOIN doctors d\n        ON d.clinic_id = c.id\n       AND d.full_name = r.doctor_name\n       AND d.is_active = TRUE\n\n    INNER JOIN services s\n        ON s.clinic_id = c.id\n       AND s.name = r.service_name\n       AND s.is_active = TRUE\n\n    INNER JOIN doctor_schedules ds\n        ON ds.doctor_id = d.id\n       AND ds.is_active = TRUE\n\n       AND ds.weekday =\n            EXTRACT(\n                ISODOW FROM r.target_date\n            )::INTEGER\n\n       AND (\n            ds.valid_from IS NULL\n            OR ds.valid_from <= r.target_date\n       )\n\n       AND (\n            ds.valid_to IS NULL\n            OR ds.valid_to >= r.target_date\n       )\n\n    CROSS JOIN LATERAL GENERATE_SERIES(\n        r.target_date + ds.start_time,\n\n        r.target_date\n            + ds.end_time\n            - MAKE_INTERVAL(\n                mins => s.duration_minutes\n            ),\n\n        MAKE_INTERVAL(\n            mins =>\n                s.duration_minutes\n                + d.buffer_minutes\n        )\n    ) AS slot(slot_start_local)\n\n    WHERE slot.slot_start_local =\n          r.target_date + r.start_time\n\n    LIMIT 1\n),\n\nslot_state AS (\n    SELECT\n        sc.*,\n\n        (\n            sc.offered_starts_at <= NOW()\n        ) AS is_in_past,\n\n        EXISTS (\n            SELECT 1\n            FROM schedule_exceptions se\n\n            WHERE se.doctor_id = sc.doctor_id\n              AND se.is_active = TRUE\n              AND se.exception_type = 'unavailable'\n\n              AND se.starts_at <\n                    sc.offered_ends_at\n\n              AND se.ends_at >\n                    sc.offered_starts_at\n        ) AS is_blocked,\n\n        EXISTS (\n            SELECT 1\n            FROM appointments existing\n\n            WHERE existing.doctor_id =\n                  sc.doctor_id\n\n              AND existing.status IN (\n                  'pending',\n                  'confirmed'\n              )\n\n              AND existing.starts_at <\n                    sc.offered_ends_at\n\n              AND existing.ends_at >\n                    sc.offered_starts_at\n        ) AS has_appointment_conflict,\n\n        EXISTS (\n            SELECT 1\n            FROM appointment_waitlist_offers existing_offer\n\n            WHERE existing_offer.doctor_id =\n                  sc.doctor_id\n\n              AND existing_offer.status = 'offered'\n              AND existing_offer.expires_at > NOW()\n\n              AND existing_offer.offered_starts_at <\n                    sc.offered_ends_at\n\n              AND existing_offer.offered_ends_at >\n                    sc.offered_starts_at\n        ) AS has_active_offer_conflict\n\n    FROM slot_context sc\n),\n\neligible_candidate AS (\n    SELECT\n        waitlist.id AS waitlist_id,\n        waitlist.clinic_id,\n        waitlist.doctor_id,\n        waitlist.patient_id,\n        waitlist.service_id,\n        waitlist.original_appointment_id,\n        waitlist.disruption_case_id,\n        waitlist.priority,\n        waitlist.created_at AS waitlist_created_at,\n\n        patient.full_name AS patient_name,\n        patient.mobile,\n\n        ss.clinic_name,\n        ss.doctor_name,\n        ss.service_name,\n        ss.timezone,\n        ss.offered_starts_at,\n        ss.offered_ends_at,\n        ss.offer_expiry_minutes,\n        ss.source\n\n    FROM appointment_waitlist waitlist\n\n    INNER JOIN slot_state ss\n        ON ss.clinic_id = waitlist.clinic_id\n       AND ss.doctor_id = waitlist.doctor_id\n       AND ss.service_id = waitlist.service_id\n\n    INNER JOIN patients patient\n        ON patient.id = waitlist.patient_id\n\n    WHERE waitlist.status = 'active'\n\n      AND ss.is_in_past = FALSE\n      AND ss.is_blocked = FALSE\n      AND ss.has_appointment_conflict = FALSE\n      AND ss.has_active_offer_conflict = FALSE\n\n      AND (\n            waitlist.desired_from IS NULL\n            OR waitlist.desired_from <=\n               ss.offered_starts_at\n      )\n\n      AND (\n            waitlist.desired_to IS NULL\n            OR waitlist.desired_to >=\n               ss.offered_ends_at\n      )\n\n      AND NOT EXISTS (\n          SELECT 1\n          FROM appointment_waitlist_offers patient_offer\n\n          WHERE patient_offer.waitlist_id =\n                waitlist.id\n\n            AND patient_offer.status = 'offered'\n            AND patient_offer.expires_at > NOW()\n      )\n\n    ORDER BY\n        waitlist.priority ASC,\n        waitlist.created_at ASC,\n        waitlist.id ASC\n\n    FOR UPDATE OF waitlist SKIP LOCKED\n\n    LIMIT 1\n),\n\ninserted_offer AS (\n    INSERT INTO appointment_waitlist_offers (\n        waitlist_id,\n        doctor_id,\n        offer_token,\n\n        offered_starts_at,\n        offered_ends_at,\n\n        status,\n        offered_at,\n        expires_at,\n\n        source\n    )\n\n    SELECT\n        candidate.waitlist_id,\n        candidate.doctor_id,\n\n        MD5(\n            RANDOM()::TEXT\n            || CLOCK_TIMESTAMP()::TEXT\n            || candidate.waitlist_id::TEXT\n            || candidate.offered_starts_at::TEXT\n        ),\n\n        candidate.offered_starts_at,\n        candidate.offered_ends_at,\n\n        'offered',\n        NOW(),\n\n        NOW()\n        + MAKE_INTERVAL(\n            mins =>\n                candidate.offer_expiry_minutes\n        ),\n\n        candidate.source\n\n    FROM eligible_candidate candidate\n\n    ON CONFLICT DO NOTHING\n\n    RETURNING\n        id AS offer_id,\n        waitlist_id,\n        doctor_id,\n        offer_token,\n\n        offered_starts_at,\n        offered_ends_at,\n\n        status AS offer_status,\n        offered_at,\n        expires_at,\n        source\n),\n\nupdated_waitlist AS (\n    UPDATE appointment_waitlist waitlist\n\n    SET\n        status = 'offered',\n        updated_at = NOW()\n\n    FROM inserted_offer offer\n\n    WHERE waitlist.id = offer.waitlist_id\n      AND waitlist.status = 'active'\n\n    RETURNING\n        waitlist.id AS waitlist_id,\n        waitlist.status AS waitlist_status\n),\n\noffer_details AS (\n    SELECT\n        offer.offer_id,\n        offer.offer_token,\n        offer.offer_status,\n        offer.offered_at,\n        offer.expires_at,\n\n        candidate.waitlist_id,\n        candidate.patient_id,\n        candidate.patient_name,\n        candidate.mobile,\n\n        candidate.clinic_name,\n        candidate.doctor_name,\n        candidate.service_name,\n        candidate.timezone,\n\n        candidate.original_appointment_id,\n        candidate.disruption_case_id,\n        candidate.priority,\n\n        offer.offered_starts_at,\n        offer.offered_ends_at\n\n    FROM inserted_offer offer\n\n    INNER JOIN eligible_candidate candidate\n        ON candidate.waitlist_id =\n           offer.waitlist_id\n\n    INNER JOIN updated_waitlist updated\n        ON updated.waitlist_id =\n           offer.waitlist_id\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM slot_context\n        )\n            THEN FALSE\n\n        WHEN (\n            SELECT is_in_past\n            FROM slot_state\n        )\n            THEN FALSE\n\n        WHEN (\n            SELECT is_blocked\n            FROM slot_state\n        )\n            THEN FALSE\n\n        WHEN (\n            SELECT has_appointment_conflict\n            FROM slot_state\n        )\n            THEN FALSE\n\n        WHEN (\n            SELECT has_active_offer_conflict\n            FROM slot_state\n        )\n            THEN FALSE\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM eligible_candidate\n        )\n            THEN FALSE\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM offer_details\n        )\n            THEN TRUE\n\n        ELSE FALSE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM slot_context\n        )\n            THEN 'invalid_target_slot'\n\n        WHEN (\n            SELECT is_in_past\n            FROM slot_state\n        )\n            THEN 'target_time_in_past'\n\n        WHEN (\n            SELECT is_blocked\n            FROM slot_state\n        )\n            THEN 'target_time_blocked'\n\n        WHEN (\n            SELECT has_appointment_conflict\n            FROM slot_state\n        )\n            THEN 'slot_unavailable'\n\n        WHEN (\n            SELECT has_active_offer_conflict\n            FROM slot_state\n        )\n            THEN 'slot_already_offered'\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM eligible_candidate\n        )\n            THEN 'no_eligible_waitlist_patient'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM offer_details\n        )\n            THEN 'waitlist_offer_created'\n\n        ELSE 'offer_creation_conflict'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM slot_context\n        )\n            THEN 'زمان واردشده با برنامه کاری پزشک و خدمت انتخاب‌شده تطابق ندارد.'\n\n        WHEN (\n            SELECT is_in_past\n            FROM slot_state\n        )\n            THEN 'زمان پیشنهادی باید مربوط به آینده باشد.'\n\n        WHEN (\n            SELECT is_blocked\n            FROM slot_state\n        )\n            THEN 'این زمان در برنامه پزشک مسدود شده است.'\n\n        WHEN (\n            SELECT has_appointment_conflict\n            FROM slot_state\n        )\n            THEN 'این زمان توسط یک نوبت فعال اشغال شده است.'\n\n        WHEN (\n            SELECT has_active_offer_conflict\n            FROM slot_state\n        )\n            THEN 'این زمان در حال حاضر به بیمار دیگری پیشنهاد شده است.'\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM eligible_candidate\n        )\n            THEN 'بیمار واجد شرایطی در لیست انتظار برای این پزشک، خدمت و زمان پیدا نشد.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM offer_details\n        )\n            THEN 'زمان آزاد به اولین بیمار واجد شرایط در لیست انتظار پیشنهاد شد.'\n\n        ELSE 'در فاصله انتخاب بیمار تا ثبت پیشنهاد، وضعیت لیست انتظار یا زمان تغییر کرد.'\n    END AS message,\n\n    r.clinic_name,\n    r.doctor_name,\n    r.service_name,\n    r.target_date,\n    r.start_time,\n\n    (\n        SELECT offer_id\n        FROM offer_details\n    ) AS offer_id,\n\n    (\n        SELECT offer_token\n        FROM offer_details\n    ) AS offer_token,\n\n    (\n        SELECT waitlist_id\n        FROM offer_details\n    ) AS waitlist_id,\n\n    (\n        SELECT patient_id\n        FROM offer_details\n    ) AS patient_id,\n\n    (\n        SELECT patient_name\n        FROM offer_details\n    ) AS patient_name,\n\n    (\n        SELECT mobile\n        FROM offer_details\n    ) AS mobile,\n\n    (\n        SELECT original_appointment_id\n        FROM offer_details\n    ) AS original_appointment_id,\n\n    (\n        SELECT disruption_case_id\n        FROM offer_details\n    ) AS disruption_case_id,\n\n    (\n        SELECT priority\n        FROM offer_details\n    ) AS waitlist_priority,\n\n    (\n        SELECT TO_CHAR(\n            offered_starts_at\n            AT TIME ZONE timezone,\n            'YYYY-MM-DD'\n        )\n        FROM offer_details\n    ) AS offered_date,\n\n    (\n        SELECT TO_CHAR(\n            offered_starts_at\n            AT TIME ZONE timezone,\n            'HH24:MI'\n        )\n        FROM offer_details\n    ) AS offered_start_time,\n\n    (\n        SELECT TO_CHAR(\n            offered_ends_at\n            AT TIME ZONE timezone,\n            'HH24:MI'\n        )\n        FROM offer_details\n    ) AS offered_end_time,\n\n    (\n        SELECT expires_at\n        FROM offer_details\n    ) AS offer_expires_at,\n\n    r.offer_expiry_minutes,\n\n    CASE\n        WHEN EXISTS (\n            SELECT 1\n            FROM offer_details\n        )\n            THEN 'send_offer_to_patient'\n        ELSE 'none'\n    END AS next_action\n\nFROM request_data r;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.doctor_name,\n  $json.service_name,\n  $json.target_date,\n  $json.start_time,\n  $json.offer_expiry_minutes,\n  $json.source\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "8b6bd0db-067a-4a1f-966b-4a7349ebcaf3",
+      "name": "Offer Slot to Next Waitlist Patient"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      result: 'invalid_request',\n      message: 'اطلاعات درخواست پیشنهاد زمان ناقص یا نامعتبر است.',\n      next_action: 'none',\n      errors: $json.errors ?? [],\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "0514be2c-c9b5-4d26-99e5-70d78575437a",
+      "name": "Return Waitlist Offer Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## پیشنهاد زمان آزاد به لیست انتظار\n\n1. ابتدا Workflow شماره 22 را فقط یک‌بار اجرا کن.\n\n2. یک زمان واقعاً آزاد را وارد کن؛ Workflow دوباره برنامه پزشک، بازه‌های مسدود و نوبت‌های موجود را کنترل می‌کند.\n\n3. اولین بیمار واجد شرایط براساس `priority` و سپس زمان ورود به لیست انتخاب می‌شود.\n\n4. این Workflow نوبت را ثبت نمی‌کند؛ فقط یک پیشنهاد زمان‌دار ایجاد می‌کند.\n\n5. پاسخ بیمار در Workflow بعدی پردازش خواهد شد.",
+        "height": 380,
+        "width": 470
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1140,
+        -280
+      ],
+      "id": "4966f3c5-8f3f-4fab-9c0e-5aa8113d31e1",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Waitlist Offer Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Waitlist Offer Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Waitlist Offer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Offer Free Slot to Waitlist": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Waitlist Offer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Waitlist Offer": {
+      "main": [
+        [
+          {
+            "node": "Is Waitlist Offer Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Waitlist Offer Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Offer Slot to Next Waitlist Patient",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Waitlist Offer Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

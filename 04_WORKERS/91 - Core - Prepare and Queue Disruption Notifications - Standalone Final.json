@@ -1,0 +1,415 @@
+{
+  "name": "91 - Core - Prepare and Queue Disruption Notifications - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1300,
+        220
+      ],
+      "id": "6e07c6c8-afb4-46bd-beca-e0f0d01230e7",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ae057071-ba0a-4868-befb-bce1088b46f7",
+              "name": "exception_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "46a047a5-22fa-446e-8fe1-65c31a76e0f8",
+              "name": "options_per_patient",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "c968caf6-6edf-444c-ae26-9af99ea3b2e6",
+              "name": "search_days",
+              "value": 14,
+              "type": "number"
+            },
+            {
+              "id": "d9275f9b-a583-4a0a-8dc1-124c9f9b65ba",
+              "name": "channel",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "ebe9f664-e549-492d-a42f-558c41e708ae",
+              "name": "webhook_base_url",
+              "value": "http://localhost:5678/webhook",
+              "type": "string"
+            },
+            {
+              "id": "1f13d00f-5fe7-43c9-946b-afe4280d1042",
+              "name": "confirm_run",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1060,
+        220
+      ],
+      "id": "466cadb0-e800-4ee5-9c06-65ea9c6998e0",
+      "name": "Manual Disruption Messaging"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/communications/disruptions/prepare-and-queue",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1060,
+        -80
+      ],
+      "id": "34389d73-ab2d-495d-bebd-6a38d02bec77",
+      "name": "Webhook - Prepare and Queue Disruptions"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input=$json.body??$json;\nconst text=v=>v===null||v===undefined?'':String(v).trim();\nconst bool=v=>typeof v==='boolean'?v:['true','1','yes','on'].includes(text(v).toLowerCase());\n\nconst exception_id=Number(input.exception_id);\nconst options_per_patient=Number(input.options_per_patient??3);\nconst search_days=Number(input.search_days??14);\nconst channel=text(input.channel||'whatsapp').toLowerCase();\nconst webhook_base_url=text(input.webhook_base_url||'http://localhost:5678/webhook').replace(/\\/+$/,'');\nconst confirm_run=bool(input.confirm_run);\nconst errors=[];\n\nif(!Number.isInteger(exception_id)||exception_id<1)errors.push({field:'exception_id',message:'شناسه تغییر تقویم معتبر نیست.'});\nif(!Number.isInteger(options_per_patient)||options_per_patient<1||options_per_patient>5)errors.push({field:'options_per_patient',message:'تعداد گزینه‌ها باید بین 1 و 5 باشد.'});\nif(!Number.isInteger(search_days)||search_days<1||search_days>60)errors.push({field:'search_days',message:'بازه جست‌وجو معتبر نیست.'});\nif(!['whatsapp','sms','email','phone','web_push','in_app'].includes(channel))errors.push({field:'channel',message:'کانال معتبر نیست.'});\nif(!/^https?:\\/\\/.+/i.test(webhook_base_url))errors.push({field:'webhook_base_url',message:'آدرس Webhook معتبر نیست.'});\nif(confirm_run!==true)errors.push({field:'confirm_run',message:'اجرای فرایند باید تأیید شود.'});\n\nreturn [{json:{\n exception_id,options_per_patient,search_days,channel,webhook_base_url,\n prepare_url:`${webhook_base_url}/clinic/schedule-exceptions/prepare-affected-cases`,\n queue_url:`${webhook_base_url}/clinic/communications/messages/queue`,\n confirm_run,validation_status:errors.length?'invalid':'valid',errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -788,
+        64
+      ],
+      "id": "60c9e54b-8f81-41eb-88e6-2d91ebf1eeaa",
+      "name": "Normalize and Validate Disruption Messaging"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6eee5342-e789-4481-9141-b78f1b980524",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -548,
+        64
+      ],
+      "id": "2246a0b4-61df-4d5f-a327-8933f3617967",
+      "name": "Is Disruption Messaging Valid?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.prepare_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { exception_id:$json.exception_id,options_per_patient:$json.options_per_patient,search_days:$json.search_days,confirm_prepare:true } }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -292,
+        -48
+      ],
+      "id": "4cd1ad63-5c85-410c-bd47-3058a596a9f7",
+      "name": "Prepare Affected Appointment Cases",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response=$json??{};\nconst cases=Array.isArray(response.disruption_cases)?response.disruption_cases:[];\nconst cfg=$('Normalize and Validate Disruption Messaging').first().json;\n\nif(!cases.length){\n  return [{json:{\n    success:true,has_case:false,\n    result:response.result||'no_affected_appointments',\n    exception_id:cfg.exception_id,\n    disruption_case_count:Number(response.disruption_case_count||0)\n  }}];\n}\n\nreturn cases.map(item=>({json:{\n  ...item,has_case:true,\n  clinic_name:response.clinic_name||'',\n  exception_id:cfg.exception_id,\n  channel:cfg.channel,\n  webhook_base_url:cfg.webhook_base_url,\n  queue_url:cfg.queue_url\n}}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -36,
+        -48
+      ],
+      "id": "096c9291-5105-4b17-a9b8-0018c9cfd44e",
+      "name": "Expand Disruption Cases"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "42837309-480a-4b5c-a9c7-3fa9b66e2c6f",
+              "leftValue": "={{ $json.has_case === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        220,
+        -48
+      ],
+      "id": "c9818671-e393-48cf-bb51-cd07bc9b0e32",
+      "name": "Is There an Affected Appointment?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item=$json;\nconst slots=Array.isArray(item.proposed_slots)?item.proposed_slots:[];\nconst slotLines=slots.slice(0,5).map((slot,index)=>{\n  const date=slot.date||slot.target_date||slot.appointment_date||'';\n  const start=slot.start_time||slot.starts_at||'';\n  return `${index+1}) ${date} ${start}`.trim();\n});\n\nconst message=[\n  `به‌دلیل تغییر فوری در برنامه ${item.doctor_name}، نوبت قبلی شما نیازمند بازتنظیم است.`,\n  `خدمت: ${item.service_name}`,\n  `زمان قبلی: ${item.original_appointment_date} ساعت ${item.original_start_time}`,\n  '',\n  slotLines.length?'زمان‌های جایگزین پیشنهادی:':'در حال حاضر زمان جایگزین قطعی در دسترس نیست.',\n  ...slotLines,\n  '',\n  'لطفاً انتخاب خود یا درخواست تماس با منشی را اعلام کنید.',\n  `کد پرونده جابه‌جایی: ${item.disruption_case_id}`\n].join('\\n');\n\nreturn [{json:{\n  queue_url:item.queue_url,\n  disruption_case_id:Number(item.disruption_case_id),\n  appointment_id:Number(item.appointment_id),\n  queue_payload:{\n    clinic_name:item.clinic_name,\n    mobile:item.mobile,\n    channel:item.channel,\n    purpose:'appointment_update',\n    message_type:'interactive',\n    template_code:'appointment_disruption_notice',\n    language:'fa',\n    subject:'',\n    message_text:message,\n    payload:{\n      exception_id:item.exception_id,\n      disruption_case_id:Number(item.disruption_case_id),\n      appointment_id:Number(item.appointment_id),\n      original_appointment_date:item.original_appointment_date,\n      original_start_time:item.original_start_time,\n      proposed_slots:slots,\n      response_endpoint:'clinic/disruptions/process-patient-decision'\n    },\n    related_entity_type:'appointment',\n    related_entity_id:Number(item.appointment_id),\n    request_reference:`disruption-case:${item.disruption_case_id}`,\n    idempotency_key:`disruption-case:${item.disruption_case_id}:initial-notice`,\n    priority:8,\n    scheduled_at:new Date().toISOString(),\n    max_attempts:6,\n    webhook_base_url:item.webhook_base_url,\n    confirm_queue:true\n  }\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        476,
+        -144
+      ],
+      "id": "3910807c-ec0a-461d-b2aa-fa270c5dab98",
+      "name": "Build Disruption Notification"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.queue_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.queue_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        732,
+        -144
+      ],
+      "id": "8c3da506-610e-4b12-96f6-56da6b7cab5b",
+      "name": "Queue Disruption Notification",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const original=$('Build Disruption Notification').item.json;\nreturn [{json:{\n  success:$json.success===true,\n  result:$json.result||'queue_result_unknown',\n  disruption_case_id:original.disruption_case_id,\n  appointment_id:original.appointment_id,\n  outbound_message_id:$json.outbound_message_id??null,\n  message_status:$json.message_status??null,\n  permission_decision:$json.permission_decision??null\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        988,
+        -144
+      ],
+      "id": "fb564d9c-258c-4174-98fa-610b3d3f4bb6",
+      "name": "Return Disruption Queue Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'تنظیمات اطلاع‌رسانی تغییر تقویم نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -292,
+        176
+      ],
+      "id": "e29bc367-3bcf-40d1-98ea-a7d686ed8df8",
+      "name": "Return Disruption Messaging Error"
+    },
+    {
+      "parameters": {
+        "content": "## اتصال تغییر فوری تقویم به موتور پیام\n\nWorkflow 20 پرونده‌های تحت تأثیر و زمان‌های جایگزین را می‌سازد.\n\nبرای هر بیمار یک پیام با اولویت بالا صف می‌شود.",
+        "height": 350,
+        "width": 510
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1540,
+        -280
+      ],
+      "id": "80532fc5-d505-40f0-9683-feb914b39053",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Disruption Messaging",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Disruption Messaging": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Disruption Messaging",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Prepare and Queue Disruptions": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Disruption Messaging",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Disruption Messaging": {
+      "main": [
+        [
+          {
+            "node": "Is Disruption Messaging Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Disruption Messaging Valid?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Affected Appointment Cases",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Disruption Messaging Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Affected Appointment Cases": {
+      "main": [
+        [
+          {
+            "node": "Expand Disruption Cases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand Disruption Cases": {
+      "main": [
+        [
+          {
+            "node": "Is There an Affected Appointment?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is There an Affected Appointment?": {
+      "main": [
+        [
+          {
+            "node": "Build Disruption Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Build Disruption Notification": {
+      "main": [
+        [
+          {
+            "node": "Queue Disruption Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queue Disruption Notification": {
+      "main": [
+        [
+          {
+            "node": "Return Disruption Queue Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

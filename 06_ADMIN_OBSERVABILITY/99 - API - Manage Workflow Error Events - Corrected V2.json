@@ -1,0 +1,273 @@
+{
+  "name": "99 - API - Manage Workflow Error Events - Corrected V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "493c121b-b7f0-40b5-87c5-2c97e5cbaca5",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "219a326f-eded-45a0-8587-82bd4f9abe22",
+              "name": "action",
+              "value": "list",
+              "type": "string"
+            },
+            {
+              "id": "015509c2-b072-415a-aa10-ae3b456de1b3",
+              "name": "clinic_name",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "6d2faf28-7147-4f64-bd60-deb1227ab10d",
+              "name": "error_event_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "01d37669-c4fc-453a-85cd-43c2f2162925",
+              "name": "error_fingerprint",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "d7b8ccc9-0162-4583-a1b1-dbb23d6394a0",
+              "name": "status_filter",
+              "value": "open",
+              "type": "string"
+            },
+            {
+              "id": "938ea912-85d3-4cd7-8500-f64ee27d20b8",
+              "name": "severity_filter",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "ed872374-4c69-4bd0-895d-d99fc53215e7",
+              "name": "actor_name",
+              "value": "مدیر سیستم",
+              "type": "string"
+            },
+            {
+              "id": "81e7740a-a3b3-4341-ac1b-5c57cc9e391e",
+              "name": "resolution_note",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "557b35ee-78a0-4a78-96e3-45a69a90f9ac",
+              "name": "limit",
+              "value": 50,
+              "type": "number"
+            },
+            {
+              "id": "10be7926-e694-4219-b92b-f1c9741e1895",
+              "name": "confirm_action",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "979e1790-29c1-4d5b-a3d8-adfcd5a0fe06",
+      "name": "Manual Error Management"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/operations/errors/manage",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "19aba9bc-0ba5-4bf9-bafb-99c0a173e35b",
+      "name": "Webhook - Manage Workflow Errors"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst action = text(input.action || 'list').toLowerCase();\nconst clinic_name = text(input.clinic_name);\nconst error_event_id = Number(input.error_event_id ?? 0);\nconst error_fingerprint = text(input.error_fingerprint);\nconst status_filter = text(input.status_filter || 'open').toLowerCase();\nconst severity_filter = text(input.severity_filter).toLowerCase();\nconst actor_name = text(input.actor_name);\nconst resolution_note = text(input.resolution_note);\nconst limit = Number(input.limit ?? 50);\nconst confirm_action = bool(input.confirm_action);\n\nconst actions = [\n  'list',\n  'get',\n  'acknowledge',\n  'resolve',\n  'ignore',\n  'reopen',\n];\n\nconst statuses = [\n  'all',\n  'open',\n  'acknowledged',\n  'resolved',\n  'ignored',\n];\n\nconst severities = [\n  '',\n  'warning',\n  'error',\n  'critical',\n];\n\nconst errors = [];\n\nif (!actions.includes(action)) {\n  errors.push({\n    field: 'action',\n    message: 'اقدام معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(error_event_id) ||\n  error_event_id < 0\n) {\n  errors.push({\n    field: 'error_event_id',\n    message: 'شناسه خطا معتبر نیست.',\n  });\n}\n\nif (\n  ['get', 'acknowledge', 'resolve', 'ignore', 'reopen'].includes(action) &&\n  error_event_id < 1 &&\n  !error_fingerprint\n) {\n  errors.push({\n    field: 'error_reference',\n    message: 'شناسه خطا یا fingerprint الزامی است.',\n  });\n}\n\nif (!statuses.includes(status_filter)) {\n  errors.push({\n    field: 'status_filter',\n    message: 'فیلتر وضعیت معتبر نیست.',\n  });\n}\n\nif (!severities.includes(severity_filter)) {\n  errors.push({\n    field: 'severity_filter',\n    message: 'فیلتر شدت معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(limit) ||\n  limit < 1 ||\n  limit > 500\n) {\n  errors.push({\n    field: 'limit',\n    message: 'Limit باید بین 1 و 500 باشد.',\n  });\n}\n\nif (\n  ['acknowledge', 'resolve', 'ignore', 'reopen'].includes(action) &&\n  !actor_name\n) {\n  errors.push({\n    field: 'actor_name',\n    message: 'نام انجام‌دهنده الزامی است.',\n  });\n}\n\nif (\n  ['resolve', 'ignore'].includes(action) &&\n  !resolution_note\n) {\n  errors.push({\n    field: 'resolution_note',\n    message: 'توضیح نتیجه الزامی است.',\n  });\n}\n\nif (\n  action !== 'list' &&\n  action !== 'get' &&\n  confirm_action !== true\n) {\n  errors.push({\n    field: 'confirm_action',\n    message: 'تغییر وضعیت خطا باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    action,\n    clinic_name,\n    error_event_id,\n    error_fingerprint,\n    status_filter,\n    severity_filter,\n    actor_name,\n    resolution_note,\n    limit,\n    confirm_action,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "bb749c03-24aa-4207-8f69-860b1ed4d365",
+      "name": "Normalize and Validate Error Management"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a924c269-2ab2-4fb3-8694-a1f1e461e285",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "4a57eb3f-1678-4841-a4a2-058b5f9aa4bd",
+      "name": "Is Error Management Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS action,\n        NULLIF($2::TEXT, '') AS clinic_name,\n        NULLIF($3::BIGINT, 0) AS error_event_id,\n        NULLIF($4::TEXT, '') AS error_fingerprint,\n        $5::TEXT AS status_filter,\n        NULLIF($6::TEXT, '') AS severity_filter,\n        NULLIF($7::TEXT, '') AS actor_name,\n        NULLIF($8::TEXT, '') AS resolution_note,\n        $9::INTEGER AS result_limit\n),\n\nscope AS (\n    SELECT\n        request.*,\n        clinic.id AS clinic_id\n    FROM request_data request\n    LEFT JOIN clinics clinic\n        ON clinic.name = request.clinic_name\n       AND clinic.is_active = TRUE\n),\n\ntarget_error AS (\n    SELECT error_event.*\n    FROM workflow_error_events error_event\n    CROSS JOIN scope scope_row\n    WHERE (\n            (\n                scope_row.error_event_id IS NOT NULL\n                AND error_event.id =\n                    scope_row.error_event_id\n            )\n            OR (\n                scope_row.error_event_id IS NULL\n                AND scope_row.error_fingerprint IS NOT NULL\n                AND error_event.error_fingerprint =\n                    scope_row.error_fingerprint\n            )\n          )\n      AND (\n            scope_row.clinic_name IS NULL\n            OR error_event.clinic_id =\n               scope_row.clinic_id\n          )\n    ORDER BY error_event.id\n    LIMIT 1\n),\n\nupdated_error AS (\n    UPDATE workflow_error_events error_event\n    SET\n        status = CASE scope_row.action\n            WHEN 'acknowledge'\n                THEN 'acknowledged'\n            WHEN 'resolve'\n                THEN 'resolved'\n            WHEN 'ignore'\n                THEN 'ignored'\n            WHEN 'reopen'\n                THEN 'open'\n            ELSE error_event.status\n        END,\n\n        acknowledged_by = CASE\n            WHEN scope_row.action = 'acknowledge'\n                THEN scope_row.actor_name\n            WHEN scope_row.action = 'reopen'\n                THEN NULL\n            ELSE error_event.acknowledged_by\n        END,\n\n        acknowledged_at = CASE\n            WHEN scope_row.action = 'acknowledge'\n                THEN NOW()\n            WHEN scope_row.action = 'reopen'\n                THEN NULL\n            ELSE error_event.acknowledged_at\n        END,\n\n        resolved_by = CASE\n            WHEN scope_row.action IN (\n                'resolve',\n                'ignore'\n            )\n                THEN scope_row.actor_name\n            WHEN scope_row.action = 'reopen'\n                THEN NULL\n            ELSE error_event.resolved_by\n        END,\n\n        resolution_note = CASE\n            WHEN scope_row.action IN (\n                'resolve',\n                'ignore'\n            )\n                THEN scope_row.resolution_note\n            WHEN scope_row.action = 'reopen'\n                THEN NULL\n            ELSE error_event.resolution_note\n        END,\n\n        resolved_at = CASE\n            WHEN scope_row.action IN (\n                'resolve',\n                'ignore'\n            )\n                THEN NOW()\n            WHEN scope_row.action = 'reopen'\n                THEN NULL\n            ELSE error_event.resolved_at\n        END,\n\n        updated_at = NOW()\n\n    FROM scope scope_row\n    WHERE error_event.id = (\n            SELECT id\n            FROM target_error\n          )\n      AND scope_row.action IN (\n            'acknowledge',\n            'resolve',\n            'ignore',\n            'reopen'\n          )\n    RETURNING error_event.*\n),\n\nlist_rows AS (\n    SELECT\n        error_event.id,\n        error_event.error_fingerprint,\n        error_event.clinic_id,\n        error_event.workflow_name,\n        error_event.workflow_id,\n        error_event.execution_id,\n        error_event.node_name,\n        error_event.error_type,\n        error_event.error_message,\n        error_event.severity,\n        error_event.retryable,\n        error_event.status,\n        error_event.occurrence_count,\n        error_event.first_occurred_at,\n        error_event.last_occurred_at,\n        error_event.acknowledged_by,\n        error_event.acknowledged_at,\n        error_event.resolved_by,\n        error_event.resolution_note,\n        error_event.resolved_at\n    FROM workflow_error_events error_event\n    CROSS JOIN scope scope_row\n    WHERE scope_row.action = 'list'\n      AND (\n            scope_row.clinic_name IS NULL\n            OR error_event.clinic_id =\n               scope_row.clinic_id\n          )\n      AND (\n            scope_row.status_filter = 'all'\n            OR error_event.status =\n               scope_row.status_filter\n          )\n      AND (\n            scope_row.severity_filter IS NULL\n            OR error_event.severity =\n               scope_row.severity_filter\n          )\n    ORDER BY\n        CASE error_event.severity\n            WHEN 'critical' THEN 1\n            WHEN 'error' THEN 2\n            ELSE 3\n        END,\n        error_event.last_occurred_at DESC\n    LIMIT (\n        SELECT result_limit\n        FROM request_data\n    )\n),\n\nselected_row AS (\n    SELECT target_error.*\n    FROM target_error\n    CROSS JOIN request_data request\n    WHERE request.action = 'get'\n\n    UNION ALL\n\n    SELECT updated_error.*\n    FROM updated_error\n)\n\nSELECT\n    CASE\n        WHEN request.clinic_name IS NOT NULL\n         AND NOT EXISTS (\n            SELECT 1\n            FROM scope\n            WHERE clinic_id IS NOT NULL\n         )\n            THEN FALSE\n\n        WHEN request.action IN (\n            'get',\n            'acknowledge',\n            'resolve',\n            'ignore',\n            'reopen'\n        )\n         AND NOT EXISTS (\n            SELECT 1\n            FROM target_error\n         )\n            THEN FALSE\n\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN request.clinic_name IS NOT NULL\n         AND NOT EXISTS (\n            SELECT 1\n            FROM scope\n            WHERE clinic_id IS NOT NULL\n         )\n            THEN 'clinic_not_found'\n\n        WHEN request.action IN (\n            'get',\n            'acknowledge',\n            'resolve',\n            'ignore',\n            'reopen'\n        )\n         AND NOT EXISTS (\n            SELECT 1\n            FROM target_error\n         )\n            THEN 'workflow_error_not_found'\n\n        WHEN request.action = 'acknowledge'\n            THEN 'workflow_error_acknowledged'\n\n        WHEN request.action = 'resolve'\n            THEN 'workflow_error_resolved'\n\n        WHEN request.action = 'ignore'\n            THEN 'workflow_error_ignored'\n\n        WHEN request.action = 'reopen'\n            THEN 'workflow_error_reopened'\n\n        WHEN request.action = 'get'\n            THEN 'workflow_error_loaded'\n\n        ELSE 'workflow_errors_listed'\n    END AS result,\n\n    (\n        SELECT TO_JSONB(selected_row)\n        FROM selected_row\n        LIMIT 1\n    ) AS error_event,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                TO_JSONB(list_rows)\n            )\n            FROM list_rows\n        ),\n        '[]'::JSONB\n    ) AS error_events,\n\n    COALESCE(\n        (\n            SELECT COUNT(*)\n            FROM list_rows\n        ),\n        0\n    ) AS error_event_count\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.action,\n  $json.clinic_name,\n  $json.error_event_id,\n  $json.error_fingerprint,\n  $json.status_filter,\n  $json.severity_filter,\n  $json.actor_name,\n  $json.resolution_note,\n  $json.limit\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "a4450a16-2fec-43ae-a5bf-80dc146b887a",
+      "name": "Manage Workflow Error Event"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات مدیریت خطا نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "e943ba9d-e4df-4679-b727-dcf7a5219a4b",
+      "name": "Return Error Management Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## مدیریت خطاهای ثبت‌شده\n\nاقدام‌ها:\n- list\n- get\n- acknowledge\n- resolve\n- ignore\n- reopen\n\nResolve و Ignore نیازمند توضیح هستند.\n\nاصلاح V2:\n- Clinic Not Found دیگر به Scope سراسری تبدیل نمی‌شود.\n- Clinic Isolation برای error_event_id و error_fingerprint اعمال می‌شود.\n- اولویت OR/AND در target_error اصلاح شده است.",
+        "height": 360,
+        "width": 510
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -280
+      ],
+      "id": "2fee26e5-cbbc-4e5d-b141-31a69535aed3",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Error Management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Error Management": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Error Management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Manage Workflow Errors": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Error Management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Error Management": {
+      "main": [
+        [
+          {
+            "node": "Is Error Management Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Error Management Valid?": {
+      "main": [
+        [
+          {
+            "node": "Manage Workflow Error Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Error Management Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

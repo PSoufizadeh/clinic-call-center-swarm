@@ -1,0 +1,67 @@
+{
+  "name": "37 - DB - Add Medication Support Cases",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "0ea407e5-15a4-44d1-b14c-2ed73ef3b946",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "ALTER TABLE human_handoff_tasks\n    DROP CONSTRAINT IF EXISTS human_handoff_tasks_source_type_check;\n\nALTER TABLE human_handoff_tasks\n    ADD CONSTRAINT human_handoff_tasks_source_type_check\n    CHECK (\n        source_type IN (\n            'appointment_confirmation',\n            'disruption_case',\n            'waitlist_offer',\n            'appointment',\n            'medication_case',\n            'manual'\n        )\n    );\n\nCREATE TABLE IF NOT EXISTS medication_support_cases (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    patient_id BIGINT NOT NULL\n        REFERENCES patients(id)\n        ON DELETE CASCADE,\n\n    appointment_id BIGINT NOT NULL\n        REFERENCES appointments(id)\n        ON DELETE CASCADE,\n\n    medication_name TEXT,\n\n    issue_type TEXT NOT NULL\n        CHECK (\n            issue_type IN (\n                'how_to_take',\n                'missed_dose',\n                'side_effect',\n                'allergy_suspected',\n                'wrong_dose',\n                'interaction_question',\n                'refill_request',\n                'other'\n            )\n        ),\n\n    patient_message TEXT NOT NULL,\n\n    symptom_severity INTEGER\n        CHECK (\n            symptom_severity IS NULL\n            OR symptom_severity BETWEEN 0 AND 10\n        ),\n\n    has_breathing_difficulty BOOLEAN NOT NULL DEFAULT FALSE,\n    has_face_lip_tongue_swelling BOOLEAN NOT NULL DEFAULT FALSE,\n    has_fainting_or_seizure BOOLEAN NOT NULL DEFAULT FALSE,\n    has_chest_pain BOOLEAN NOT NULL DEFAULT FALSE,\n    overdose_possible BOOLEAN NOT NULL DEFAULT FALSE,\n    has_severe_bleeding BOOLEAN NOT NULL DEFAULT FALSE,\n\n    operational_risk_level TEXT NOT NULL\n        CHECK (\n            operational_risk_level IN (\n                'low',\n                'medium',\n                'high',\n                'urgent'\n            )\n        ),\n\n    needs_human_review BOOLEAN NOT NULL DEFAULT TRUE,\n\n    source_channel TEXT NOT NULL DEFAULT 'whatsapp'\n        CHECK (\n            source_channel IN (\n                'whatsapp',\n                'sms',\n                'phone',\n                'telegram',\n                'web',\n                'manual'\n            )\n        ),\n\n    consent_to_contact BOOLEAN NOT NULL DEFAULT FALSE,\n\n    status TEXT NOT NULL DEFAULT 'new'\n        CHECK (\n            status IN (\n                'new',\n                'in_review',\n                'awaiting_patient',\n                'escalated',\n                'resolved',\n                'closed'\n            )\n        ),\n\n    handoff_task_id BIGINT\n        REFERENCES human_handoff_tasks(id)\n        ON DELETE SET NULL,\n\n    assigned_to TEXT,\n\n    response_to_patient TEXT,\n    resolution_note TEXT,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    resolved_at TIMESTAMPTZ\n);\n\nCREATE INDEX IF NOT EXISTS idx_medication_cases_active\n    ON medication_support_cases(\n        status,\n        operational_risk_level,\n        created_at\n    )\n    WHERE status IN (\n        'new',\n        'in_review',\n        'awaiting_patient',\n        'escalated'\n    );\n\nCREATE INDEX IF NOT EXISTS idx_medication_cases_patient\n    ON medication_support_cases(\n        patient_id,\n        created_at DESC\n    );\n\nCREATE INDEX IF NOT EXISTS idx_medication_cases_appointment\n    ON medication_support_cases(\n        appointment_id,\n        created_at DESC\n    );\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار مدیریت سؤالات و مشکلات دارویی پس از مراجعه ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "8b402427-6c5d-433f-9866-c1da53b984b3",
+      "name": "Create Medication Support Structure"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nاین Workflow جدول `medication_support_cases` را ایجاد می‌کند و `medication_case` را به منابع مجاز صف انسانی اضافه می‌کند.\n\nاین ساختار برای ثبت سؤال، مشکل دارویی، سطح اولویت عملیاتی و نتیجه بررسی انسانی است.",
+        "height": 290,
+        "width": 450
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -540,
+        -250
+      ],
+      "id": "dc20c3b3-9846-4e80-99d8-b16380b5a693",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Medication Support Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

@@ -1,0 +1,67 @@
+{
+  "name": "43 - DB - Add Patient Feedback Cases",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "e5fb5f66-373a-4bbd-836e-b8dc3a46a5bc",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DO $$\nDECLARE\n    constraint_record RECORD;\nBEGIN\n    FOR constraint_record IN\n        SELECT\n            constraint_name\n        FROM information_schema.table_constraints\n        WHERE table_schema = 'public'\n          AND table_name = 'human_handoff_tasks'\n          AND constraint_type = 'CHECK'\n    LOOP\n        IF EXISTS (\n            SELECT 1\n            FROM pg_constraint constraint_item\n            INNER JOIN pg_class relation\n                ON relation.oid = constraint_item.conrelid\n            WHERE relation.relname = 'human_handoff_tasks'\n              AND constraint_item.conname =\n                  constraint_record.constraint_name\n              AND pg_get_constraintdef(\n                    constraint_item.oid\n                  ) ILIKE '%source_type%'\n        ) THEN\n            EXECUTE FORMAT(\n                'ALTER TABLE human_handoff_tasks DROP CONSTRAINT %I',\n                constraint_record.constraint_name\n            );\n        END IF;\n    END LOOP;\nEND\n$$;\n\nALTER TABLE human_handoff_tasks\n    ADD CONSTRAINT human_handoff_tasks_source_type_check\n    CHECK (\n        source_type IN (\n            'appointment_confirmation',\n            'disruption_case',\n            'waitlist_offer',\n            'appointment',\n            'medication_case',\n            'insurance_case',\n            'feedback_case',\n            'manual'\n        )\n    );\n\nCREATE TABLE IF NOT EXISTS patient_feedback_cases (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    patient_id BIGINT NOT NULL\n        REFERENCES patients(id)\n        ON DELETE CASCADE,\n\n    appointment_id BIGINT\n        REFERENCES appointments(id)\n        ON DELETE SET NULL,\n\n    feedback_type TEXT NOT NULL\n        CHECK (\n            feedback_type IN (\n                'complaint',\n                'suggestion',\n                'praise',\n                'service_feedback',\n                'other'\n            )\n        ),\n\n    category TEXT NOT NULL\n        CHECK (\n            category IN (\n                'reception',\n                'appointment',\n                'doctor',\n                'nursing',\n                'medication',\n                'billing_insurance',\n                'facility',\n                'communication',\n                'privacy',\n                'other'\n            )\n        ),\n\n    rating_overall INTEGER\n        CHECK (\n            rating_overall IS NULL\n            OR rating_overall BETWEEN 1 AND 5\n        ),\n\n    feedback_message TEXT NOT NULL,\n\n    has_safety_concern BOOLEAN NOT NULL DEFAULT FALSE,\n    has_privacy_concern BOOLEAN NOT NULL DEFAULT FALSE,\n    has_financial_dispute BOOLEAN NOT NULL DEFAULT FALSE,\n    staff_misconduct_reported BOOLEAN NOT NULL DEFAULT FALSE,\n\n    wants_response BOOLEAN NOT NULL DEFAULT FALSE,\n    consent_to_contact BOOLEAN NOT NULL DEFAULT FALSE,\n\n    source_channel TEXT NOT NULL DEFAULT 'whatsapp'\n        CHECK (\n            source_channel IN (\n                'whatsapp',\n                'sms',\n                'phone',\n                'telegram',\n                'web',\n                'manual'\n            )\n        ),\n\n    priority TEXT NOT NULL DEFAULT 'low'\n        CHECK (\n            priority IN (\n                'low',\n                'normal',\n                'high',\n                'urgent'\n            )\n        ),\n\n    status TEXT NOT NULL DEFAULT 'new'\n        CHECK (\n            status IN (\n                'new',\n                'in_review',\n                'awaiting_patient',\n                'escalated',\n                'resolved',\n                'closed'\n            )\n        ),\n\n    needs_human_review BOOLEAN NOT NULL DEFAULT FALSE,\n\n    handoff_task_id BIGINT\n        REFERENCES human_handoff_tasks(id)\n        ON DELETE SET NULL,\n\n    assigned_to TEXT,\n    response_to_patient TEXT,\n    resolution_note TEXT,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    resolved_at TIMESTAMPTZ\n);\n\nCREATE INDEX IF NOT EXISTS idx_feedback_cases_active\n    ON patient_feedback_cases(\n        status,\n        priority,\n        created_at\n    )\n    WHERE status IN (\n        'new',\n        'in_review',\n        'awaiting_patient',\n        'escalated'\n    );\n\nCREATE INDEX IF NOT EXISTS idx_feedback_cases_patient\n    ON patient_feedback_cases(\n        patient_id,\n        created_at DESC\n    );\n\nCREATE INDEX IF NOT EXISTS idx_feedback_cases_appointment\n    ON patient_feedback_cases(\n        appointment_id,\n        created_at DESC\n    )\n    WHERE appointment_id IS NOT NULL;\n\nCREATE INDEX IF NOT EXISTS idx_feedback_cases_category\n    ON patient_feedback_cases(\n        category,\n        feedback_type,\n        created_at DESC\n    );\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار ثبت و رسیدگی به شکایت، نظر و رضایت بیمار ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "bee98548-e34e-44d9-95e7-7c738b699ce2",
+      "name": "Create Patient Feedback Structure"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nاین Workflow جدول `patient_feedback_cases` را ایجاد می‌کند و `feedback_case` را به منابع صف انسانی اضافه می‌کند.\n\nساختار برای شکایت، پیشنهاد، تشکر، امتیاز رضایت، نگرانی ایمنی، حریم خصوصی و اختلاف مالی است.",
+        "height": 310,
+        "width": 470
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -550,
+        -260
+      ],
+      "id": "0df0c1f7-68b2-4f0e-b153-643dfbc76f4a",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Patient Feedback Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

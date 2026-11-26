@@ -1,0 +1,369 @@
+{
+  "name": "60 - API - Start Clinical Intake - Per Clinic Override V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "50d8be2d-1498-4652-a586-ad71ef54d12d",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d57cf822-d2ed-4927-9e9d-e584d217f1ac",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "bceaf991-1652-4d09-8e21-8bd3ee9b2776",
+              "name": "mobile",
+              "value": "09000000000",
+              "type": "string"
+            },
+            {
+              "id": "8fc7d5c4-eba1-4a80-8a46-71b5a53247e1",
+              "name": "appointment_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "0c959b67-0d93-4fcc-bdcd-53f9502a2795",
+              "name": "request_goal",
+              "value": "doctor_question",
+              "type": "string"
+            },
+            {
+              "id": "bd2da6fe-f809-4368-b424-25a1040c5c28",
+              "name": "symptom_category",
+              "value": "dental",
+              "type": "string"
+            },
+            {
+              "id": "8d934b6f-4f20-472f-b23f-3918548397a5",
+              "name": "chief_complaint",
+              "value": "دندانم درد می‌کند.",
+              "type": "string"
+            },
+            {
+              "id": "a565707a-d055-49f4-8ca8-0a904575ab98",
+              "name": "duration_text",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "7a27047b-2195-46c6-99d7-e545208ba442",
+              "name": "severity",
+              "value": -1,
+              "type": "number"
+            },
+            {
+              "id": "1b4fa72a-f990-4c96-ada7-04eb3dfe3c7a",
+              "name": "age_group",
+              "value": "adult",
+              "type": "string"
+            },
+            {
+              "id": "42387f3c-c2e6-4c86-bd00-d96ed0abac75",
+              "name": "pregnancy_possible",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "3c3145e5-8395-4d2f-98b3-ae8e76c43854",
+              "name": "is_worsening",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "c49a468f-0134-40a3-93d0-78bc82a8275a",
+              "name": "difficulty_breathing",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "d4eb0d4c-f76c-4c9b-a59c-b3d5ff9c324b",
+              "name": "chest_pain",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "71225a68-e15c-4212-b775-e924301d0b10",
+              "name": "loss_of_consciousness",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "e7e91695-2721-4c9b-9587-23144d8d3982",
+              "name": "seizure",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "8e7f31c3-cbff-497b-9a01-e1f51fa7a999",
+              "name": "severe_bleeding",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "13bed1b9-2152-4b08-b823-0d99aed5b335",
+              "name": "possible_overdose",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "cff5200a-26b2-426e-99e4-a79221c356eb",
+              "name": "pregnancy_emergency_concern",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "04790ddd-b8be-49cb-995e-7cd12a42cda7",
+              "name": "self_harm_or_violence",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "fdc74ee5-2693-4612-aa10-325adb570d74",
+              "name": "chronic_conditions",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "23d24153-0aa8-4191-bdd5-4c43fd4b2578",
+              "name": "current_medications",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "fc2b4b48-5a29-4bc8-9951-fcdb51dfb4c0",
+              "name": "source_channel",
+              "value": "web",
+              "type": "string"
+            },
+            {
+              "id": "582c5ae6-5661-4ddc-9484-0d41c7dba405",
+              "name": "consent_to_contact",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "285a717c-939f-41d2-9017-557baf79add0",
+              "name": "consent_to_store_health_information",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "afd57ad4-b0d1-4887-b1fa-d1e9100e3f48",
+              "name": "disclaimer_acknowledged",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "fb840b18-e83b-4fb8-9f29-c567b0099366",
+              "name": "confirm_submission",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "1cec56e9-d843-4786-a4c3-7bd86135bddb",
+      "name": "Manual Clinical Intake Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/clinical-intake/start",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "eba2e316-e4d0-413e-89fe-37c57dc9bd95",
+      "name": "Webhook - Start Clinical Intake"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst toNullableBoolean = (value) => {\n  if (\n    value === null ||\n    value === undefined ||\n    text(value) === ''\n  ) {\n    return null;\n  }\n\n  if (typeof value === 'boolean') return value;\n\n  const normalized = text(value).toLowerCase();\n\n  if (['true', '1', 'yes', 'on', 'بله', 'بلی', 'آره', 'نعم'].includes(normalized)) {\n    return true;\n  }\n\n  if (['false', '0', 'no', 'off', 'خیر', 'نه', 'لا'].includes(normalized)) {\n    return false;\n  }\n\n  return 'invalid';\n};\n\nconst clinic_name = text(input.clinic_name);\nconst mobile = text(input.mobile);\nconst appointment_id = Number(input.appointment_id ?? 0);\nconst request_goal = text(input.request_goal || 'doctor_question').toLowerCase();\nconst symptom_category = text(input.symptom_category || 'general').toLowerCase();\nconst chief_complaint = text(input.chief_complaint);\nconst duration_text = text(input.duration_text);\n\nconst severityRaw = Number(input.severity);\nconst severity =\n  Number.isInteger(severityRaw) && severityRaw >= 0\n    ? severityRaw\n    : null;\n\nconst age_group = text(input.age_group || 'unknown').toLowerCase();\n\nconst nullableBooleanFields = [\n  'pregnancy_possible',\n  'is_worsening',\n  'difficulty_breathing',\n  'chest_pain',\n  'loss_of_consciousness',\n  'seizure',\n  'severe_bleeding',\n  'possible_overdose',\n  'pregnancy_emergency_concern',\n  'self_harm_or_violence',\n];\n\nconst nullableBooleans = {};\nconst errors = [];\n\nfor (const field of nullableBooleanFields) {\n  const value = toNullableBoolean(input[field]);\n\n  if (value === 'invalid') {\n    errors.push({\n      field,\n      message: `${field} باید true، false یا خالی باشد.`,\n    });\n  } else {\n    nullableBooleans[field] = value;\n  }\n}\n\nconst chronic_conditions = text(input.chronic_conditions);\nconst current_medications = text(input.current_medications);\nconst source_channel = text(input.source_channel || 'web').toLowerCase();\n\nconst consent_to_contact = toBoolean(input.consent_to_contact);\nconst consent_to_store_health_information =\n  toBoolean(input.consent_to_store_health_information);\nconst disclaimer_acknowledged =\n  toBoolean(input.disclaimer_acknowledged);\nconst confirm_submission = toBoolean(input.confirm_submission);\n\nconst goals = [\n  'service_selection',\n  'urgency_guidance',\n  'appointment_guidance',\n  'pre_visit_question',\n  'doctor_question',\n  'other',\n];\n\nconst ageGroups = [\n  'child',\n  'adolescent',\n  'adult',\n  'older_adult',\n  'unknown',\n];\n\nconst channels = [\n  'web',\n  'whatsapp',\n  'sms',\n  'phone',\n  'telegram',\n  'manual',\n  'api',\n];\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (!/^\\+?[0-9]{8,15}$/.test(mobile)) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(appointment_id) ||\n  appointment_id < 0\n) {\n  errors.push({\n    field: 'appointment_id',\n    message: 'شناسه نوبت معتبر نیست.',\n  });\n}\n\nif (!goals.includes(request_goal)) {\n  errors.push({\n    field: 'request_goal',\n    message: 'هدف درخواست معتبر نیست.',\n  });\n}\n\nif (!symptom_category) {\n  errors.push({\n    field: 'symptom_category',\n    message: 'دسته کلی موضوع الزامی است.',\n  });\n}\n\nif (!chief_complaint) {\n  errors.push({\n    field: 'chief_complaint',\n    message: 'شرح اصلی درخواست یا مشکل الزامی است.',\n  });\n}\n\nif (chief_complaint.length > 8000) {\n  errors.push({\n    field: 'chief_complaint',\n    message: 'شرح مشکل بیش از حد طولانی است.',\n  });\n}\n\nif (\n  severity !== null &&\n  (severity < 0 || severity > 10)\n) {\n  errors.push({\n    field: 'severity',\n    message: 'شدت باید عددی بین صفر و ده باشد.',\n  });\n}\n\nif (!ageGroups.includes(age_group)) {\n  errors.push({\n    field: 'age_group',\n    message: 'گروه سنی معتبر نیست.',\n  });\n}\n\nif (!channels.includes(source_channel)) {\n  errors.push({\n    field: 'source_channel',\n    message: 'کانال ورودی معتبر نیست.',\n  });\n}\n\nif (consent_to_store_health_information !== true) {\n  errors.push({\n    field: 'consent_to_store_health_information',\n    message: 'رضایت برای نگهداری اطلاعات سلامت الزامی است.',\n  });\n}\n\nif (disclaimer_acknowledged !== true) {\n  errors.push({\n    field: 'disclaimer_acknowledged',\n    message: 'تأیید محدودیت پاسخ‌گویی غیرتشخیصی الزامی است.',\n  });\n}\n\nif (confirm_submission !== true) {\n  errors.push({\n    field: 'confirm_submission',\n    message: 'ثبت درخواست باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    clinic_name,\n    mobile,\n    appointment_id,\n    request_goal,\n    symptom_category,\n    chief_complaint,\n    duration_text,\n    severity,\n    age_group,\n    ...nullableBooleans,\n    chronic_conditions,\n    current_medications,\n    source_channel,\n    consent_to_contact,\n    consent_to_store_health_information,\n    disclaimer_acknowledged,\n    confirm_submission,\n    validation_status: errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "611581ef-7347-4ff7-bc60-e55498c0b78a",
+      "name": "Normalize and Validate Clinical Intake"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fbb76fc7-7b15-4bd9-b482-27dc0b904c93",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "f43521a3-5f2c-4c14-98ce-d6f6635167cd",
+      "name": "Is Clinical Intake Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        $2::TEXT AS mobile,\n        NULLIF($3::BIGINT, 0) AS appointment_id,\n        $4::TEXT AS request_goal,\n        $5::TEXT AS symptom_category,\n        $6::TEXT AS chief_complaint,\n        NULLIF($7::TEXT, '') AS duration_text,\n        $8::INTEGER AS severity,\n        $9::TEXT AS age_group,\n        $10::BOOLEAN AS pregnancy_possible,\n        $11::BOOLEAN AS is_worsening,\n        $12::BOOLEAN AS difficulty_breathing,\n        $13::BOOLEAN AS chest_pain,\n        $14::BOOLEAN AS loss_of_consciousness,\n        $15::BOOLEAN AS seizure,\n        $16::BOOLEAN AS severe_bleeding,\n        $17::BOOLEAN AS possible_overdose,\n        $18::BOOLEAN AS pregnancy_emergency_concern,\n        $19::BOOLEAN AS self_harm_or_violence,\n        NULLIF($20::TEXT, '') AS chronic_conditions,\n        NULLIF($21::TEXT, '') AS current_medications,\n        $22::TEXT AS source_channel,\n        $23::BOOLEAN AS consent_to_contact,\n        $24::BOOLEAN AS consent_to_store_health_information,\n        $25::BOOLEAN AS disclaimer_acknowledged\n),\n\nclinic_context AS (\n    SELECT\n        clinic.id AS clinic_id,\n        clinic.name AS clinic_name,\n        request.*\n    FROM request_data request\n    INNER JOIN clinics clinic\n        ON clinic.name = request.clinic_name\n       AND clinic.is_active = TRUE\n    ORDER BY clinic.id\n    LIMIT 1\n),\n\npatient_context AS (\n    SELECT\n        patient.id AS patient_id,\n        patient.full_name AS patient_name\n    FROM patients patient\n    INNER JOIN clinic_context context\n        ON patient.clinic_id = context.clinic_id\n       AND patient.mobile = context.mobile\n    LIMIT 1\n),\n\nappointment_context AS (\n    SELECT\n        appointment.id AS appointment_id,\n        appointment.service_id,\n        appointment.patient_id\n    FROM appointments appointment\n    INNER JOIN clinic_context context\n        ON appointment.clinic_id = context.clinic_id\n       AND appointment.id = context.appointment_id\n    LEFT JOIN patients appointment_patient\n        ON appointment_patient.id = appointment.patient_id\n    WHERE context.appointment_id IS NOT NULL\n      AND (\n            appointment_patient.mobile = context.mobile\n            OR appointment.patient_id = (\n                SELECT patient_id\n                FROM patient_context\n            )\n          )\n    LIMIT 1\n),\n\nvalid_context AS (\n    SELECT context.*\n    FROM clinic_context context\n    WHERE context.appointment_id IS NULL\n       OR EXISTS (\n            SELECT 1\n            FROM appointment_context\n       )\n),\n\nrisk_context AS (\n    SELECT\n        context.*,\n\n        CASE\n            WHEN context.difficulty_breathing = TRUE\n              OR context.chest_pain = TRUE\n              OR context.loss_of_consciousness = TRUE\n              OR context.seizure = TRUE\n              OR context.severe_bleeding = TRUE\n              OR context.possible_overdose = TRUE\n              OR context.pregnancy_emergency_concern = TRUE\n              OR context.self_harm_or_violence = TRUE\n              OR context.severity = 10\n                THEN 'urgent'\n\n            WHEN context.severity >= 8\n              OR context.is_worsening = TRUE\n                THEN 'high'\n\n            WHEN context.severity >= 5\n              OR context.pregnancy_possible = TRUE\n                THEN 'medium'\n\n            ELSE 'low'\n        END AS risk_level\n\n    FROM valid_context context\n),\n\ninserted_case AS (\n    INSERT INTO clinical_intake_cases (\n        clinic_id,\n        patient_id,\n        appointment_id,\n        service_id,\n        contact_mobile,\n        source_channel,\n        request_goal,\n        symptom_category,\n        chief_complaint,\n        duration_text,\n        severity,\n        age_group,\n        pregnancy_possible,\n        is_worsening,\n        difficulty_breathing,\n        chest_pain,\n        loss_of_consciousness,\n        seizure,\n        severe_bleeding,\n        possible_overdose,\n        pregnancy_emergency_concern,\n        self_harm_or_violence,\n        chronic_conditions,\n        current_medications,\n        risk_level,\n        recommended_route,\n        status,\n        consent_to_contact,\n        consent_to_store_health_information,\n        disclaimer_acknowledged\n    )\n    SELECT\n        context.clinic_id,\n        (\n            SELECT patient_id\n            FROM patient_context\n        ),\n        (\n            SELECT appointment_id\n            FROM appointment_context\n        ),\n        (\n            SELECT service_id\n            FROM appointment_context\n        ),\n        context.mobile,\n        context.source_channel,\n        context.request_goal,\n        context.symptom_category,\n        context.chief_complaint,\n        context.duration_text,\n        context.severity,\n        context.age_group,\n        context.pregnancy_possible,\n        context.is_worsening,\n        context.difficulty_breathing,\n        context.chest_pain,\n        context.loss_of_consciousness,\n        context.seizure,\n        context.severe_bleeding,\n        context.possible_overdose,\n        context.pregnancy_emergency_concern,\n        context.self_harm_or_violence,\n        context.chronic_conditions,\n        context.current_medications,\n        context.risk_level,\n\n        CASE context.risk_level\n            WHEN 'urgent'\n                THEN 'emergency_services'\n            WHEN 'high'\n                THEN 'urgent_clinic'\n            WHEN 'medium'\n                THEN 'doctor_review'\n            ELSE 'routine_appointment'\n        END,\n\n        CASE\n            WHEN context.risk_level IN ('urgent', 'high')\n                THEN 'escalated'\n            ELSE 'collecting_information'\n        END,\n\n        context.consent_to_contact,\n        context.consent_to_store_health_information,\n        context.disclaimer_acknowledged\n\n    FROM risk_context context\n    RETURNING *\n),\n\nupserted_handoff AS (\n    INSERT INTO human_handoff_tasks (\n        clinic_id,\n        patient_id,\n        appointment_id,\n        task_type,\n        source_type,\n        source_record_id,\n        priority,\n        status,\n        reason,\n        due_at\n    )\n    SELECT\n        intake.clinic_id,\n        intake.patient_id,\n        intake.appointment_id,\n        'clinical_triage',\n        'clinical_intake',\n        intake.id,\n\n        CASE intake.risk_level\n            WHEN 'urgent' THEN 'urgent'\n            WHEN 'high' THEN 'high'\n            ELSE 'normal'\n        END,\n\n        'open',\n\n        CONCAT(\n            'بررسی پرسش تخصصی اولیه. سطح ریسک: ',\n            intake.risk_level,\n            '. شرح بیمار: ',\n            intake.chief_complaint\n        ),\n\n        CASE intake.risk_level\n            WHEN 'urgent' THEN NOW()\n            WHEN 'high' THEN NOW() + INTERVAL '1 hour'\n            ELSE NOW() + INTERVAL '4 hours'\n        END\n\n    FROM inserted_case intake\n    WHERE intake.risk_level IN ('urgent', 'high')\n\n    ON CONFLICT (\n        source_type,\n        source_record_id,\n        task_type\n    )\n    WHERE source_record_id IS NOT NULL\n\n    DO UPDATE SET\n        priority = EXCLUDED.priority,\n        reason = EXCLUDED.reason,\n        due_at = LEAST(\n            COALESCE(\n                human_handoff_tasks.due_at,\n                EXCLUDED.due_at\n            ),\n            EXCLUDED.due_at\n        ),\n        status = CASE\n            WHEN human_handoff_tasks.status = 'cancelled'\n                THEN 'open'\n            ELSE human_handoff_tasks.status\n        END,\n        updated_at = NOW()\n\n    RETURNING *\n),\n\nlinked_case AS (\n    UPDATE clinical_intake_cases intake\n    SET\n        handoff_task_id = handoff.id,\n        updated_at = NOW()\n    FROM upserted_handoff handoff\n    WHERE intake.id = handoff.source_record_id\n    RETURNING intake.*\n),\n\napplicable_templates AS (\n    SELECT DISTINCT ON (\n        intake.id,\n        template.question_code\n    )\n        intake.id AS intake_id,\n        template.id AS question_template_id,\n        template.question_code,\n        template.question_text_fa,\n        template.question_text_en,\n        template.question_text_ar,\n        template.answer_type,\n        template.options_json,\n        template.required,\n        template.maps_to_case_field,\n        template.risk_if_true,\n        template.sort_order,\n        template.clinic_id\n\n    FROM inserted_case intake\n\n    INNER JOIN clinical_intake_question_templates template\n        ON template.active = TRUE\n       AND (\n            template.clinic_id IS NULL\n            OR template.clinic_id = intake.clinic_id\n       )\n       AND LOWER(template.symptom_category) IN (\n            'general',\n            LOWER(intake.symptom_category)\n       )\n\n    ORDER BY\n        intake.id,\n        template.question_code,\n        CASE\n            WHEN template.clinic_id = intake.clinic_id\n                THEN 0\n            ELSE 1\n        END,\n        template.id DESC\n),\n\nquestion_candidates AS (\n    SELECT\n        template.question_template_id,\n        template.question_code,\n\n        CASE\n            WHEN intake.source_channel = 'api'\n                THEN COALESCE(\n                    template.question_text_en,\n                    template.question_text_fa\n                )\n            ELSE template.question_text_fa\n        END AS question_text,\n\n        template.answer_type,\n        template.options_json,\n        template.required,\n        template.risk_if_true,\n        template.sort_order\n\n    FROM inserted_case intake\n\n    INNER JOIN applicable_templates template\n        ON template.intake_id = intake.id\n\n    WHERE\n        CASE template.maps_to_case_field\n            WHEN 'duration_text'\n                THEN intake.duration_text IS NULL\n            WHEN 'severity'\n                THEN intake.severity IS NULL\n            WHEN 'pregnancy_possible'\n                THEN intake.pregnancy_possible IS NULL\n            WHEN 'is_worsening'\n                THEN intake.is_worsening IS NULL\n            WHEN 'difficulty_breathing'\n                THEN intake.difficulty_breathing IS NULL\n            WHEN 'chest_pain'\n                THEN intake.chest_pain IS NULL\n            WHEN 'loss_of_consciousness'\n                THEN intake.loss_of_consciousness IS NULL\n            WHEN 'seizure'\n                THEN intake.seizure IS NULL\n            WHEN 'severe_bleeding'\n                THEN intake.severe_bleeding IS NULL\n            WHEN 'possible_overdose'\n                THEN intake.possible_overdose IS NULL\n            WHEN 'pregnancy_emergency_concern'\n                THEN intake.pregnancy_emergency_concern IS NULL\n            WHEN 'self_harm_or_violence'\n                THEN intake.self_harm_or_violence IS NULL\n            WHEN 'chronic_conditions'\n                THEN intake.chronic_conditions IS NULL\n            WHEN 'current_medications'\n                THEN intake.current_medications IS NULL\n            ELSE TRUE\n        END\n\n    ORDER BY\n        template.required DESC,\n        template.sort_order,\n        template.question_template_id\n\n    LIMIT 8\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN FALSE\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM clinic_context\n            WHERE appointment_id IS NOT NULL\n        )\n        AND NOT EXISTS (\n            SELECT 1\n            FROM appointment_context\n        )\n            THEN FALSE\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM inserted_case\n        )\n            THEN FALSE\n\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN 'clinic_not_found'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM clinic_context\n            WHERE appointment_id IS NOT NULL\n        )\n        AND NOT EXISTS (\n            SELECT 1\n            FROM appointment_context\n        )\n            THEN 'appointment_not_found_or_mobile_mismatch'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM inserted_case\n            WHERE risk_level = 'urgent'\n        )\n            THEN 'urgent_clinical_intake_created'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM inserted_case\n            WHERE risk_level = 'high'\n        )\n            THEN 'high_risk_clinical_intake_created'\n\n        ELSE 'clinical_intake_created'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN 'کلینیک مطابق ورودی پیدا نشد.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM clinic_context\n            WHERE appointment_id IS NOT NULL\n        )\n        AND NOT EXISTS (\n            SELECT 1\n            FROM appointment_context\n        )\n            THEN 'نوبت مطابق شماره موبایل و کلینیک پیدا نشد.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM inserted_case\n            WHERE risk_level = 'urgent'\n        )\n            THEN 'درخواست ثبت شد. علائم اعلام‌شده نیازمند ارزیابی فوری هستند؛ بیمار نباید منتظر پاسخ خودکار بماند.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM inserted_case\n            WHERE risk_level = 'high'\n        )\n            THEN 'درخواست ثبت و برای بررسی سریع انسانی ارجاع شد.'\n\n        ELSE 'درخواست ثبت شد و سؤالات تکمیلی آماده‌اند.'\n    END AS message,\n\n    (\n        SELECT id\n        FROM inserted_case\n    ) AS clinical_intake_case_id,\n\n    (\n        SELECT patient_id\n        FROM inserted_case\n    ) AS patient_id,\n\n    (\n        SELECT risk_level\n        FROM inserted_case\n    ) AS risk_level,\n\n    (\n        SELECT recommended_route\n        FROM inserted_case\n    ) AS recommended_route,\n\n    (\n        SELECT status\n        FROM inserted_case\n    ) AS case_status,\n\n    (\n        SELECT id\n        FROM upserted_handoff\n    ) AS handoff_task_id,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'question_template_id',\n                        question_template_id,\n                    'question_code',\n                        question_code,\n                    'question_text',\n                        question_text,\n                    'answer_type',\n                        answer_type,\n                    'options',\n                        options_json,\n                    'required',\n                        required,\n                    'risk_if_true',\n                        risk_if_true\n                )\n                ORDER BY sort_order, question_template_id\n            )\n            FROM question_candidates\n        ),\n        '[]'::JSONB\n    ) AS next_questions,\n\n    CASE\n        WHEN EXISTS (\n            SELECT 1\n            FROM inserted_case\n            WHERE risk_level = 'urgent'\n        )\n            THEN 'seek_immediate_local_emergency_help_and_human_review'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM inserted_case\n            WHERE risk_level = 'high'\n        )\n            THEN 'human_review'\n\n        ELSE 'collect_intake_answers'\n    END AS next_action\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.mobile,\n  $json.appointment_id,\n  $json.request_goal,\n  $json.symptom_category,\n  $json.chief_complaint,\n  $json.duration_text,\n  $json.severity,\n  $json.age_group,\n  $json.pregnancy_possible,\n  $json.is_worsening,\n  $json.difficulty_breathing,\n  $json.chest_pain,\n  $json.loss_of_consciousness,\n  $json.seizure,\n  $json.severe_bleeding,\n  $json.possible_overdose,\n  $json.pregnancy_emergency_concern,\n  $json.self_harm_or_violence,\n  $json.chronic_conditions,\n  $json.current_medications,\n  $json.source_channel,\n  $json.consent_to_contact,\n  $json.consent_to_store_health_information,\n  $json.disclaimer_acknowledged\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "3a4fc8b7-cf0a-4a32-be6d-2c972dcd3f9c",
+      "name": "Create Clinical Intake Case"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: 'invalid_request',\n    message: 'اطلاعات شروع پرسش تخصصی ناقص یا نامعتبر است.',\n    errors: $json.errors ?? [],\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "27f51620-358b-40b7-bc20-ff4a7d197757",
+      "name": "Return Clinical Intake Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## شروع پرسش تخصصی اولیه\n\nاین Workflow اطلاعات اولیه را ثبت و فقط سطح ارجاع عملیاتی را مشخص می‌کند.\n\nکارهایی که انجام نمی‌دهد:\n- تشخیص پزشکی\n- تجویز یا تغییر درمان\n- اطمینان‌دادن پزشکی بدون بررسی متخصص\n\nدر ریسک بالا یا فوری، تسک انسانی ساخته می‌شود. در سایر موارد، سؤالات تکمیلی از دیتابیس برگردانده می‌شوند.",
+        "height": 430,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -320
+      ],
+      "id": "d9f14c70-3000-45d4-9be7-762b2a7829d7",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Clinical Intake Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Clinical Intake Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Clinical Intake",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Start Clinical Intake": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Clinical Intake",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Clinical Intake": {
+      "main": [
+        [
+          {
+            "node": "Is Clinical Intake Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Clinical Intake Valid?": {
+      "main": [
+        [
+          {
+            "node": "Create Clinical Intake Case",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Clinical Intake Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

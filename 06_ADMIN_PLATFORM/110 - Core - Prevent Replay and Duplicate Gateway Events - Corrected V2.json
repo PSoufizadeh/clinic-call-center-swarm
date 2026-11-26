@@ -1,0 +1,279 @@
+{
+  "name": "110 - Core - Prevent Replay and Duplicate Gateway Events - Corrected V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "27e66225-f4f9-4f7b-8c7e-2cb46f7f106d",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "71ea35da-90ef-45b9-846b-82248c9d7ca7",
+              "name": "clinic_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "34d82315-2100-4487-adba-335015980adf",
+              "name": "client_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "77209414-87bb-4a3b-9665-2f77896c6e99",
+              "name": "gateway_event_type",
+              "value": "inbound_message",
+              "type": "string"
+            },
+            {
+              "id": "e4e0ec4b-e2b3-4e32-8f18-661946075a94",
+              "name": "channel",
+              "value": "webchat",
+              "type": "string"
+            },
+            {
+              "id": "d4732c00-cde5-42d3-981f-333d01f11f2a",
+              "name": "external_event_id",
+              "value": "event-001",
+              "type": "string"
+            },
+            {
+              "id": "520f7dc7-7deb-4220-89c4-449feecade26",
+              "name": "external_message_id",
+              "value": "message-001",
+              "type": "string"
+            },
+            {
+              "id": "65c2534d-963b-4e54-8109-dd87ab401e72",
+              "name": "request_hash",
+              "value": "hash-001",
+              "type": "string"
+            },
+            {
+              "id": "a88ff13e-fe25-4e8a-b8ba-d09036a42ae5",
+              "name": "source_ip",
+              "value": "127.0.0.1",
+              "type": "string"
+            },
+            {
+              "id": "4ed06639-1307-4cb5-a86b-e7e8bfba05c4",
+              "name": "request_timestamp",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "18a85f54-437c-495e-8b9f-9aecc3a8dc2b",
+              "name": "replay_window_seconds",
+              "value": 86400,
+              "type": "number"
+            },
+            {
+              "id": "66906160-cdea-47fa-9854-802696dae8f9",
+              "name": "confirm_check",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "6650f51b-1f71-4191-a293-58cae3a8276a",
+      "name": "Manual Replay Check"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/gateway/security/replay-check",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "a3181cdf-0a28-46e8-be89-ff666d67b6ca",
+      "name": "Webhook - Replay and Duplicate Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst hash = (value) => {\n  let current = 2166136261;\n\n  for (let index = 0; index < value.length; index++) {\n    current ^= value.charCodeAt(index);\n    current = Math.imul(current, 16777619);\n  }\n\n  return (current >>> 0)\n    .toString(16)\n    .padStart(8, '0');\n};\n\nconst clinic_id = Number(input.clinic_id ?? 0);\nconst client_id = Number(input.client_id ?? 0);\nconst gateway_event_type =\n  text(input.gateway_event_type).toLowerCase();\nconst channel = text(input.channel).toLowerCase();\nconst external_event_id =\n  text(input.external_event_id);\nconst external_message_id =\n  text(input.external_message_id);\nconst source_ip = text(input.source_ip);\nconst request_timestamp =\n  text(input.request_timestamp) ||\n  new Date().toISOString();\nconst replay_window_seconds =\n  Number(input.replay_window_seconds ?? 86400);\nconst confirm_check = bool(input.confirm_check);\n\nconst request_hash =\n  text(input.request_hash) ||\n  `req-${hash(JSON.stringify({\n    clinic_id,\n    client_id,\n    gateway_event_type,\n    channel,\n    external_event_id,\n    external_message_id,\n    request_timestamp,\n  }))}`;\n\nconst replay_key = [\n  clinic_id,\n  client_id,\n  gateway_event_type,\n  channel,\n  external_event_id,\n].join(':');\n\nconst errors = [];\n\nif (\n  !Number.isInteger(clinic_id) ||\n  clinic_id < 1\n) {\n  errors.push({\n    field: 'clinic_id',\n    message: 'شناسه کلینیک معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(client_id) ||\n  client_id < 1\n) {\n  errors.push({\n    field: 'client_id',\n    message: 'شناسه Gateway Client معتبر نیست.',\n  });\n}\n\nif (\n  !['inbound_message', 'delivery_status'].includes(\n    gateway_event_type\n  )\n) {\n  errors.push({\n    field: 'gateway_event_type',\n    message: 'نوع رویداد Gateway معتبر نیست.',\n  });\n}\n\nif (!channel) {\n  errors.push({\n    field: 'channel',\n    message: 'کانال الزامی است.',\n  });\n}\n\nif (!external_event_id) {\n  errors.push({\n    field: 'external_event_id',\n    message: 'شناسه خارجی رویداد الزامی است.',\n  });\n}\n\nif (Number.isNaN(Date.parse(request_timestamp))) {\n  errors.push({\n    field: 'request_timestamp',\n    message: 'زمان درخواست معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(replay_window_seconds) ||\n  replay_window_seconds < 60 ||\n  replay_window_seconds > 604800\n) {\n  errors.push({\n    field: 'replay_window_seconds',\n    message: 'Replay Window باید بین 60 و 604800 ثانیه باشد.',\n  });\n}\n\nif (confirm_check !== true) {\n  errors.push({\n    field: 'confirm_check',\n    message: 'بررسی Replay باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    clinic_id,\n    client_id,\n    gateway_event_type,\n    channel,\n    external_event_id,\n    external_message_id,\n    request_hash,\n    replay_key,\n    source_ip,\n    request_timestamp,\n    replay_window_seconds,\n    confirm_check,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "e2732429-e534-4227-88ff-214ed6b131be",
+      "name": "Normalize and Validate Replay Check"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fc601679-95e0-4751-8833-189fcfdd40e6",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "eaa04a68-3cfa-4401-855a-a1d3b59717f2",
+      "name": "Is Replay Check Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS clinic_id,\n        $2::BIGINT AS client_id,\n        $3::TEXT AS gateway_event_type,\n        $4::TEXT AS channel,\n        $5::TEXT AS external_event_id,\n        NULLIF($6::TEXT, '') AS external_message_id,\n        $7::TEXT AS request_hash,\n        $8::TEXT AS replay_key,\n        NULLIF($9::TEXT, '') AS source_ip,\n        $10::TIMESTAMPTZ AS request_timestamp,\n        $11::INTEGER AS replay_window_seconds\n),\n\nclient_context AS (\n    SELECT\n        request.*,\n\n        client.id AS registered_client_id,\n        client.clinic_id AS registered_clinic_id,\n        client.channel AS registered_channel,\n        client.enabled AS client_enabled,\n\n        CASE\n            WHEN client.id IS NULL\n                THEN FALSE\n            ELSE TRUE\n        END AS client_exists,\n\n        CASE\n            WHEN client.id IS NOT NULL\n             AND client.clinic_id =\n                 request.clinic_id\n                THEN TRUE\n            ELSE FALSE\n        END AS client_belongs_to_clinic,\n\n        CASE\n            WHEN client.id IS NOT NULL\n             AND client.channel =\n                 request.channel\n                THEN TRUE\n            ELSE FALSE\n        END AS channel_matches\n\n    FROM request_data request\n    LEFT JOIN channel_gateway_clients client\n        ON client.id = request.client_id\n),\n\nfreshness AS (\n    SELECT\n        context.*,\n\n        CASE\n            WHEN context.request_timestamp <\n                 NOW() -\n                 MAKE_INTERVAL(\n                     secs =>\n                       context.replay_window_seconds\n                 )\n                THEN FALSE\n\n            WHEN context.request_timestamp >\n                 NOW() + INTERVAL '5 minutes'\n                THEN FALSE\n\n            ELSE TRUE\n        END AS timestamp_is_fresh\n\n    FROM client_context context\n),\n\ninserted_request AS (\n    INSERT INTO channel_gateway_requests (\n        clinic_id,\n        client_id,\n        gateway_event_type,\n        channel,\n        external_event_id,\n        external_message_id,\n        request_hash,\n        replay_key,\n        source_ip,\n        request_timestamp,\n        authentication_status,\n        rate_limit_status,\n        processing_status\n    )\n    SELECT\n        fresh.clinic_id,\n        fresh.client_id,\n        fresh.gateway_event_type,\n        fresh.channel,\n        fresh.external_event_id,\n        fresh.external_message_id,\n        fresh.request_hash,\n        fresh.replay_key,\n        fresh.source_ip,\n        fresh.request_timestamp,\n        'allowed',\n        'allowed',\n        'accepted'\n    FROM freshness fresh\n    WHERE fresh.client_exists = TRUE\n      AND fresh.client_belongs_to_clinic = TRUE\n      AND fresh.channel_matches = TRUE\n      AND fresh.client_enabled = TRUE\n      AND fresh.timestamp_is_fresh = TRUE\n    ON CONFLICT (replay_key)\n    DO NOTHING\n    RETURNING *\n),\n\nexisting_request AS (\n    SELECT request_row.*\n    FROM channel_gateway_requests request_row\n    INNER JOIN request_data request\n        ON request_row.replay_key =\n           request.replay_key\n    LIMIT 1\n),\n\nselected_request AS (\n    SELECT\n        inserted.*,\n        FALSE AS duplicate_event\n    FROM inserted_request inserted\n\n    UNION ALL\n\n    SELECT\n        existing.*,\n        TRUE AS duplicate_event\n    FROM existing_request existing\n    WHERE NOT EXISTS (\n        SELECT 1\n        FROM inserted_request\n    )\n\n    LIMIT 1\n)\n\nSELECT\n    CASE\n        WHEN freshness.client_exists = FALSE\n            THEN FALSE\n\n        WHEN freshness.client_belongs_to_clinic = FALSE\n            THEN FALSE\n\n        WHEN freshness.channel_matches = FALSE\n            THEN FALSE\n\n        WHEN freshness.client_enabled = FALSE\n            THEN FALSE\n\n        WHEN freshness.timestamp_is_fresh = FALSE\n            THEN FALSE\n\n        WHEN selected.duplicate_event = TRUE\n            THEN FALSE\n\n        WHEN selected.id IS NULL\n            THEN FALSE\n\n        ELSE TRUE\n    END AS allowed,\n\n    CASE\n        WHEN freshness.client_exists = FALSE\n            THEN 'gateway_client_not_found'\n\n        WHEN freshness.client_belongs_to_clinic = FALSE\n            THEN 'gateway_client_clinic_mismatch'\n\n        WHEN freshness.channel_matches = FALSE\n            THEN 'gateway_client_channel_mismatch'\n\n        WHEN freshness.client_enabled = FALSE\n            THEN 'gateway_client_disabled'\n\n        WHEN freshness.timestamp_is_fresh = FALSE\n            THEN 'request_timestamp_outside_replay_window'\n\n        WHEN selected.duplicate_event = TRUE\n            THEN 'duplicate_gateway_event'\n\n        WHEN selected.id IS NULL\n            THEN 'gateway_request_not_registered'\n\n        ELSE 'gateway_event_accepted'\n    END AS result,\n\n    selected.id AS gateway_request_id,\n\n    COALESCE(\n        selected.duplicate_event,\n        FALSE\n    ) AS duplicate_event,\n\n    freshness.timestamp_is_fresh,\n    freshness.replay_key,\n    freshness.request_hash,\n\n    freshness.client_exists,\n    freshness.client_belongs_to_clinic,\n    freshness.channel_matches,\n    COALESCE(\n        freshness.client_enabled,\n        FALSE\n    ) AS client_enabled,\n\n    selected.received_at AS first_received_at\n\nFROM freshness\nLEFT JOIN selected_request selected\n    ON TRUE;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_id,\n  $json.client_id,\n  $json.gateway_event_type,\n  $json.channel,\n  $json.external_event_id,\n  $json.external_message_id,\n  $json.request_hash,\n  $json.replay_key,\n  $json.source_ip,\n  $json.request_timestamp,\n  $json.replay_window_seconds\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "65850b91-d133-400f-9a2c-fe79271613fe",
+      "name": "Register Gateway Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{allowed:false,result:'invalid_request',message:'اطلاعات Replay Check نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "b2bb1279-038e-484a-84d9-8726a0f2394b",
+      "name": "Return Replay Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## Replay Protection — Corrected V2\n\nقبل از INSERT این موارد بررسی می‌شوند:\n- وجود Gateway Client\n- تعلق Client به کلینیک\n- تطابق کانال\n- فعال‌بودن Client\n- معتبر بودن Timestamp\n\nدر صورت نامعتبر بودن client_id، Workflow به‌جای خطای Foreign Key پاسخ gateway_client_not_found برمی‌گرداند.\n\nبرای تست دستی از شناسه‌ای استفاده کن که Workflow 112A در خروجی gateway_client.id برگردانده است.",
+        "height": 370,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -290
+      ],
+      "id": "291c3600-aaec-4f87-93bc-81cb58babaf7",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Replay Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Replay Check": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Replay Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Replay and Duplicate Check": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Replay Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Replay Check": {
+      "main": [
+        [
+          {
+            "node": "Is Replay Check Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Replay Check Valid?": {
+      "main": [
+        [
+          {
+            "node": "Register Gateway Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Replay Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

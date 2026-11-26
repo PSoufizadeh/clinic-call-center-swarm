@@ -1,0 +1,67 @@
+{
+  "name": "77 - DB - Add Patient Consents and Communication Preferences",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "63c6349f-a938-4064-9308-bfd914ca6a4a",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS patient_consents (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    patient_id BIGINT NOT NULL\n        REFERENCES patients(id)\n        ON DELETE CASCADE,\n\n    consent_type TEXT NOT NULL\n        CHECK (\n            consent_type IN (\n                'contact',\n                'profile_storage',\n                'document_storage',\n                'appointment_reminders',\n                'followup_messages',\n                'marketing_messages',\n                'satisfaction_surveys',\n                'data_processing'\n            )\n        ),\n\n    status TEXT NOT NULL DEFAULT 'pending'\n        CHECK (\n            status IN (\n                'pending',\n                'granted',\n                'revoked',\n                'expired'\n            )\n        ),\n\n    policy_version TEXT,\n    scope_json JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    source_channel TEXT NOT NULL DEFAULT 'api'\n        CHECK (\n            source_channel IN (\n                'web',\n                'whatsapp',\n                'telegram',\n                'sms',\n                'email',\n                'phone',\n                'manual',\n                'api',\n                'system'\n            )\n        ),\n\n    granted_at TIMESTAMPTZ,\n    revoked_at TIMESTAMPTZ,\n    expires_at TIMESTAMPTZ,\n\n    last_actor TEXT,\n    last_reason TEXT,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    UNIQUE (\n        clinic_id,\n        patient_id,\n        consent_type\n    )\n);\n\nCREATE TABLE IF NOT EXISTS patient_consent_events (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    patient_id BIGINT NOT NULL\n        REFERENCES patients(id)\n        ON DELETE CASCADE,\n\n    consent_id BIGINT\n        REFERENCES patient_consents(id)\n        ON DELETE SET NULL,\n\n    consent_type TEXT NOT NULL,\n\n    event_type TEXT NOT NULL\n        CHECK (\n            event_type IN (\n                'granted',\n                'revoked',\n                'expired',\n                'preference_changed',\n                'status_checked',\n                'imported'\n            )\n        ),\n\n    previous_status TEXT,\n    new_status TEXT,\n\n    actor_name TEXT NOT NULL,\n    source_channel TEXT NOT NULL DEFAULT 'api',\n\n    policy_version TEXT,\n    reason TEXT,\n    event_payload JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE TABLE IF NOT EXISTS patient_communication_preferences (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    patient_id BIGINT NOT NULL\n        REFERENCES patients(id)\n        ON DELETE CASCADE,\n\n    channel TEXT NOT NULL\n        CHECK (\n            channel IN (\n                'whatsapp',\n                'sms',\n                'email',\n                'phone',\n                'web_push',\n                'in_app'\n            )\n        ),\n\n    enabled BOOLEAN NOT NULL DEFAULT TRUE,\n\n    preferred_language TEXT NOT NULL DEFAULT 'fa'\n        CHECK (\n            preferred_language IN (\n                'fa',\n                'en',\n                'ar',\n                'unknown'\n            )\n        ),\n\n    timezone TEXT NOT NULL DEFAULT 'Asia/Baghdad',\n\n    quiet_hours_enabled BOOLEAN NOT NULL DEFAULT FALSE,\n    quiet_hours_start TIME,\n    quiet_hours_end TIME,\n\n    max_messages_per_week INTEGER\n        CHECK (\n            max_messages_per_week IS NULL\n            OR max_messages_per_week BETWEEN 1 AND 100\n        ),\n\n    metadata JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    updated_by TEXT,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    UNIQUE (\n        clinic_id,\n        patient_id,\n        channel\n    ),\n\n    CHECK (\n        quiet_hours_enabled = FALSE\n        OR (\n            quiet_hours_start IS NOT NULL\n            AND quiet_hours_end IS NOT NULL\n        )\n    )\n);\n\nCREATE TABLE IF NOT EXISTS communication_permission_checks (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    patient_id BIGINT\n        REFERENCES patients(id)\n        ON DELETE SET NULL,\n\n    channel TEXT NOT NULL,\n    purpose TEXT NOT NULL,\n\n    decision TEXT NOT NULL\n        CHECK (\n            decision IN (\n                'allowed',\n                'blocked',\n                'deferred',\n                'error'\n            )\n        ),\n\n    decision_reason TEXT NOT NULL,\n    next_allowed_at TIMESTAMPTZ,\n\n    consent_snapshot JSONB NOT NULL DEFAULT '{}'::JSONB,\n    preference_snapshot JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    request_reference TEXT,\n    checked_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE INDEX IF NOT EXISTS idx_patient_consents_current\n    ON patient_consents(\n        clinic_id,\n        patient_id,\n        consent_type,\n        status\n    );\n\nCREATE INDEX IF NOT EXISTS idx_patient_consent_events_recent\n    ON patient_consent_events(\n        patient_id,\n        created_at DESC\n    );\n\nCREATE INDEX IF NOT EXISTS idx_communication_preferences_patient\n    ON patient_communication_preferences(\n        clinic_id,\n        patient_id,\n        channel\n    );\n\nCREATE INDEX IF NOT EXISTS idx_permission_checks_recent\n    ON communication_permission_checks(\n        clinic_id,\n        patient_id,\n        checked_at DESC\n    );\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار رضایت بیمار، ترجیحات ارتباطی و ثبت کنترل مجوز پیام ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "2f5469f4-ba6d-4098-b40d-e88da83c9b38",
+      "name": "Create Consent and Preference Structures"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nساختارهای زیر ایجاد می‌شوند:\n- رضایت‌های جاری بیمار\n- تاریخچه تغییر رضایت\n- ترجیحات هر کانال\n- ثبت نتیجه بررسی مجوز ارسال پیام\n\nاین Migration جایگزین فیلدهای ساده پروفایل نمی‌شود؛ لایه متمرکز و قابل‌ممیزی روی آن‌ها می‌سازد.",
+        "height": 390,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -590,
+        -300
+      ],
+      "id": "5e71155e-7354-4a71-8e4f-50662e04198c",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Consent and Preference Structures",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

@@ -1,0 +1,67 @@
+{
+  "name": "70 - DB - Add Patient Profiles Documents and Previsit Guidance",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "1b2dfe6c-49e1-4fdb-b302-f30924970286",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS patient_profiles (\n    patient_id BIGINT PRIMARY KEY REFERENCES patients(id) ON DELETE CASCADE,\n    email TEXT,\n    date_of_birth DATE,\n    preferred_language TEXT NOT NULL DEFAULT 'fa'\n        CHECK (preferred_language IN ('fa','en','ar','unknown')),\n    emergency_contact_name TEXT,\n    emergency_contact_mobile TEXT,\n    address_text TEXT,\n    consent_to_contact BOOLEAN NOT NULL DEFAULT FALSE,\n    consent_to_store_profile BOOLEAN NOT NULL DEFAULT FALSE,\n    consent_to_store_documents BOOLEAN NOT NULL DEFAULT FALSE,\n    privacy_notice_version TEXT,\n    privacy_notice_accepted_at TIMESTAMPTZ,\n    profile_status TEXT NOT NULL DEFAULT 'active'\n        CHECK (profile_status IN ('active','inactive','merged','archived')),\n    notes TEXT,\n    metadata JSONB NOT NULL DEFAULT '{}'::JSONB,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE TABLE IF NOT EXISTS patient_profile_changes (\n    id BIGSERIAL PRIMARY KEY,\n    clinic_id BIGINT NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,\n    patient_id BIGINT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,\n    changed_by TEXT NOT NULL,\n    change_source TEXT NOT NULL DEFAULT 'api'\n        CHECK (change_source IN ('patient','secretary','doctor','admin','api','import','system')),\n    before_data JSONB NOT NULL DEFAULT '{}'::JSONB,\n    after_data JSONB NOT NULL DEFAULT '{}'::JSONB,\n    changed_fields JSONB NOT NULL DEFAULT '[]'::JSONB,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE TABLE IF NOT EXISTS patient_documents (\n    id BIGSERIAL PRIMARY KEY,\n    clinic_id BIGINT NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,\n    patient_id BIGINT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,\n    appointment_id BIGINT REFERENCES appointments(id) ON DELETE SET NULL,\n    document_type TEXT NOT NULL\n        CHECK (document_type IN (\n            'insurance_card','prescription','lab_result','imaging','referral',\n            'medical_report','consent_form','identification','pre_visit_form','other'\n        )),\n    source_channel TEXT NOT NULL DEFAULT 'web'\n        CHECK (source_channel IN ('web','whatsapp','telegram','email','manual','api')),\n    original_filename TEXT NOT NULL,\n    mime_type TEXT NOT NULL,\n    file_size_bytes BIGINT CHECK (file_size_bytes IS NULL OR file_size_bytes >= 0),\n    storage_provider TEXT NOT NULL DEFAULT 'external',\n    storage_key TEXT,\n    file_url TEXT,\n    checksum_sha256 TEXT,\n    status TEXT NOT NULL DEFAULT 'pending_review'\n        CHECK (status IN (\n            'uploaded','processing','pending_review','approved','rejected',\n            'reupload_required','archived','failed'\n        )),\n    extracted_text TEXT,\n    extraction_status TEXT NOT NULL DEFAULT 'not_requested'\n        CHECK (extraction_status IN ('not_requested','pending','completed','failed')),\n    contains_sensitive_health_information BOOLEAN NOT NULL DEFAULT TRUE,\n    consent_to_store BOOLEAN NOT NULL DEFAULT FALSE,\n    metadata JSONB NOT NULL DEFAULT '{}'::JSONB,\n    reviewed_by TEXT,\n    reviewed_at TIMESTAMPTZ,\n    review_note TEXT,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE UNIQUE INDEX IF NOT EXISTS uq_patient_document_checksum\nON patient_documents(clinic_id, patient_id, checksum_sha256)\nWHERE checksum_sha256 IS NOT NULL;\n\nCREATE TABLE IF NOT EXISTS patient_document_actions (\n    id BIGSERIAL PRIMARY KEY,\n    document_id BIGINT NOT NULL REFERENCES patient_documents(id) ON DELETE CASCADE,\n    action_type TEXT NOT NULL\n        CHECK (action_type IN (\n            'uploaded','claimed','processing_started','text_extracted',\n            'approved','rejected','reupload_requested','archived','failed'\n        )),\n    actor_name TEXT NOT NULL,\n    action_note TEXT,\n    action_metadata JSONB NOT NULL DEFAULT '{}'::JSONB,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE TABLE IF NOT EXISTS appointment_previsit_guidance (\n    id BIGSERIAL PRIMARY KEY,\n    clinic_id BIGINT NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,\n    appointment_id BIGINT NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,\n    patient_id BIGINT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,\n    version_number INTEGER NOT NULL CHECK (version_number >= 1),\n    language TEXT NOT NULL DEFAULT 'fa' CHECK (language IN ('fa','en','ar')),\n    guidance_text TEXT NOT NULL,\n    checklist JSONB NOT NULL DEFAULT '[]'::JSONB,\n    citations JSONB NOT NULL DEFAULT '[]'::JSONB,\n    status TEXT NOT NULL DEFAULT 'generated'\n        CHECK (status IN ('generated','sent','acknowledged','needs_clarification','archived')),\n    generated_by TEXT NOT NULL DEFAULT 'rag',\n    generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    sent_at TIMESTAMPTZ,\n    acknowledged_at TIMESTAMPTZ,\n    patient_response TEXT,\n    clarification_note TEXT,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    UNIQUE (appointment_id, version_number)\n);\n\nCREATE INDEX IF NOT EXISTS idx_patient_profile_changes\nON patient_profile_changes(patient_id, created_at DESC);\n\nCREATE INDEX IF NOT EXISTS idx_patient_documents_review\nON patient_documents(clinic_id, status, created_at DESC)\nWHERE status IN ('uploaded','processing','pending_review','reupload_required');\n\nCREATE INDEX IF NOT EXISTS idx_patient_documents_patient\nON patient_documents(patient_id, created_at DESC);\n\nCREATE INDEX IF NOT EXISTS idx_previsit_guidance_appointment\nON appointment_previsit_guidance(appointment_id, version_number DESC);\n\nSELECT TRUE AS success,\n       'migration_completed' AS result,\n       'ساختار پروفایل بیمار، مدارک بیمار و راهنمای پیش از مراجعه ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "76486585-4123-4ca0-823c-243287470981",
+      "name": "Create Patient Data Structures"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nپروفایل بیمار، تاریخچه تغییرات، مدارک بیمار و راهنمای پیش از مراجعه ایجاد می‌شوند.\n\nفایل واقعی در PostgreSQL ذخیره نمی‌شود؛ فقط URL یا Storage Key آن نگهداری می‌شود.",
+        "height": 350,
+        "width": 510
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -580,
+        -280
+      ],
+      "id": "67ae6a0d-7b8f-4bb5-8461-4603de62b7ac",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Patient Data Structures",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

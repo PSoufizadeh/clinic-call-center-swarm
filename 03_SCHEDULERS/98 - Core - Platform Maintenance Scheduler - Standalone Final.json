@@ -1,0 +1,491 @@
+{
+  "name": "98 - Core - Platform Maintenance Scheduler - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1300,
+        -160
+      ],
+      "id": "8a83473a-56ca-4a34-a992-135dc776ff29",
+      "name": "Every Hour"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "de7c847d-a8e5-41a0-b855-6488ca924aae",
+              "name": "mode",
+              "value": "auto",
+              "type": "string"
+            },
+            {
+              "id": "9f9a9f45-9d8c-4fb8-b57e-83fa016f3ce8",
+              "name": "clinic_name",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "8c15e0be-4f3a-496f-bed8-22697bbfcb3e",
+              "name": "timezone",
+              "value": "Asia/Baghdad",
+              "type": "string"
+            },
+            {
+              "id": "e7f351cd-e56a-4520-aa10-d2208f9abd5f",
+              "name": "cleanup_hour",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "95a3f215-f0fb-4e0a-987e-51f510b0f171",
+              "name": "force_cleanup",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "75321842-de9b-4f38-8256-b4cf2f5c7bb0",
+              "name": "webhook_base_url",
+              "value": "http://localhost:5678/webhook",
+              "type": "string"
+            },
+            {
+              "id": "87a0a859-30df-4de1-bf7f-29bbad7df17f",
+              "name": "confirm_run",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1060,
+        -160
+      ],
+      "id": "82e8d9ac-47d9-403d-866c-7f1c5d0b13fb",
+      "name": "Scheduled Maintenance Defaults"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1300,
+        80
+      ],
+      "id": "165a64a8-abf1-4f4b-aa40-06a9eaa768af",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "06c1b912-5cf1-49d8-969e-09160449d09f",
+              "name": "mode",
+              "value": "all",
+              "type": "string"
+            },
+            {
+              "id": "09de9bb3-ddef-4260-8b4f-53882347787d",
+              "name": "clinic_name",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "f8b028ab-dd9d-4d82-a6ac-9c2a9f22c509",
+              "name": "timezone",
+              "value": "Asia/Baghdad",
+              "type": "string"
+            },
+            {
+              "id": "27036f96-0015-47c2-bf18-756272119c22",
+              "name": "cleanup_hour",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "ce7ae078-20a6-4fea-8532-171de458fce4",
+              "name": "force_cleanup",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "841818ff-1199-4e84-8f8a-80c0f522fba6",
+              "name": "webhook_base_url",
+              "value": "http://localhost:5678/webhook",
+              "type": "string"
+            },
+            {
+              "id": "f555ade2-bd86-4ba5-ae3a-8a8ef3001222",
+              "name": "confirm_run",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1060,
+        80
+      ],
+      "id": "a30f389e-f952-49b5-b6a2-8480374765fd",
+      "name": "Manual Maintenance Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/operations/maintenance/run",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1060,
+        240
+      ],
+      "id": "ae9d810d-8396-40d8-a869-f029d9aeb97f",
+      "name": "Webhook - Run Platform Maintenance"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst mode = text(input.mode || 'auto').toLowerCase();\nconst clinic_name = text(input.clinic_name);\nconst timezone =\n  text(input.timezone || 'Asia/Baghdad');\nconst cleanup_hour = Number(input.cleanup_hour ?? 3);\nconst force_cleanup = bool(input.force_cleanup);\nconst webhook_base_url =\n  text(\n    input.webhook_base_url ||\n    'http://localhost:5678/webhook'\n  ).replace(/\\/+$/, '');\nconst confirm_run = bool(input.confirm_run);\n\nconst errors = [];\n\nif (!['auto', 'hourly', 'daily', 'all'].includes(mode)) {\n  errors.push({\n    field: 'mode',\n    message: 'حالت Scheduler معتبر نیست.',\n  });\n}\n\ntry {\n  new Intl.DateTimeFormat(\n    'en-US',\n    { timeZone: timezone }\n  ).format(new Date());\n} catch {\n  errors.push({\n    field: 'timezone',\n    message: 'منطقه زمانی معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(cleanup_hour) ||\n  cleanup_hour < 0 ||\n  cleanup_hour > 23\n) {\n  errors.push({\n    field: 'cleanup_hour',\n    message: 'ساعت Cleanup باید بین صفر و 23 باشد.',\n  });\n}\n\nif (!/^https?:\\/\\/.+/i.test(webhook_base_url)) {\n  errors.push({\n    field: 'webhook_base_url',\n    message: 'آدرس Webhook معتبر نیست.',\n  });\n}\n\nif (confirm_run !== true) {\n  errors.push({\n    field: 'confirm_run',\n    message: 'اجرای Scheduler باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    mode,\n    clinic_name,\n    timezone,\n    cleanup_hour,\n    force_cleanup,\n    webhook_base_url,\n    confirm_run,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -788,
+        48
+      ],
+      "id": "4907b0fb-59b4-4a8e-8aa8-e9989d9d8359",
+      "name": "Normalize and Validate Maintenance Run"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "282117da-4645-49d3-b3de-541b78b99660",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -548,
+        48
+      ],
+      "id": "02dd66a4-d197-43ca-a9e5-291b15800052",
+      "name": "Is Maintenance Run Valid?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $json;\n\nconst hourParts = new Intl.DateTimeFormat(\n  'en-US',\n  {\n    timeZone: config.timezone,\n    hour: '2-digit',\n    hourCycle: 'h23',\n  }\n).formatToParts(new Date());\n\nconst localHour = Number(\n  hourParts.find(\n    (part) => part.type === 'hour'\n  )?.value || 0\n);\n\nconst shouldCleanup =\n  config.force_cleanup === true ||\n  config.mode === 'daily' ||\n  config.mode === 'all' ||\n  (\n    config.mode === 'auto' &&\n    localHour === config.cleanup_hour\n  );\n\nconst tasks = [];\n\nif (\n  ['auto', 'hourly', 'all'].includes(\n    config.mode\n  )\n) {\n  tasks.push({\n    task_type: 'system_health_check',\n    url:\n      `${config.webhook_base_url}/clinic/operations/health/check`,\n    payload: {\n      clinic_name: config.clinic_name,\n      warning_queue_threshold: 100,\n      critical_queue_threshold: 500,\n      stale_processing_minutes: 15,\n      error_window_hours: 24,\n      confirm_check: true,\n    },\n  });\n\n  tasks.push({\n    task_type: 'message_retry_maintenance',\n    url:\n      `${config.webhook_base_url}/clinic/communications/messages/retry-maintenance`,\n    payload: {\n      stuck_processing_minutes: 15,\n      retry_batch_size: 500,\n      confirm_maintenance: true,\n    },\n  });\n}\n\nif (shouldCleanup) {\n  tasks.push({\n    task_type: 'data_retention_cleanup',\n    url:\n      `${config.webhook_base_url}/clinic/operations/maintenance/cleanup`,\n    payload: {\n      dry_run: false,\n      batch_size: 5000,\n      permission_check_retention_days: 90,\n      delivery_event_retention_days: 180,\n      message_attempt_retention_days: 180,\n      audit_retention_days: 365,\n      resolved_error_retention_days: 180,\n      health_snapshot_retention_days: 90,\n      maintenance_run_retention_days: 90,\n      confirm_cleanup: true,\n    },\n  });\n}\n\nif (tasks.length === 0) {\n  return [{\n    json: {\n      has_task: false,\n      task_type: 'none',\n      result: 'no_maintenance_task_for_mode',\n      local_hour: localHour,\n      should_cleanup: shouldCleanup,\n    },\n  }];\n}\n\nreturn tasks.map((task) => ({\n  json: {\n    ...task,\n    has_task: true,\n    local_hour: localHour,\n    should_cleanup: shouldCleanup,\n    mode: config.mode,\n  },\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -292,
+        -48
+      ],
+      "id": "26719ee6-aa92-43d3-b9c3-e391a7ec54bc",
+      "name": "Build Platform Maintenance Tasks"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d23ead22-0538-4fd3-b82c-60daaa566ea6",
+              "leftValue": "={{ $json.has_task === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -36,
+        -48
+      ],
+      "id": "aaa3631f-57d7-47f0-84ae-8f9692fcc83b",
+      "name": "Is There a Maintenance Task?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        220,
+        -144
+      ],
+      "id": "2bae562d-043e-4abe-8608-59601fd8aa72",
+      "name": "Execute Maintenance Task",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const task =\n  $('Build Platform Maintenance Tasks')\n    .item.json;\n\nconst response = $json ?? {};\n\nreturn [{\n  json: {\n    task_type: task.task_type,\n    success:\n      response.success !== false,\n    result:\n      response.result || 'maintenance_task_completed',\n    response,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        476,
+        -144
+      ],
+      "id": "a698c6e9-168c-439e-af31-f423b1389d1a",
+      "name": "Normalize Maintenance Task Result"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const results = $input\n  .all()\n  .map((item) => item.json);\n\nconst failed = results.filter(\n  (item) => item.success === false\n);\n\nreturn [{\n  json: {\n    success: failed.length === 0,\n    result:\n      failed.length === 0\n        ? 'platform_maintenance_completed'\n        : 'platform_maintenance_completed_with_errors',\n    task_count: results.length,\n    failed_task_count: failed.length,\n    task_results: results,\n    completed_at: new Date().toISOString(),\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        732,
+        -48
+      ],
+      "id": "cc9bc25f-9ff0-47df-a1c7-dc8c7ff4c426",
+      "name": "Return Maintenance Summary"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'تنظیمات Platform Maintenance نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -292,
+        160
+      ],
+      "id": "09d9bb24-6e5b-4f8c-9363-3b33409ec19f",
+      "name": "Return Maintenance Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## Scheduler نگهداری پلتفرم\n\nهر ساعت:\n- Health Check\n- Retry و Dead Letter Maintenance\n\nدر ساعت 03:00 منطقه زمانی تنظیم‌شده:\n- Data Retention Cleanup\n\nقبل از Active کردن، Workflowهای 86 Corrected V2، 95 و 97 باید فعال باشند.",
+        "height": 410,
+        "width": 540
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1540,
+        -340
+      ],
+      "id": "66f9748f-35ca-4e6f-9f94-ea7b111b95b5",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every Hour": {
+      "main": [
+        [
+          {
+            "node": "Scheduled Maintenance Defaults",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scheduled Maintenance Defaults": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Maintenance Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Maintenance Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Maintenance Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Maintenance Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Run Platform Maintenance": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Maintenance Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Maintenance Run": {
+      "main": [
+        [
+          {
+            "node": "Is Maintenance Run Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Maintenance Run Valid?": {
+      "main": [
+        [
+          {
+            "node": "Build Platform Maintenance Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Maintenance Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Platform Maintenance Tasks": {
+      "main": [
+        [
+          {
+            "node": "Is There a Maintenance Task?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is There a Maintenance Task?": {
+      "main": [
+        [
+          {
+            "node": "Execute Maintenance Task",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Maintenance Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Maintenance Task": {
+      "main": [
+        [
+          {
+            "node": "Normalize Maintenance Task Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Maintenance Task Result": {
+      "main": [
+        [
+          {
+            "node": "Return Maintenance Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

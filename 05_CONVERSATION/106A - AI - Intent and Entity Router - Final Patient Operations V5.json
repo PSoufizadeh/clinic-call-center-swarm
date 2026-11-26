@@ -1,0 +1,481 @@
+{
+  "name": "106A - AI - Intent and Entity Router - Final Patient Operations V5",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1320,
+        208
+      ],
+      "id": "beb04464-fa8d-4083-81d6-5cf26f55dcf3",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cf0e67cc-1224-4824-8928-bfa150905108",
+              "name": "session_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "f03da651-4e04-4c74-bce0-85991a3d9a49",
+              "name": "message_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "e59ccc31-c7e0-4982-b1eb-da488e4a2483",
+              "name": "context_message_limit",
+              "value": 20,
+              "type": "number"
+            },
+            {
+              "id": "b2260f3e-493e-4733-8ffa-3b9bfc83c0a2",
+              "name": "model_provider",
+              "value": "openai",
+              "type": "string"
+            },
+            {
+              "id": "e37b2bf2-e37e-4828-8aa7-d0c997bf7984",
+              "name": "model_name",
+              "value": "gpt-5-mini",
+              "type": "string"
+            },
+            {
+              "id": "c2729219-7f40-41e2-8a38-45016715c95e",
+              "name": "prompt_version",
+              "value": "intent-router-final-v5",
+              "type": "string"
+            },
+            {
+              "id": "5ac1f4fb-f11d-40e1-83c4-b59167919efd",
+              "name": "confirm_analysis",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1080,
+        208
+      ],
+      "id": "e0129e07-a02b-4054-a02f-2a7f1bdfd0ef",
+      "name": "Manual AI Analysis Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/ai/analyze-message",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1080,
+        -80
+      ],
+      "id": "1692468c-d682-4ed1-bf03-3c56d0bf1cb7",
+      "name": "Webhook - Analyze Conversation Message"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst session_id = Number(input.session_id);\nconst message_id = Number(input.message_id);\nconst context_message_limit = Number(input.context_message_limit ?? 20);\nconst model_provider = text(input.model_provider || 'openai').toLowerCase();\nconst model_name = text(input.model_name || 'gpt-5-mini');\nconst prompt_version = text(input.prompt_version || 'intent-router-final-v5');\nconst confirm_analysis = toBoolean(input.confirm_analysis);\n\nconst errors = [];\n\nif (!Number.isInteger(session_id) || session_id < 1) {\n  errors.push({\n    field: 'session_id',\n    message: 'session_id باید یک عدد صحیح بزرگ‌تر از صفر باشد.',\n  });\n}\n\nif (!Number.isInteger(message_id) || message_id < 1) {\n  errors.push({\n    field: 'message_id',\n    message: 'message_id باید یک عدد صحیح بزرگ‌تر از صفر باشد.',\n  });\n}\n\nif (\n  !Number.isInteger(context_message_limit) ||\n  context_message_limit < 1 ||\n  context_message_limit > 100\n) {\n  errors.push({\n    field: 'context_message_limit',\n    message: 'تعداد پیام‌های زمینه باید بین 1 و 100 باشد.',\n  });\n}\n\nif (!model_provider) {\n  errors.push({\n    field: 'model_provider',\n    message: 'نام ارائه‌دهنده مدل الزامی است.',\n  });\n}\n\nif (!model_name) {\n  errors.push({\n    field: 'model_name',\n    message: 'نام مدل الزامی است.',\n  });\n}\n\nif (!prompt_version) {\n  errors.push({\n    field: 'prompt_version',\n    message: 'نسخه پرامپت الزامی است.',\n  });\n}\n\nif (confirm_analysis !== true) {\n  errors.push({\n    field: 'confirm_analysis',\n    message: 'تحلیل پیام باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    session_id,\n    message_id,\n    context_message_limit,\n    model_provider,\n    model_name,\n    prompt_version,\n    analysis_started_at_ms: Date.now(),\n    confirm_analysis,\n    validation_status: errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -808,
+        64
+      ],
+      "id": "dc8450be-3956-438d-9de2-daffe100c310",
+      "name": "Normalize and Validate AI Analysis"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "651dff8b-d981-4c9f-bb87-ba50ab5b0fb7",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -568,
+        64
+      ],
+      "id": "7f07ba46-8450-4cfc-bf04-6a5482d5e743",
+      "name": "Is AI Analysis Request Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS session_id,\n        $2::BIGINT AS message_id,\n        LEAST(\n            GREATEST($3::INTEGER, 1),\n            100\n        ) AS context_message_limit\n),\n\nsession_context AS (\n    SELECT\n        session.id AS session_id,\n        session.session_key,\n        session.clinic_id,\n        session.patient_id,\n        session.channel,\n        session.external_conversation_id,\n        session.status AS session_status,\n        session.language,\n        session.last_intent,\n        session.pending_action,\n        session.collected_entities,\n        session.risk_flags AS session_risk_flags,\n        session.context_summary,\n\n        clinic.name AS clinic_name,\n\n        patient.full_name AS patient_name,\n        patient.mobile\n\n    FROM conversation_sessions session\n\n    INNER JOIN request_data request\n        ON request.session_id = session.id\n\n    INNER JOIN clinics clinic\n        ON clinic.id = session.clinic_id\n\n    LEFT JOIN patients patient\n        ON patient.id = session.patient_id\n\n    LIMIT 1\n),\n\ntarget_message AS (\n    SELECT\n        message.id AS message_id,\n        message.session_id,\n        message.direction,\n        message.sender_type,\n        message.message_type,\n        message.content_text,\n        message.content_json,\n        message.created_at\n\n    FROM conversation_messages message\n\n    INNER JOIN request_data request\n        ON request.message_id = message.id\n       AND request.session_id = message.session_id\n\n    WHERE message.direction = 'inbound'\n\n    LIMIT 1\n),\n\nrecent_rows AS (\n    SELECT *\n    FROM (\n        SELECT\n            message.id AS message_id,\n            message.direction,\n            message.sender_type,\n            message.message_type,\n            message.content_text,\n            message.content_json,\n            message.intent,\n            message.tool_action,\n            message.created_at\n\n        FROM conversation_messages message\n\n        INNER JOIN request_data request\n            ON request.session_id = message.session_id\n\n        ORDER BY\n            message.created_at DESC,\n            message.id DESC\n\n        LIMIT (\n            SELECT context_message_limit\n            FROM request_data\n        )\n    ) recent\n\n    ORDER BY\n        recent.created_at ASC,\n        recent.message_id ASC\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM session_context\n        )\n            THEN FALSE\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM target_message\n        )\n            THEN FALSE\n\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM session_context\n        )\n            THEN 'conversation_session_not_found'\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM target_message\n        )\n            THEN 'inbound_message_not_found'\n\n        ELSE 'ai_context_loaded'\n    END AS result,\n\n    (\n        SELECT ROW_TO_JSON(session_context)\n        FROM session_context\n    ) AS session_context,\n\n    (\n        SELECT ROW_TO_JSON(target_message)\n        FROM target_message\n    ) AS target_message,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'message_id', message_id,\n                    'direction', direction,\n                    'sender_type', sender_type,\n                    'message_type', message_type,\n                    'content_text', content_text,\n                    'content_json', content_json,\n                    'intent', intent,\n                    'tool_action', tool_action,\n                    'created_at', created_at\n                )\n                ORDER BY created_at, message_id\n            )\n            FROM recent_rows\n        ),\n        '[]'::JSONB\n    ) AS recent_messages\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.session_id,\n  $json.message_id,\n  $json.context_message_limit\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -312,
+        -48
+      ],
+      "id": "62ca9b44-7f98-4da6-b91c-a50b34362507",
+      "name": "Load Conversation AI Context"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "096d23cc-ffbf-4adc-86f9-d21b7fb6a380",
+              "leftValue": "={{ $json.success === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -56,
+        -48
+      ],
+      "id": "1e3e3cab-ef95-4ea9-9425-4dff5034e60e",
+      "name": "Is AI Context Available?"
+    },
+    {
+      "parameters": {
+        "jsCode": "if ($json.success !== true) {\n  return [{ json: $json }];\n}\n\nconst input = $('Normalize and Validate AI Analysis').first().json;\nconst session = $json.session_context || {};\nconst target = $json.target_message || {};\nconst messages = Array.isArray($json.recent_messages)\n  ? $json.recent_messages\n  : [];\n\nconst aiPrompt = [\n  'CURRENT_MESSAGE:',\n  JSON.stringify({\n    message_id: target.message_id,\n    text: target.content_text,\n    payload: target.content_json,\n    message_type: target.message_type,\n  }),\n  '',\n  'CONVERSATION_STATE:',\n  JSON.stringify({\n    clinic_name: session.clinic_name,\n    patient_name: session.patient_name,\n    mobile: session.mobile,\n    language: session.language,\n    last_intent: session.last_intent,\n    pending_action: session.pending_action,\n    collected_entities: session.collected_entities || {},\n    existing_risk_flags: session.session_risk_flags || [],\n    context_summary: session.context_summary || null,\n  }),\n  '',\n  'RECENT_MESSAGES:',\n  JSON.stringify(messages),\n  '',\n  'Return only the structured result required by the output schema.',\n].join('\\n');\n\nreturn [{\n  json: {\n    ...$json,\n    model_provider: input.model_provider,\n    model_name: input.model_name,\n    prompt_version: input.prompt_version,\n    analysis_started_at_ms: input.analysis_started_at_ms,\n    ai_prompt: aiPrompt,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        -144
+      ],
+      "id": "7c4da9fb-20c2-479f-8ac0-cbdf2fcb7ec6",
+      "name": "Build AI Router Prompt"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.ai_prompt }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the intent, entity, and safety router for a clinic virtual receptionist.\n\nYour job is classification and extraction only. Do not provide medical diagnosis, treatment, dosage changes, legal advice, or invented clinic facts.\n\nUse only the current message and supplied conversation context.\n\nAllowed intents:\n- greeting\n- book_appointment\n- find_available_slots\n- find_patient_appointments\n- cancel_appointment\n- reschedule_appointment\n- clinic_information\n- clinical_question\n- clinical_intake\n- clinical_intake_answer\n- patient_registration\n- patient_profile_update\n- patient_document_upload\n- pre_visit_guidance\n- communication_consent_management\n- communication_opt_out\n- communication_opt_in\n- communication_preference_update\n- post_visit_followup_response\n- appointment_disruption_response\n- medication_issue\n- prescription_insurance\n- feedback_complaint\n- appointment_confirmation\n- waitlist_response\n- emergency\n- human_help\n- unclear\n\nAllowed tool_action values:\n- none\n- ask_clinic_information\n- answer_clinical_question\n- start_clinical_intake\n- submit_clinical_intake_answers\n- register_patient\n- update_patient_profile\n- register_patient_document\n- generate_pre_visit_guidance\n- manage_patient_consents\n- process_communication_consent_response\n- process_post_visit_followup_response\n- process_disruption_patient_decision\n- find_available_slots\n- find_patient_appointments\n- create_appointment\n- cancel_appointment\n- reschedule_appointment\n- intake_medication_issue\n- intake_prescription_insurance\n- intake_patient_feedback\n- process_confirmation_response\n- process_waitlist_response\n- urgent_human_handoff\n- human_handoff\n\nRules:\n1. Never claim an appointment, price, service, insurance status, prescription status, or tracking code exists unless it is supplied in context.\n2. For booking, cancellation, and rescheduling, set requires_confirmation=true before any write action unless the patient has clearly confirmed the exact action and details.\n3. When information is missing, list only the genuinely missing fields and write one concise next_question in the user's language.\n4. Medication concerns must use medication_issue. Administrative prescription, insurance, and tracking-code requests must use prescription_insurance.\n5. Set emergency or urgent_human_handoff when the message indicates immediate threat, severe breathing difficulty, severe bleeding, loss of consciousness, seizure, severe chest pain, or possible overdose.\n6. Risk classification is operational triage, not diagnosis.\n7. Preserve existing collected entities unless the current message explicitly changes them.\n8. confidence must be between 0 and 1.\n9. reasoning_summary must be brief and must not contain hidden chain-of-thought; state only the decisive classification factors.\n\nClinical routing rules:\n10. Use clinical_question when the patient asks a medical or specialty question that may be answered from clinic-approved knowledge.\n11. Use clinical_intake when the patient describes symptoms, asks which service to use, or needs urgency guidance.\n12. Use clinical_intake_answer when the conversation is waiting for answers to an existing clinical intake case.\n13. The model may identify possible emergency risk, but must not diagnose.\n14. For clinical_question choose answer_clinical_question.\n15. For clinical_intake choose start_clinical_intake.\n16. For clinical_intake_answer choose submit_clinical_intake_answers.\n17. Never claim a clinical answer is correct unless a downstream grounded knowledge workflow confirms it.\n\n\nPatient data routing rules:\n18. Use patient_registration when a new patient provides identity/contact details or explicitly asks to register.\n19. Use patient_profile_update when an existing patient asks to correct or change profile information.\n20. Use patient_document_upload only when actual attachment metadata or a storage reference is available.\n21. Use pre_visit_guidance when the patient asks how to prepare for a known appointment.\n22. Registration and profile writes require explicit confirmation.\n23. Document registration requires explicit consent to store the document.\n24. Never invent file URLs, storage keys, checksums, appointment IDs, profile values, or consent.\n25. For patient_registration choose register_patient.\n26. For patient_profile_update choose update_patient_profile.\n27. For patient_document_upload choose register_patient_document.\n28. For pre_visit_guidance choose generate_pre_visit_guidance.\n\n\nCommunication consent routing rules:\n29. Use communication_opt_out when the patient asks to stop all messages, stop marketing, or disable a channel.\n30. Use communication_opt_in only when the patient explicitly asks to enable communication again.\n31. Use communication_preference_update when the patient changes channel, language, quiet hours, timezone, or message frequency.\n32. Use communication_consent_management when the patient asks to view, grant, or revoke a specific consent.\n33. Never infer consent from silence, prior conversation, appointment creation, or an existing patient record.\n34. Never convert an ambiguous statement into opt-in.\n35. Opt-out requests should be routed quickly and do not require the model to persuade the patient.\n36. For communication_opt_out and communication_opt_in choose process_communication_consent_response.\n37. For communication_consent_management and communication_preference_update choose manage_patient_consents.\n38. Preserve the patient's exact message in the downstream payload for audit.\n\n\nFinal patient-operation routing rules:\n39. Use post_visit_followup_response when the patient is responding to a post-visit follow-up message or follow-up token.\n40. For post_visit_followup_response extract followup_token, recovery_status, pain_level, red-flag information, medication issues, complaint information, satisfaction score, and patient comment.\n41. recovery_status must be better, same, or worse. Do not invent a value when the patient has not stated it.\n42. pain_level may legitimately be zero.\n43. A red-flag statement must set has_red_flag=true and preserve the patient's own description in red_flag_details.\n44. Use appointment_disruption_response when the patient responds to a clinic-initiated urgent schedule-change case.\n45. For appointment_disruption_response extract disruption_case_id, disruption_decision, option_number, and decision_note.\n46. disruption_decision must be one of reschedule, cancel, waitlist, or more_options.\n47. When disruption_decision is reschedule, option_number is required.\n48. Use process_post_visit_followup_response for post_visit_followup_response.\n49. Use process_disruption_patient_decision for appointment_disruption_response.\n50. Never treat a normal appointment reschedule request as an appointment_disruption_response unless a disruption case or clinic-initiated schedule change is present.\n51. Never convert a medical red flag into an ordinary post-visit response without also setting requires_human=true and the applicable risk flags.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        456,
+        -144
+      ],
+      "id": "6f6024bb-b538-435a-bab7-af27b8874a08",
+      "name": "AI Intent Router"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        400,
+        96
+      ],
+      "id": "036f300e-5c98-4c70-9d5d-4c231029c874",
+      "name": "OpenAI Chat Model - Select Credential"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\": \"object\", \"additionalProperties\": false, \"properties\": {\"intent\": {\"type\": \"string\", \"enum\": [\"greeting\", \"book_appointment\", \"find_available_slots\", \"find_patient_appointments\", \"cancel_appointment\", \"reschedule_appointment\", \"clinic_information\", \"medication_issue\", \"prescription_insurance\", \"feedback_complaint\", \"appointment_confirmation\", \"waitlist_response\", \"emergency\", \"human_help\", \"unclear\", \"clinical_question\", \"clinical_intake\", \"clinical_intake_answer\", \"patient_registration\", \"patient_profile_update\", \"patient_document_upload\", \"pre_visit_guidance\", \"communication_consent_management\", \"communication_opt_out\", \"communication_opt_in\", \"communication_preference_update\", \"post_visit_followup_response\", \"appointment_disruption_response\"]}, \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1}, \"language\": {\"type\": \"string\", \"enum\": [\"fa\", \"en\", \"ar\", \"unknown\"]}, \"entities\": {\"type\": \"object\", \"additionalProperties\": true, \"properties\": {\"patient_name\": {\"type\": [\"string\", \"null\"]}, \"mobile\": {\"type\": [\"string\", \"null\"]}, \"doctor_name\": {\"type\": [\"string\", \"null\"]}, \"service_name\": {\"type\": [\"string\", \"null\"]}, \"date_text\": {\"type\": [\"string\", \"null\"]}, \"time_text\": {\"type\": [\"string\", \"null\"]}, \"appointment_id\": {\"type\": [\"integer\", \"null\"]}, \"confirmation_token\": {\"type\": [\"string\", \"null\"]}, \"offer_token\": {\"type\": [\"string\", \"null\"]}, \"medication_name\": {\"type\": [\"string\", \"null\"]}, \"medication_issue_type\": {\"type\": [\"string\", \"null\"]}, \"insurance_provider\": {\"type\": [\"string\", \"null\"]}, \"prescription_identifier\": {\"type\": [\"string\", \"null\"]}, \"tracking_code\": {\"type\": [\"string\", \"null\"]}, \"feedback_category\": {\"type\": [\"string\", \"null\"]}, \"patient_decision\": {\"type\": [\"string\", \"null\"]}, \"clinical_intake_case_id\": {\"type\": [\"integer\", \"null\"]}, \"symptom_category\": {\"type\": [\"string\", \"null\"]}, \"chief_complaint\": {\"type\": [\"string\", \"null\"]}, \"duration_text\": {\"type\": [\"string\", \"null\"]}, \"severity\": {\"type\": [\"integer\", \"null\"]}, \"age_group\": {\"type\": [\"string\", \"null\"]}, \"pregnancy_possible\": {\"type\": [\"boolean\", \"null\"]}, \"is_worsening\": {\"type\": [\"boolean\", \"null\"]}, \"difficulty_breathing\": {\"type\": [\"boolean\", \"null\"]}, \"chest_pain\": {\"type\": [\"boolean\", \"null\"]}, \"loss_of_consciousness\": {\"type\": [\"boolean\", \"null\"]}, \"seizure\": {\"type\": [\"boolean\", \"null\"]}, \"severe_bleeding\": {\"type\": [\"boolean\", \"null\"]}, \"possible_overdose\": {\"type\": [\"boolean\", \"null\"]}, \"pregnancy_emergency_concern\": {\"type\": [\"boolean\", \"null\"]}, \"self_harm_or_violence\": {\"type\": [\"boolean\", \"null\"]}, \"clinical_answers\": {\"type\": [\"array\", \"null\"], \"items\": {\"type\": \"object\", \"additionalProperties\": true, \"properties\": {\"question_code\": {\"type\": \"string\"}, \"answer\": {}}, \"required\": [\"question_code\", \"answer\"]}}, \"consent_to_store_health_information\": {\"type\": [\"boolean\", \"null\"]}, \"disclaimer_acknowledged\": {\"type\": [\"boolean\", \"null\"]}, \"full_name\": {\"type\": [\"string\", \"null\"]}, \"email\": {\"type\": [\"string\", \"null\"]}, \"date_of_birth\": {\"type\": [\"string\", \"null\"]}, \"preferred_language\": {\"type\": [\"string\", \"null\"]}, \"emergency_contact_name\": {\"type\": [\"string\", \"null\"]}, \"emergency_contact_mobile\": {\"type\": [\"string\", \"null\"]}, \"address_text\": {\"type\": [\"string\", \"null\"]}, \"patient_profile_updates\": {\"type\": [\"object\", \"null\"], \"additionalProperties\": true}, \"patient_document_id\": {\"type\": [\"integer\", \"null\"]}, \"document_type\": {\"type\": [\"string\", \"null\"]}, \"original_filename\": {\"type\": [\"string\", \"null\"]}, \"mime_type\": {\"type\": [\"string\", \"null\"]}, \"file_size_bytes\": {\"type\": [\"integer\", \"null\"]}, \"storage_provider\": {\"type\": [\"string\", \"null\"]}, \"storage_key\": {\"type\": [\"string\", \"null\"]}, \"file_url\": {\"type\": [\"string\", \"null\"]}, \"checksum_sha256\": {\"type\": [\"string\", \"null\"]}, \"file_metadata\": {\"type\": [\"object\", \"null\"], \"additionalProperties\": true}, \"consent_to_store_profile\": {\"type\": [\"boolean\", \"null\"]}, \"consent_to_store_documents\": {\"type\": [\"boolean\", \"null\"]}, \"communication_action\": {\"type\": [\"string\", \"null\"]}, \"consent_type\": {\"type\": [\"string\", \"null\"]}, \"communication_channel\": {\"type\": [\"string\", \"null\"]}, \"communication_purpose\": {\"type\": [\"string\", \"null\"]}, \"preference_enabled\": {\"type\": [\"boolean\", \"null\"]}, \"quiet_hours_enabled\": {\"type\": [\"boolean\", \"null\"]}, \"quiet_hours_start\": {\"type\": [\"string\", \"null\"]}, \"quiet_hours_end\": {\"type\": [\"string\", \"null\"]}, \"timezone\": {\"type\": [\"string\", \"null\"]}, \"max_messages_per_week\": {\"type\": [\"integer\", \"null\"]}, \"consent_reason\": {\"type\": [\"string\", \"null\"]}, \"policy_version\": {\"type\": [\"string\", \"null\"]}, \"consent_scope\": {\"type\": [\"object\", \"null\"], \"additionalProperties\": true}, \"followup_token\": {\"type\": [\"string\", \"null\"]}, \"recovery_status\": {\"type\": [\"string\", \"null\"]}, \"pain_level\": {\"type\": [\"integer\", \"null\"], \"minimum\": 0, \"maximum\": 10}, \"has_red_flag\": {\"type\": [\"boolean\", \"null\"]}, \"red_flag_details\": {\"type\": [\"string\", \"null\"]}, \"has_medication_issue\": {\"type\": [\"boolean\", \"null\"]}, \"medication_issue_details\": {\"type\": [\"string\", \"null\"]}, \"has_complaint\": {\"type\": [\"boolean\", \"null\"]}, \"complaint_details\": {\"type\": [\"string\", \"null\"]}, \"satisfaction_score\": {\"type\": [\"integer\", \"null\"], \"minimum\": 1, \"maximum\": 5}, \"patient_comment\": {\"type\": [\"string\", \"null\"]}, \"disruption_case_id\": {\"type\": [\"integer\", \"null\"]}, \"disruption_decision\": {\"type\": [\"string\", \"null\"]}, \"option_number\": {\"type\": [\"integer\", \"null\"]}, \"decision_note\": {\"type\": [\"string\", \"null\"]}, \"options_per_patient\": {\"type\": [\"integer\", \"null\"]}, \"additional_search_days\": {\"type\": [\"integer\", \"null\"]}}}, \"missing_fields\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}, \"risk_flags\": {\"type\": \"array\", \"items\": {\"type\": \"string\", \"enum\": [\"breathing_difficulty\", \"face_lip_tongue_swelling\", \"loss_of_consciousness\", \"seizure\", \"chest_pain\", \"possible_overdose\", \"severe_bleeding\", \"self_harm_or_violence\", \"medical_uncertainty\", \"privacy_concern\", \"none\"]}}, \"requires_human\": {\"type\": \"boolean\"}, \"requires_confirmation\": {\"type\": \"boolean\"}, \"tool_action\": {\"type\": \"string\", \"enum\": [\"none\", \"ask_clinic_information\", \"find_available_slots\", \"find_patient_appointments\", \"create_appointment\", \"cancel_appointment\", \"reschedule_appointment\", \"intake_medication_issue\", \"intake_prescription_insurance\", \"intake_patient_feedback\", \"process_confirmation_response\", \"process_waitlist_response\", \"urgent_human_handoff\", \"human_handoff\", \"answer_clinical_question\", \"start_clinical_intake\", \"submit_clinical_intake_answers\", \"register_patient\", \"update_patient_profile\", \"register_patient_document\", \"generate_pre_visit_guidance\", \"manage_patient_consents\", \"process_communication_consent_response\", \"process_post_visit_followup_response\", \"process_disruption_patient_decision\"]}, \"next_question\": {\"type\": [\"string\", \"null\"]}, \"reasoning_summary\": {\"type\": \"string\"}}, \"required\": [\"intent\", \"confidence\", \"language\", \"entities\", \"missing_fields\", \"risk_flags\", \"requires_human\", \"requires_confirmation\", \"tool_action\", \"next_question\", \"reasoning_summary\"]}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        624,
+        96
+      ],
+      "id": "fb82efa1-5e6f-48dc-a6b0-2286f7eba3da",
+      "name": "Structured Intent Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "const envelope = $json ?? {};\nlet parsed = envelope.output ?? envelope;\n\nif (typeof parsed === 'string') {\n  try {\n    parsed = JSON.parse(parsed);\n  } catch {\n    const match = parsed.match(/\\{[\\s\\S]*\\}/);\n    if (match) {\n      parsed = JSON.parse(match[0]);\n    } else {\n      throw new Error('AI output is not valid JSON.');\n    }\n  }\n}\n\nif (\n  parsed &&\n  typeof parsed === 'object' &&\n  parsed.output &&\n  typeof parsed.output === 'object'\n) {\n  parsed = parsed.output;\n}\n\nconst context = $('Build AI Router Prompt').first().json;\nconst session = context.session_context || {};\nconst target = context.target_message || {};\n\nconst riskFlags = Array.isArray(parsed.risk_flags)\n  ? [...new Set(parsed.risk_flags.filter(Boolean))]\n  : [];\n\nconst filteredRiskFlags =\n  riskFlags.length > 1\n    ? riskFlags.filter((item) => item !== 'none')\n    : riskFlags;\n\nconst entities =\n  parsed.entities &&\n  typeof parsed.entities === 'object' &&\n  !Array.isArray(parsed.entities)\n    ? parsed.entities\n    : {};\n\nconst missingFields = Array.isArray(parsed.missing_fields)\n  ? [...new Set(parsed.missing_fields.filter(Boolean))]\n  : [];\n\nconst confidence = Math.max(\n  0,\n  Math.min(1, Number(parsed.confidence ?? 0))\n);\n\nconst urgent =\n  parsed.intent === 'emergency' ||\n  parsed.tool_action === 'urgent_human_handoff';\n\nreturn [{\n  json: {\n    success: true,\n    result: urgent\n      ? 'urgent_ai_route_created'\n      : 'ai_route_created',\n\n    session_id: Number(session.session_id),\n    message_id: Number(target.message_id),\n\n    intent: parsed.intent,\n    confidence,\n    language: parsed.language || session.language || 'unknown',\n    entities,\n    entities_json: JSON.stringify(entities),\n    missing_fields: missingFields,\n    missing_fields_json: JSON.stringify(missingFields),\n    risk_flags: filteredRiskFlags,\n    risk_flags_json: JSON.stringify(filteredRiskFlags),\n    requires_human: Boolean(parsed.requires_human || urgent),\n    requires_confirmation: Boolean(parsed.requires_confirmation),\n    tool_action: urgent\n      ? 'urgent_human_handoff'\n      : parsed.tool_action,\n    next_question: parsed.next_question ?? null,\n    reasoning_summary: String(parsed.reasoning_summary || '').slice(0, 1000),\n\n    model_provider: context.model_provider,\n    model_name: context.model_name,\n    prompt_version: context.prompt_version,\n    raw_output_json: JSON.stringify(envelope),\n    parsed_output_json: JSON.stringify(parsed),\n    latency_ms: Math.max(\n      0,\n      Date.now() - Number(context.analysis_started_at_ms || Date.now())\n    ),\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -144
+      ],
+      "id": "d84417c7-bd52-4a49-ae73-376e5ad75927",
+      "name": "Normalize AI Router Output"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS session_id,\n        $2::BIGINT AS message_id,\n        $3::TEXT AS intent,\n        $4::NUMERIC AS confidence,\n        $5::TEXT AS language,\n        $6::JSONB AS entities,\n        $7::JSONB AS missing_fields,\n        $8::JSONB AS risk_flags,\n        $9::BOOLEAN AS requires_human,\n        $10::BOOLEAN AS requires_confirmation,\n        $11::TEXT AS tool_action,\n        NULLIF($12::TEXT, '') AS next_question,\n        NULLIF($13::TEXT, '') AS reasoning_summary,\n        $14::TEXT AS model_provider,\n        $15::TEXT AS model_name,\n        $16::TEXT AS prompt_version,\n        $17::JSONB AS raw_output,\n        $18::JSONB AS parsed_output,\n        $19::INTEGER AS latency_ms\n),\n\nupdated_message AS (\n    UPDATE conversation_messages message\n\n    SET\n        intent = request.intent,\n        intent_confidence = request.confidence,\n        extracted_entities = request.entities,\n        risk_flags = request.risk_flags,\n        tool_action = request.tool_action,\n        model_provider = request.model_provider,\n        model_name = request.model_name\n\n    FROM request_data request\n\n    WHERE message.id = request.message_id\n      AND message.session_id = request.session_id\n\n    RETURNING message.id\n),\n\nupdated_session AS (\n    UPDATE conversation_sessions session\n\n    SET\n        language = request.language,\n        last_intent = request.intent,\n\n        pending_action = CASE\n            WHEN JSONB_ARRAY_LENGTH(\n                request.missing_fields\n            ) > 0\n                THEN request.tool_action\n\n            WHEN request.requires_confirmation = TRUE\n                THEN request.tool_action\n\n            ELSE NULL\n        END,\n\n        collected_entities =\n            COALESCE(\n                session.collected_entities,\n                '{}'::JSONB\n            )\n            || request.entities,\n\n        risk_flags = request.risk_flags,\n\n        status = CASE\n            WHEN request.requires_human = TRUE\n                THEN 'waiting_human'\n\n            WHEN JSONB_ARRAY_LENGTH(\n                    request.missing_fields\n                 ) > 0\n                THEN 'waiting_patient'\n\n            ELSE 'active'\n        END,\n\n        updated_at = NOW()\n\n    FROM request_data request\n\n    WHERE session.id = request.session_id\n\n      AND EXISTS (\n          SELECT 1\n          FROM updated_message\n      )\n\n    RETURNING session.*\n),\n\ninserted_run AS (\n    INSERT INTO conversation_ai_runs (\n        session_id,\n        input_message_id,\n        model_provider,\n        model_name,\n        prompt_version,\n        status,\n        raw_output,\n        parsed_output,\n        latency_ms\n    )\n\n    SELECT\n        request.session_id,\n        request.message_id,\n        request.model_provider,\n        request.model_name,\n        request.prompt_version,\n        'success',\n        request.raw_output,\n        request.parsed_output,\n        request.latency_ms\n\n    FROM request_data request\n\n    WHERE EXISTS (\n        SELECT 1\n        FROM updated_message\n    )\n\n    RETURNING id AS ai_run_id\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM updated_message\n        )\n            THEN FALSE\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM updated_message\n        )\n            THEN 'message_or_session_not_found'\n\n        WHEN request.tool_action =\n             'urgent_human_handoff'\n            THEN 'urgent_ai_route_saved'\n\n        ELSE 'ai_route_saved'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM updated_message\n        )\n            THEN 'پیام یا جلسه مکالمه پیدا نشد.'\n\n        WHEN request.tool_action =\n             'urgent_human_handoff'\n            THEN 'تحلیل ثبت شد و پیام نیازمند ارجاع فوری انسانی است.'\n\n        ELSE 'هدف، اطلاعات استخراج‌شده و مسیر بعدی ثبت شد.'\n    END AS message,\n\n    request.session_id,\n    request.message_id,\n\n    (\n        SELECT ai_run_id\n        FROM inserted_run\n    ) AS ai_run_id,\n\n    request.intent,\n    request.confidence,\n    request.language,\n    request.entities,\n    request.missing_fields,\n    request.risk_flags,\n    request.requires_human,\n    request.requires_confirmation,\n    request.tool_action,\n    request.next_question,\n    request.reasoning_summary,\n\n    (\n        SELECT status\n        FROM updated_session\n    ) AS session_status,\n\n    (\n        SELECT pending_action\n        FROM updated_session\n    ) AS pending_action,\n\n    (\n        SELECT collected_entities\n        FROM updated_session\n    ) AS collected_entities,\n\n    CASE\n        WHEN request.tool_action =\n             'urgent_human_handoff'\n            THEN 'safety_handoff'\n\n        WHEN request.next_question IS NOT NULL\n            THEN 'ask_missing_information'\n\n        WHEN request.requires_confirmation = TRUE\n            THEN 'request_action_confirmation'\n\n        WHEN request.tool_action <> 'none'\n            THEN 'execute_tool'\n\n        ELSE 'compose_response'\n    END AS next_action\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.session_id,\n  $json.message_id,\n  $json.intent,\n  $json.confidence,\n  $json.language,\n  $json.entities_json,\n  $json.missing_fields_json,\n  $json.risk_flags_json,\n  $json.requires_human,\n  $json.requires_confirmation,\n  $json.tool_action,\n  $json.next_question || '',\n  $json.reasoning_summary || '',\n  $json.model_provider,\n  $json.model_name,\n  $json.prompt_version,\n  $json.raw_output_json,\n  $json.parsed_output_json,\n  $json.latency_ms\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        976,
+        -144
+      ],
+      "id": "f114c892-5e83-4aa5-a5a8-afec06650542",
+      "name": "Save AI Route and Update Conversation"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: 'invalid_request',\n    message: 'اطلاعات تحلیل مدل زبانی ناقص یا نامعتبر است.',\n    errors: $json.errors ?? [],\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -312,
+        176
+      ],
+      "id": "c4e8c59e-c9b3-418d-b859-f741ba1f2644",
+      "name": "Return AI Analysis Validation Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: $json.result || 'ai_context_not_available',\n    message:\n      $json.result === 'conversation_session_not_found'\n        ? 'جلسه مکالمه پیدا نشد.'\n        : 'پیام ورودی در جلسه مکالمه پیدا نشد.',\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        32
+      ],
+      "id": "e7589084-e7a1-47f6-9001-32caee929753",
+      "name": "Return AI Context Error"
+    },
+    {
+      "parameters": {
+        "content": "## مسیریاب نهایی پیام بیمار\n\nاین نسخه جایگزین 81A است و مسیرهای بیمارمحور را یکپارچه می‌کند.\n\nپوشش نهایی:\n- نوبت و لیست انتظار\n- اطلاعات کلینیک\n- دارو، نسخه، بیمه و بازخورد\n- Clinical Intake و RAG\n- ثبت بیمار، پروفایل و مدارک\n- رضایت و ترجیحات ارتباطی\n- پاسخ پیگیری پس از مراجعه\n- پاسخ بیمار به تغییر فوری برنامه پزشک\n\nCredential مدل زبانی باید بعداً روی نود Chat Model انتخاب شود.",
+        "height": 440,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1520,
+        -340
+      ],
+      "id": "ebcd1aaa-bbd1-4684-8c45-71e6e0a28f7a",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual AI Analysis Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual AI Analysis Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate AI Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Analyze Conversation Message": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate AI Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate AI Analysis": {
+      "main": [
+        [
+          {
+            "node": "Is AI Analysis Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is AI Analysis Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Load Conversation AI Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return AI Analysis Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Conversation AI Context": {
+      "main": [
+        [
+          {
+            "node": "Is AI Context Available?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is AI Context Available?": {
+      "main": [
+        [
+          {
+            "node": "Build AI Router Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return AI Context Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build AI Router Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Intent Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Intent Router": {
+      "main": [
+        [
+          {
+            "node": "Normalize AI Router Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model - Select Credential": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Intent Router",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Intent Output": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Intent Router",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize AI Router Output": {
+      "main": [
+        [
+          {
+            "node": "Save AI Route and Update Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

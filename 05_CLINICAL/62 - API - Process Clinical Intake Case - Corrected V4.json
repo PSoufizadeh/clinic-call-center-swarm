@@ -1,0 +1,261 @@
+{
+  "name": "62 - API - Process Clinical Intake Case - Corrected V4",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "cd1c4a9c-9f5b-4f58-a51f-ea87864a743d",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "89d8331f-b2b5-4f10-b7cd-beb434f2ec6b",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "05c0910a-7ca1-4fb7-8a03-daa6ffaaef05",
+              "name": "clinical_intake_case_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "6e9cea03-6657-4e92-a7e6-f3965e2a2da6",
+              "name": "action",
+              "value": "claim",
+              "type": "string"
+            },
+            {
+              "id": "c8f93b60-0dcc-4014-8e0b-10bc8c9b84e4",
+              "name": "actor_name",
+              "value": "منشی آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "175cd87b-cece-4468-ad8a-0f5b25a5ab07",
+              "name": "service_name",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "400102f5-9348-48fd-a8a6-6457c082d2f0",
+              "name": "response_to_patient",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "a0be0833-bfeb-44b7-a1a3-9e372816ef53",
+              "name": "resolution_note",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "8fd34182-e9a2-4616-b212-e1bf15d8c722",
+              "name": "confirm_action",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "dec5d2fe-872b-4bf9-a731-f6444b5946c9",
+      "name": "Manual Clinical Intake Action"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/clinical-intake/process",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "d916695b-c455-4264-9009-e5c751b69dce",
+      "name": "Webhook - Process Clinical Intake Case"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst clinic_name = text(input.clinic_name);\nconst clinical_intake_case_id =\n  Number(input.clinical_intake_case_id);\nconst action = text(input.action).toLowerCase();\nconst actor_name = text(input.actor_name);\nconst service_name = text(input.service_name);\nconst response_to_patient = text(input.response_to_patient);\nconst resolution_note = text(input.resolution_note);\nconst confirm_action = toBoolean(input.confirm_action);\n\nconst actions = [\n  'claim',\n  'request_more_information',\n  'route_to_service',\n  'escalate_to_doctor',\n  'resolve',\n  'close',\n];\n\nconst errors = [];\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (\n  !Number.isInteger(clinical_intake_case_id) ||\n  clinical_intake_case_id < 1\n) {\n  errors.push({\n    field: 'clinical_intake_case_id',\n    message: 'شناسه پرونده معتبر نیست.',\n  });\n}\n\nif (!actions.includes(action)) {\n  errors.push({\n    field: 'action',\n    message: 'اقدام درخواستی معتبر نیست.',\n  });\n}\n\nif (!actor_name) {\n  errors.push({\n    field: 'actor_name',\n    message: 'نام مسئول انجام اقدام الزامی است.',\n  });\n}\n\nif (\n  action === 'route_to_service' &&\n  !service_name\n) {\n  errors.push({\n    field: 'service_name',\n    message: 'برای مسیریابی، نام خدمت الزامی است.',\n  });\n}\n\nif (\n  action === 'request_more_information' &&\n  !response_to_patient\n) {\n  errors.push({\n    field: 'response_to_patient',\n    message: 'متن درخواست اطلاعات بیشتر الزامی است.',\n  });\n}\n\nif (\n  ['resolve', 'close'].includes(action) &&\n  !resolution_note\n) {\n  errors.push({\n    field: 'resolution_note',\n    message: 'برای بستن یا حل پرونده، توضیح نتیجه الزامی است.',\n  });\n}\n\nif (confirm_action !== true) {\n  errors.push({\n    field: 'confirm_action',\n    message: 'انجام اقدام باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    clinic_name,\n    clinical_intake_case_id,\n    action,\n    actor_name,\n    service_name,\n    response_to_patient,\n    resolution_note,\n    confirm_action,\n    validation_status: errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "efde3638-250e-4311-934c-8c530cde530f",
+      "name": "Normalize and Validate Clinical Intake Action"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "25c43a8b-2383-4ab4-815c-9747f43dbd89",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "bf2baa67-9cf1-4516-8405-fe0924e82603",
+      "name": "Is Clinical Intake Action Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        $2::BIGINT AS case_id,\n        $3::TEXT AS action,\n        $4::TEXT AS actor_name,\n        NULLIF($5::TEXT, '') AS service_name,\n        NULLIF($6::TEXT, '') AS response_to_patient,\n        NULLIF($7::TEXT, '') AS resolution_note\n),\n\ncase_context AS (\n    SELECT\n        intake.*,\n        clinic.name AS clinic_name,\n        request.action,\n        request.actor_name,\n        request.service_name AS requested_service_name,\n        request.response_to_patient AS requested_response_to_patient,\n        request.resolution_note AS requested_resolution_note\n    FROM clinical_intake_cases intake\n    INNER JOIN request_data request\n        ON request.case_id = intake.id\n    INNER JOIN clinics clinic\n        ON clinic.id = intake.clinic_id\n       AND clinic.name = request.clinic_name\n    LIMIT 1\n),\n\nservice_context AS (\n    SELECT\n        service.id AS service_id,\n        service.name AS service_name\n    FROM services service\n    INNER JOIN case_context context\n        ON service.clinic_id = context.clinic_id\n       AND LOWER(service.name) =\n           LOWER(context.requested_service_name)\n    WHERE context.action = 'route_to_service'\n      AND service.is_active = TRUE\n    LIMIT 1\n),\n\nensured_task AS (\n    INSERT INTO human_handoff_tasks (\n        clinic_id,\n        patient_id,\n        appointment_id,\n        task_type,\n        source_type,\n        source_record_id,\n        priority,\n        status,\n        reason,\n        due_at,\n        assigned_to,\n        resolution_code,\n        resolution_note,\n        resolved_at\n    )\n    SELECT\n        context.clinic_id,\n        context.patient_id,\n        context.appointment_id,\n        'clinical_triage',\n        'clinical_intake',\n        context.id,\n\n        CASE context.risk_level\n            WHEN 'urgent' THEN 'urgent'\n            WHEN 'high' THEN 'high'\n            WHEN 'medium' THEN 'normal'\n            ELSE 'low'\n        END,\n\n        CASE context.action\n            WHEN 'claim' THEN 'in_progress'\n            WHEN 'request_more_information' THEN 'open'\n            WHEN 'route_to_service' THEN 'resolved'\n            WHEN 'escalate_to_doctor' THEN 'in_progress'\n            WHEN 'resolve' THEN 'resolved'\n            WHEN 'close' THEN 'resolved'\n            ELSE 'open'\n        END,\n\n        CONCAT(\n            'رسیدگی انسانی به پرسش تخصصی اولیه. شرح بیمار: ',\n            context.chief_complaint\n        ),\n\n        CASE context.risk_level\n            WHEN 'urgent' THEN NOW()\n            WHEN 'high' THEN NOW() + INTERVAL '1 hour'\n            WHEN 'medium' THEN NOW() + INTERVAL '4 hours'\n            ELSE NOW() + INTERVAL '1 day'\n        END,\n\n        context.actor_name,\n\n        CASE context.action\n            WHEN 'request_more_information'\n                THEN 'more_information_requested'\n            WHEN 'route_to_service'\n                THEN 'routed_to_service'\n            WHEN 'escalate_to_doctor'\n                THEN 'escalated_to_doctor'\n            WHEN 'resolve'\n                THEN 'clinical_intake_resolved'\n            WHEN 'close'\n                THEN 'clinical_intake_closed'\n            ELSE NULL\n        END,\n\n        COALESCE(\n            context.requested_resolution_note,\n            context.requested_response_to_patient\n        ),\n\n        CASE\n            WHEN context.action IN (\n                'route_to_service',\n                'resolve',\n                'close'\n            )\n                THEN NOW()\n            ELSE NULL\n        END\n\n    FROM case_context context\n\n    WHERE context.status NOT IN (\n            'resolved',\n            'closed'\n          )\n      AND (\n            context.action <> 'route_to_service'\n            OR EXISTS (\n                SELECT 1\n                FROM service_context\n            )\n          )\n\n    ON CONFLICT (\n        source_type,\n        source_record_id,\n        task_type\n    )\n    WHERE source_record_id IS NOT NULL\n\n    DO UPDATE SET\n        priority = EXCLUDED.priority,\n        status = EXCLUDED.status,\n        reason = EXCLUDED.reason,\n        due_at = EXCLUDED.due_at,\n        assigned_to = EXCLUDED.assigned_to,\n        resolution_code = EXCLUDED.resolution_code,\n        resolution_note = COALESCE(\n            EXCLUDED.resolution_note,\n            human_handoff_tasks.resolution_note\n        ),\n        resolved_at = EXCLUDED.resolved_at,\n        updated_at = NOW()\n\n    RETURNING *\n),\n\nupdated_case AS (\n    UPDATE clinical_intake_cases intake\n\n    SET\n        handoff_task_id = task.id,\n\n        service_id = CASE\n            WHEN context.action = 'route_to_service'\n                THEN (\n                    SELECT service_id\n                    FROM service_context\n                )\n            ELSE intake.service_id\n        END,\n\n        assigned_to = CASE\n            WHEN context.action IN (\n                'claim',\n                'escalate_to_doctor',\n                'resolve',\n                'close'\n            )\n                THEN context.actor_name\n            ELSE intake.assigned_to\n        END,\n\n        response_to_patient = COALESCE(\n            context.requested_response_to_patient,\n            intake.response_to_patient\n        ),\n\n        resolution_note = COALESCE(\n            context.requested_resolution_note,\n            intake.resolution_note\n        ),\n\n        status = CASE context.action\n            WHEN 'claim'\n                THEN 'under_review'\n            WHEN 'request_more_information'\n                THEN 'awaiting_patient'\n            WHEN 'route_to_service'\n                THEN 'routed'\n            WHEN 'escalate_to_doctor'\n                THEN 'escalated'\n            WHEN 'resolve'\n                THEN 'resolved'\n            WHEN 'close'\n                THEN 'closed'\n            ELSE intake.status\n        END,\n\n        resolved_at = CASE\n            WHEN context.action IN (\n                'resolve',\n                'close'\n            )\n                THEN NOW()\n            ELSE intake.resolved_at\n        END,\n\n        updated_at = NOW()\n\n    FROM case_context context\n    CROSS JOIN ensured_task task\n\n    WHERE intake.id = context.id\n\n      AND (\n            context.action <> 'route_to_service'\n            OR EXISTS (\n                SELECT 1\n                FROM service_context\n            )\n          )\n\n      AND intake.status NOT IN (\n            'resolved',\n            'closed'\n          )\n\n    RETURNING intake.*\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM case_context\n        )\n            THEN FALSE\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM case_context\n            WHERE status IN ('resolved', 'closed')\n        )\n            THEN FALSE\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM case_context\n            WHERE action = 'route_to_service'\n        )\n        AND NOT EXISTS (\n            SELECT 1\n            FROM service_context\n        )\n            THEN FALSE\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM updated_case\n        )\n            THEN FALSE\n\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM case_context\n        )\n            THEN 'clinical_intake_case_not_found'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM case_context\n            WHERE status IN ('resolved', 'closed')\n        )\n            THEN 'clinical_intake_case_closed'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM case_context\n            WHERE action = 'route_to_service'\n        )\n        AND NOT EXISTS (\n            SELECT 1\n            FROM service_context\n        )\n            THEN 'service_not_found'\n\n        WHEN request.action = 'claim'\n            THEN 'clinical_intake_claimed'\n\n        WHEN request.action = 'request_more_information'\n            THEN 'more_information_requested'\n\n        WHEN request.action = 'route_to_service'\n            THEN 'clinical_intake_routed_to_service'\n\n        WHEN request.action = 'escalate_to_doctor'\n            THEN 'clinical_intake_escalated_to_doctor'\n\n        WHEN request.action = 'resolve'\n            THEN 'clinical_intake_resolved'\n\n        WHEN request.action = 'close'\n            THEN 'clinical_intake_closed'\n\n        ELSE 'clinical_intake_updated'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM case_context\n        )\n            THEN 'پرونده مطابق کلینیک پیدا نشد.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM case_context\n            WHERE status IN ('resolved', 'closed')\n        )\n            THEN 'این پرونده قبلاً بسته شده است.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM case_context\n            WHERE action = 'route_to_service'\n        )\n        AND NOT EXISTS (\n            SELECT 1\n            FROM service_context\n        )\n            THEN 'خدمت فعال مطابق نام واردشده پیدا نشد.'\n\n        ELSE 'اقدام انسانی روی پرونده ثبت شد.'\n    END AS message,\n\n    (\n        SELECT id\n        FROM updated_case\n    ) AS clinical_intake_case_id,\n\n    (\n        SELECT status\n        FROM updated_case\n    ) AS case_status,\n\n    (\n        SELECT risk_level\n        FROM updated_case\n    ) AS risk_level,\n\n    (\n        SELECT recommended_route\n        FROM updated_case\n    ) AS recommended_route,\n\n    (\n        SELECT service_id\n        FROM updated_case\n    ) AS service_id,\n\n    (\n        SELECT service_name\n        FROM service_context\n    ) AS service_name,\n\n    (\n        SELECT id\n        FROM ensured_task\n    ) AS handoff_task_id,\n\n    (\n        SELECT status\n        FROM ensured_task\n    ) AS handoff_status,\n\n    (\n        SELECT response_to_patient\n        FROM updated_case\n    ) AS response_to_patient,\n\n    CASE request.action\n        WHEN 'request_more_information'\n            THEN 'send_patient_question'\n        WHEN 'route_to_service'\n            THEN 'continue_appointment_guidance'\n        WHEN 'escalate_to_doctor'\n            THEN 'doctor_review'\n        WHEN 'resolve'\n            THEN 'send_resolution_response'\n        WHEN 'close'\n            THEN 'close_case'\n        ELSE 'continue_human_review'\n    END AS next_action\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.clinical_intake_case_id,\n  $json.action,\n  $json.actor_name,\n  $json.service_name,\n  $json.response_to_patient,\n  $json.resolution_note\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "c29fb022-38c1-469a-8c43-5f30536dfdf0",
+      "name": "Apply Clinical Intake Action"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: 'invalid_request',\n    message: 'اطلاعات اقدام انسانی ناقص یا نامعتبر است.',\n    errors: $json.errors ?? [],\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "d34060c1-d8a1-4d80-a397-69c7e4abaae8",
+      "name": "Return Clinical Intake Action Error"
+    },
+    {
+      "parameters": {
+        "content": "## رسیدگی انسانی به پرونده\n\nاقدام‌های موجود:\n\n- `claim`\n- `request_more_information`\n- `route_to_service`\n- `escalate_to_doctor`\n- `resolve`\n- `close`\n\nاین Workflow پاسخ پزشکی خودکار تولید نمی‌کند. تصمیم و متن نهایی توسط فرد مسئول ثبت می‌شود.\n\nاصلاح V3:\nرکورد Human Handoff فقط یک‌بار در هر Statement درج یا به‌روزرسانی می‌شود؛ به‌روزرسانی دوم همان ردیف حذف شده است.\n\nاصلاح V4:\n- ویرگول بین CTEهای ensured_task و updated_case اضافه شد.\n- ویرگول اضافی بعد از آخرین CTE یعنی updated_case حذف شد.\n- خطای Syntax نزدیک updated_case برطرف شد.",
+        "height": 390,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -300
+      ],
+      "id": "7cd82f5d-cc2d-4c84-b1e5-b61bb557ed1a",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Clinical Intake Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Clinical Intake Action": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Clinical Intake Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Process Clinical Intake Case": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Clinical Intake Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Clinical Intake Action": {
+      "main": [
+        [
+          {
+            "node": "Is Clinical Intake Action Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Clinical Intake Action Valid?": {
+      "main": [
+        [
+          {
+            "node": "Apply Clinical Intake Action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Clinical Intake Action Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

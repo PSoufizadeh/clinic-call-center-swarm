@@ -1,0 +1,285 @@
+{
+  "name": "67 - API - Retrieve Clinical Knowledge - Corrected V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "0ed7416b-6137-4193-a48e-70a435466477",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7dbadfe0-3d64-4643-9af8-451dbf99592e",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "4cfc1cbb-587b-4a5b-8656-06ac120d7a2d",
+              "name": "question",
+              "value": "بعد از کشیدن دندان چه مراقبت‌هایی لازم است؟",
+              "type": "string"
+            },
+            {
+              "id": "4aee9c9c-85f2-4321-89d9-ec4b553bdd7b",
+              "name": "normalized_query",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "f5405783-d9cf-4927-af2d-a32b65b4e846",
+              "name": "specialty",
+              "value": "dental",
+              "type": "string"
+            },
+            {
+              "id": "54900d74-db4e-4508-a1bf-a2b64eb402e7",
+              "name": "service_name",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "959002c6-f963-4645-b18e-7979cc9585b9",
+              "name": "keywords",
+              "value": "[]",
+              "type": "string"
+            },
+            {
+              "id": "827e397f-d888-472c-b546-44aefe153305",
+              "name": "top_k",
+              "value": 8,
+              "type": "number"
+            },
+            {
+              "id": "088462c6-7dcc-4db0-b976-73f9b1e48685",
+              "name": "min_score",
+              "value": 0.18,
+              "type": "number"
+            },
+            {
+              "id": "543cd538-194b-401c-9fd5-2311915e2c87",
+              "name": "session_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "e6f023e8-3dd1-468c-b1a7-6cc9da028a98",
+              "name": "message_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "e73d2010-528b-438b-883c-ef45d4e3df13",
+              "name": "clinical_intake_case_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "d3709e76-182e-4fc1-bc0b-95e448d48072",
+              "name": "confirm_query",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "d68e55fe-4207-4979-9708-80dc306d8de2",
+      "name": "Manual Clinical Knowledge Query"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/clinical-knowledge/retrieve",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "556a114a-e3c0-44b3-ae74-cc12c0cc2769",
+      "name": "Webhook - Retrieve Clinical Knowledge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\nconst text = (v) => v === null || v === undefined ? '' : String(v).trim();\nconst bool = (v) => typeof v === 'boolean' ? v : ['true','1','yes','on'].includes(text(v).toLowerCase());\nconst norm = (v) => text(v).replace(/ي/g,'ی').replace(/ك/g,'ک').replace(/\\u200c/g,' ').replace(/\\s+/g,' ').trim();\n\nconst clinic_name = text(input.clinic_name);\nconst question = norm(input.question);\nconst normalized_query = norm(input.normalized_query || question);\nconst specialty = text(input.specialty || 'general').toLowerCase();\nconst service_name = text(input.service_name);\nconst top_k = Number(input.top_k ?? 8);\nconst min_score = Number(input.min_score ?? 0.18);\nconst session_id = Number(input.session_id ?? 0);\nconst message_id = Number(input.message_id ?? 0);\nconst clinical_intake_case_id = Number(input.clinical_intake_case_id ?? 0);\nconst confirm_query = bool(input.confirm_query);\n\nlet keywords = input.keywords ?? [];\ntry { if (typeof keywords === 'string') keywords = JSON.parse(keywords || '[]'); } catch { keywords = null; }\n\nconst errors = [];\nif (!clinic_name) errors.push({field:'clinic_name',message:'نام کلینیک الزامی است.'});\nif (!question) errors.push({field:'question',message:'سؤال الزامی است.'});\nif (question.length > 8000) errors.push({field:'question',message:'سؤال بیش از حد طولانی است.'});\nif (!Array.isArray(keywords)) {\n  errors.push({field:'keywords',message:'keywords باید آرایه باشد.'});\n  keywords = [];\n}\nkeywords = keywords.map(norm).filter(Boolean).slice(0,30);\nif (!Number.isInteger(top_k) || top_k < 1 || top_k > 30) errors.push({field:'top_k',message:'top_k معتبر نیست.'});\nif (!Number.isFinite(min_score) || min_score < 0 || min_score > 1) errors.push({field:'min_score',message:'min_score معتبر نیست.'});\nfor (const [field,value] of Object.entries({session_id,message_id,clinical_intake_case_id})) {\n  if (!Number.isInteger(value) || value < 0) errors.push({field,message:`${field} معتبر نیست.`});\n}\nif (confirm_query !== true) errors.push({field:'confirm_query',message:'جست‌وجو باید تأیید شود.'});\n\nreturn [{json:{\n  clinic_name,question,normalized_query,specialty,service_name,\n  keywords_json:JSON.stringify(keywords),top_k,min_score,session_id,message_id,\n  clinical_intake_case_id,confirm_query,\n  validation_status:errors.length?'invalid':'valid',errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "42a6548b-9874-4e7f-9e3c-33cd54ccaf18",
+      "name": "Normalize and Validate Knowledge Query"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c28cb3a1-c880-4c59-8dbe-ab1af9f73f9a",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "4a8632ea-b300-45fb-b7b0-6c4dafb3a8b7",
+      "name": "Is Knowledge Query Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH r AS (\n  SELECT $1::TEXT clinic_name,$2::TEXT question,$3::TEXT normalized_query,\n         $4::TEXT specialty,NULLIF($5::TEXT,'') service_name,$6::JSONB keywords,\n         $7::INTEGER top_k,$8::NUMERIC min_score,NULLIF($9::BIGINT,0) session_id,\n         NULLIF($10::BIGINT,0) message_id,NULLIF($11::BIGINT,0) clinical_intake_case_id\n),\nc AS (\n  SELECT clinics.id clinic_id,clinics.name,r.*\n  FROM clinics,r WHERE clinics.name=r.clinic_name AND clinics.is_active=TRUE LIMIT 1\n),\ns AS (\n  SELECT services.id service_id,services.name\n  FROM services,c WHERE services.clinic_id=c.clinic_id\n    AND LOWER(services.name)=LOWER(c.service_name)\n    AND c.service_name IS NOT NULL AND services.is_active=TRUE LIMIT 1\n),\nkw AS (\n  SELECT COALESCE(STRING_AGG(value,' '),'') keyword_text\n  FROM c LEFT JOIN LATERAL JSONB_ARRAY_ELEMENTS_TEXT(c.keywords) value ON TRUE\n),\nsc AS (\n  SELECT c.*,TRIM(c.normalized_query||' '||(SELECT keyword_text FROM kw)) expanded_query,\n         WEBSEARCH_TO_TSQUERY('simple',TRIM(c.normalized_query||' '||(SELECT keyword_text FROM kw))) ts_query\n  FROM c\n),\nqa AS (\n  SELECT 'qa'::TEXT result_type,q.id result_id,q.document_id,q.question title,\n         NULL::INTEGER page_start,NULL::INTEGER page_end,q.answer content,\n         q.requires_human_confirmation,q.safety_category,q.source_priority,\n         GREATEST(\n           SIMILARITY(LOWER(q.question),LOWER(sc.normalized_query)),\n           SIMILARITY(LOWER(q.question||' '||q.question_variants::TEXT||' '||q.keywords::TEXT),LOWER(sc.expanded_query))\n         )*0.75+(q.source_priority::NUMERIC/100)*0.25 score\n  FROM clinic_knowledge_qa q JOIN sc ON sc.clinic_id=q.clinic_id\n  WHERE q.status='published'\n    AND (q.valid_from IS NULL OR q.valid_from<=CURRENT_DATE)\n    AND (q.valid_to IS NULL OR q.valid_to>=CURRENT_DATE)\n    AND (sc.specialty IN ('','all','general') OR LOWER(q.specialty) IN ('general',LOWER(sc.specialty)))\n    AND (sc.service_name IS NULL OR q.service_id IS NULL OR q.service_id=(SELECT service_id FROM s))\n),\nchunks AS (\n  SELECT 'chunk'::TEXT result_type,k.id result_id,d.id document_id,\n         COALESCE(k.section_title,d.title) title,k.page_start,k.page_end,k.content,\n         FALSE requires_human_confirmation,'general'::TEXT safety_category,d.source_priority,\n         GREATEST(\n           TS_RANK_CD(k.search_vector,sc.ts_query),\n           SIMILARITY(LOWER(k.content),LOWER(sc.expanded_query))*0.65\n         )+(d.source_priority::NUMERIC/100)*0.20 score\n  FROM clinic_knowledge_chunks k\n  JOIN clinic_knowledge_documents d ON d.id=k.document_id\n  JOIN sc ON sc.clinic_id=d.clinic_id\n  WHERE d.status='published' AND d.allowed_use<>'internal_only'\n    AND (d.valid_from IS NULL OR d.valid_from<=CURRENT_DATE)\n    AND (d.valid_to IS NULL OR d.valid_to>=CURRENT_DATE)\n    AND (sc.specialty IN ('','all','general') OR LOWER(d.specialty) IN ('general',LOWER(sc.specialty)))\n    AND (sc.service_name IS NULL OR d.service_id IS NULL OR d.service_id=(SELECT service_id FROM s))\n    AND (k.search_vector@@sc.ts_query OR SIMILARITY(LOWER(k.content),LOWER(sc.expanded_query))>=sc.min_score)\n),\nall_candidates AS (\n  SELECT * FROM qa UNION ALL SELECT * FROM chunks\n),\nranked AS (\n  SELECT a.*\n  FROM all_candidates a CROSS JOIN sc\n  WHERE a.score>=sc.min_score\n  ORDER BY a.score DESC,a.source_priority DESC,a.result_id\n  LIMIT (SELECT top_k FROM sc)\n),\nlogged AS (\n  INSERT INTO clinical_knowledge_queries (\n    clinic_id,patient_id,session_id,input_message_id,clinical_intake_case_id,\n    question,normalized_query,specialty,service_id,retrieved_chunk_ids,\n    retrieved_qa_ids,answer_status\n  )\n  SELECT sc.clinic_id,cs.patient_id,sc.session_id,sc.message_id,sc.clinical_intake_case_id,\n         sc.question,sc.normalized_query,sc.specialty,(SELECT service_id FROM s),\n         COALESCE((SELECT JSONB_AGG(result_id) FROM ranked WHERE result_type='chunk'),'[]'::JSONB),\n         COALESCE((SELECT JSONB_AGG(result_id) FROM ranked WHERE result_type='qa'),'[]'::JSONB),\n         CASE WHEN EXISTS(SELECT 1 FROM ranked) THEN 'retrieved' ELSE 'no_reliable_answer' END\n  FROM sc LEFT JOIN conversation_sessions cs ON cs.id=sc.session_id\n  RETURNING *\n)\nSELECT\n  CASE\n    WHEN NOT EXISTS(SELECT 1 FROM c) THEN FALSE\n    WHEN EXISTS(SELECT 1 FROM c WHERE service_name IS NOT NULL) AND NOT EXISTS(SELECT 1 FROM s) THEN FALSE\n    ELSE TRUE\n  END success,\n  CASE\n    WHEN NOT EXISTS(SELECT 1 FROM c) THEN 'clinic_not_found'\n    WHEN EXISTS(SELECT 1 FROM c WHERE service_name IS NOT NULL) AND NOT EXISTS(SELECT 1 FROM s) THEN 'service_not_found'\n    WHEN EXISTS(SELECT 1 FROM ranked) THEN 'clinical_knowledge_retrieved'\n    ELSE 'no_reliable_clinical_knowledge_found'\n  END result,\n  (SELECT id FROM logged) clinical_knowledge_query_id,\n  COALESCE((\n    SELECT JSONB_AGG(JSONB_BUILD_OBJECT(\n      'result_type',result_type,'result_id',result_id,'document_id',document_id,\n      'title',title,'page_start',page_start,'page_end',page_end,'content',content,\n      'score',ROUND(score::NUMERIC,5),'requires_human_confirmation',requires_human_confirmation,\n      'safety_category',safety_category,'source_priority',source_priority\n    ) ORDER BY score DESC,source_priority DESC)\n    FROM ranked\n  ),'[]'::JSONB) retrieved_context,\n  COALESCE((SELECT MAX(score) FROM ranked),0) top_score,\n  CASE WHEN EXISTS(SELECT 1 FROM ranked) THEN 'compose_grounded_answer' ELSE 'human_review_or_no_answer' END next_action\nFROM r;",
+        "options": {
+          "queryReplacement": "={{ [ $json.clinic_name,$json.question,$json.normalized_query,$json.specialty,$json.service_name,$json.keywords_json,$json.top_k,$json.min_score,$json.session_id,$json.message_id,$json.clinical_intake_case_id ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "d10124f0-036b-4a95-820e-109f8fb1aca8",
+      "name": "Retrieve Published Clinical Knowledge"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات جست‌وجوی دانش نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "bcc6c91a-13c1-4421-9f6f-40aa5439e042",
+      "name": "Return Knowledge Query Error"
+    },
+    {
+      "parameters": {
+        "content": "## Retrieval برای RAG\n\nفقط Q&A و اسناد published جست‌وجو می‌شوند.\n\nاین Workflow پاسخ نهایی تولید نمی‌کند.",
+        "height": 330,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -270
+      ],
+      "id": "bea516ec-5e48-43e2-b8c1-eb4e7a97a004",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Clinical Knowledge Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Clinical Knowledge Query": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Knowledge Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Retrieve Clinical Knowledge": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Knowledge Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Knowledge Query": {
+      "main": [
+        [
+          {
+            "node": "Is Knowledge Query Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Knowledge Query Valid?": {
+      "main": [
+        [
+          {
+            "node": "Retrieve Published Clinical Knowledge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Knowledge Query Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

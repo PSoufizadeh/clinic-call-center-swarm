@@ -1,0 +1,67 @@
+{
+  "name": "49 - DB - Add Conversation Memory",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "f7643b70-8afc-4575-a66c-bc13ec7ec997",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS conversation_sessions (\n    id BIGSERIAL PRIMARY KEY,\n\n    session_key TEXT NOT NULL UNIQUE,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    patient_id BIGINT\n        REFERENCES patients(id)\n        ON DELETE SET NULL,\n\n    channel TEXT NOT NULL\n        CHECK (\n            channel IN (\n                'whatsapp',\n                'sms',\n                'phone',\n                'telegram',\n                'webchat',\n                'manual',\n                'api'\n            )\n        ),\n\n    external_conversation_id TEXT NOT NULL,\n\n    status TEXT NOT NULL DEFAULT 'active'\n        CHECK (\n            status IN (\n                'active',\n                'waiting_patient',\n                'waiting_human',\n                'completed',\n                'closed'\n            )\n        ),\n\n    language TEXT NOT NULL DEFAULT 'fa'\n        CHECK (\n            language IN (\n                'fa',\n                'en',\n                'ar',\n                'unknown'\n            )\n        ),\n\n    last_intent TEXT,\n    pending_action TEXT,\n\n    collected_entities JSONB NOT NULL DEFAULT '{}'::JSONB,\n    risk_flags JSONB NOT NULL DEFAULT '[]'::JSONB,\n\n    context_summary TEXT,\n\n    last_message_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    expires_at TIMESTAMPTZ,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    UNIQUE (\n        clinic_id,\n        channel,\n        external_conversation_id\n    )\n);\n\nCREATE TABLE IF NOT EXISTS conversation_messages (\n    id BIGSERIAL PRIMARY KEY,\n\n    session_id BIGINT NOT NULL\n        REFERENCES conversation_sessions(id)\n        ON DELETE CASCADE,\n\n    direction TEXT NOT NULL\n        CHECK (\n            direction IN (\n                'inbound',\n                'outbound',\n                'internal'\n            )\n        ),\n\n    sender_type TEXT NOT NULL\n        CHECK (\n            sender_type IN (\n                'patient',\n                'assistant',\n                'human',\n                'system'\n            )\n        ),\n\n    message_type TEXT NOT NULL DEFAULT 'text'\n        CHECK (\n            message_type IN (\n                'text',\n                'audio',\n                'image',\n                'file',\n                'event'\n            )\n        ),\n\n    content_text TEXT,\n    content_json JSONB,\n\n    intent TEXT,\n\n    intent_confidence NUMERIC(6, 5)\n        CHECK (\n            intent_confidence IS NULL\n            OR (\n                intent_confidence >= 0\n                AND intent_confidence <= 1\n            )\n        ),\n\n    extracted_entities JSONB,\n    risk_flags JSONB,\n\n    tool_action TEXT,\n    tool_result JSONB,\n\n    model_provider TEXT,\n    model_name TEXT,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    CHECK (\n        content_text IS NOT NULL\n        OR content_json IS NOT NULL\n    )\n);\n\nCREATE TABLE IF NOT EXISTS conversation_ai_runs (\n    id BIGSERIAL PRIMARY KEY,\n\n    session_id BIGINT NOT NULL\n        REFERENCES conversation_sessions(id)\n        ON DELETE CASCADE,\n\n    input_message_id BIGINT\n        REFERENCES conversation_messages(id)\n        ON DELETE SET NULL,\n\n    model_provider TEXT,\n    model_name TEXT,\n    prompt_version TEXT,\n\n    status TEXT NOT NULL\n        CHECK (\n            status IN (\n                'success',\n                'error'\n            )\n        ),\n\n    raw_output JSONB,\n    parsed_output JSONB,\n    error_message TEXT,\n\n    latency_ms INTEGER\n        CHECK (\n            latency_ms IS NULL\n            OR latency_ms >= 0\n        ),\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE INDEX IF NOT EXISTS idx_conversation_sessions_active\n    ON conversation_sessions(\n        clinic_id,\n        status,\n        last_message_at DESC\n    );\n\nCREATE INDEX IF NOT EXISTS idx_conversation_sessions_patient\n    ON conversation_sessions(\n        patient_id,\n        last_message_at DESC\n    )\n    WHERE patient_id IS NOT NULL;\n\nCREATE INDEX IF NOT EXISTS idx_conversation_messages_session\n    ON conversation_messages(\n        session_id,\n        created_at DESC,\n        id DESC\n    );\n\nCREATE INDEX IF NOT EXISTS idx_conversation_messages_intent\n    ON conversation_messages(\n        intent,\n        created_at DESC\n    )\n    WHERE intent IS NOT NULL;\n\nCREATE INDEX IF NOT EXISTS idx_conversation_ai_runs_session\n    ON conversation_ai_runs(\n        session_id,\n        created_at DESC\n    );\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار حافظه، پیام‌ها و اجرای مدل زبانی ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "0adcd63a-849a-4e19-bfde-02b36e58c5b2",
+      "name": "Create Conversation Memory Structure"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nاین Workflow سه جدول برای جلسه مکالمه، پیام‌ها و ثبت اجرای مدل زبانی ایجاد می‌کند.\n\nPostgreSQL مرجع اصلی حافظه مکالمه خواهد بود؛ بنابراین حافظه به اجرای موقت n8n وابسته نمی‌ماند.",
+        "height": 290,
+        "width": 470
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -550,
+        -250
+      ],
+      "id": "d0bf4f01-b837-4a42-b22e-0eddaa445bd3",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Conversation Memory Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

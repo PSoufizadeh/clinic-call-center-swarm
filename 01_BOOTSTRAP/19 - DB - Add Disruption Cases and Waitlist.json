@@ -1,0 +1,67 @@
+{
+  "name": "19 - DB - Add Disruption Cases and Waitlist",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "20c14d41-0947-4e53-b9da-a2c3aee4b34a",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS appointment_disruption_cases (\n    id BIGSERIAL PRIMARY KEY,\n\n    exception_id BIGINT NOT NULL\n        REFERENCES schedule_exceptions(id)\n        ON DELETE CASCADE,\n\n    appointment_id BIGINT NOT NULL\n        REFERENCES appointments(id)\n        ON DELETE CASCADE,\n\n    status TEXT NOT NULL\n        CHECK (\n            status IN (\n                'awaiting_reschedule_consent',\n                'awaiting_waitlist_consent',\n                'reschedule_selected',\n                'rescheduled',\n                'cancelled',\n                'waitlisted',\n                'declined',\n                'closed'\n            )\n        ),\n\n    proposed_slots JSONB NOT NULL DEFAULT '[]'::JSONB,\n\n    selected_starts_at TIMESTAMPTZ,\n    selected_ends_at TIMESTAMPTZ,\n\n    patient_decision TEXT\n        CHECK (\n            patient_decision IS NULL\n            OR patient_decision IN (\n                'reschedule',\n                'cancel',\n                'waitlist',\n                'decline'\n            )\n        ),\n\n    decision_note TEXT,\n\n    contacted_at TIMESTAMPTZ,\n    responded_at TIMESTAMPTZ,\n    resolved_at TIMESTAMPTZ,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    UNIQUE (exception_id, appointment_id)\n);\n\nCREATE INDEX IF NOT EXISTS idx_disruption_cases_status\n    ON appointment_disruption_cases(status, created_at);\n\nCREATE INDEX IF NOT EXISTS idx_disruption_cases_appointment\n    ON appointment_disruption_cases(appointment_id, created_at DESC);\n\nCREATE TABLE IF NOT EXISTS appointment_waitlist (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    doctor_id BIGINT NOT NULL\n        REFERENCES doctors(id)\n        ON DELETE CASCADE,\n\n    patient_id BIGINT NOT NULL\n        REFERENCES patients(id)\n        ON DELETE CASCADE,\n\n    service_id BIGINT\n        REFERENCES services(id)\n        ON DELETE SET NULL,\n\n    original_appointment_id BIGINT\n        REFERENCES appointments(id)\n        ON DELETE SET NULL,\n\n    disruption_case_id BIGINT\n        REFERENCES appointment_disruption_cases(id)\n        ON DELETE SET NULL,\n\n    desired_from TIMESTAMPTZ,\n    desired_to TIMESTAMPTZ,\n\n    status TEXT NOT NULL DEFAULT 'active'\n        CHECK (\n            status IN (\n                'active',\n                'offered',\n                'booked',\n                'cancelled',\n                'expired'\n            )\n        ),\n\n    priority INTEGER NOT NULL DEFAULT 100,\n    consent_given_at TIMESTAMPTZ NOT NULL,\n\n    notes TEXT,\n    source TEXT NOT NULL DEFAULT 'assistant',\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    CHECK (\n        desired_to IS NULL\n        OR desired_from IS NULL\n        OR desired_to > desired_from\n    )\n);\n\nCREATE INDEX IF NOT EXISTS idx_waitlist_active_search\n    ON appointment_waitlist(\n        doctor_id,\n        service_id,\n        priority,\n        created_at\n    )\n    WHERE status = 'active';\n\nCREATE UNIQUE INDEX IF NOT EXISTS uq_active_waitlist_disruption_case\n    ON appointment_waitlist(disruption_case_id)\n    WHERE status = 'active'\n      AND disruption_case_id IS NOT NULL;\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار پرونده‌های تغییر فوری و لیست انتظار با موفقیت ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "4a6966a0-a3ee-4443-a9af-5922f3870415",
+      "name": "Create Disruption and Waitlist Structure"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nاین Workflow دو ساختار ایجاد می‌کند:\n\n1. `appointment_disruption_cases` برای مدیریت نوبت‌های تحت‌تأثیر تغییر برنامه پزشک\n2. `appointment_waitlist` برای بیمارانی که با رضایت خود وارد لیست انتظار می‌شوند\n\nپس از اجرای موفق، Workflow را غیرفعال نگه دار.",
+        "height": 320,
+        "width": 430
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -540,
+        -260
+      ],
+      "id": "82f5db7d-31b0-4c00-89c0-a7bfb5b1d43f",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Disruption and Waitlist Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

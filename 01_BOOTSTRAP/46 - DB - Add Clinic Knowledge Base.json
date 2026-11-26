@@ -1,0 +1,67 @@
+{
+  "name": "46 - DB - Add Clinic Knowledge Base",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "b66bf251-ce0a-4228-846d-7d44f86332e1",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE EXTENSION IF NOT EXISTS pg_trgm;\n\nDO $$\nDECLARE\n    constraint_record RECORD;\nBEGIN\n    FOR constraint_record IN\n        SELECT constraint_name\n        FROM information_schema.table_constraints\n        WHERE table_schema = 'public'\n          AND table_name = 'human_handoff_tasks'\n          AND constraint_type = 'CHECK'\n    LOOP\n        IF EXISTS (\n            SELECT 1\n            FROM pg_constraint constraint_item\n            INNER JOIN pg_class relation\n                ON relation.oid = constraint_item.conrelid\n            WHERE relation.relname = 'human_handoff_tasks'\n              AND constraint_item.conname =\n                  constraint_record.constraint_name\n              AND (\n                    pg_get_constraintdef(\n                        constraint_item.oid\n                    ) ILIKE '%source_type%'\n\n                    OR pg_get_constraintdef(\n                        constraint_item.oid\n                    ) ILIKE '%task_type%'\n                  )\n        ) THEN\n            EXECUTE FORMAT(\n                'ALTER TABLE human_handoff_tasks DROP CONSTRAINT %I',\n                constraint_record.constraint_name\n            );\n        END IF;\n    END LOOP;\nEND\n$$;\n\nALTER TABLE human_handoff_tasks\n    ADD CONSTRAINT human_handoff_tasks_source_type_check\n    CHECK (\n        source_type IN (\n            'appointment_confirmation',\n            'disruption_case',\n            'waitlist_offer',\n            'appointment',\n            'medication_case',\n            'insurance_case',\n            'feedback_case',\n            'knowledge_query',\n            'manual'\n        )\n    );\n\nALTER TABLE human_handoff_tasks\n    ADD CONSTRAINT human_handoff_tasks_task_type_check\n    CHECK (\n        task_type IN (\n            'confirmation_no_response',\n            'reschedule_request',\n            'calendar_sync_issue',\n            'medical_review',\n            'complaint',\n            'insurance_support',\n            'information_request',\n            'manual_followup'\n        )\n    );\n\nCREATE TABLE IF NOT EXISTS clinic_knowledge_entries (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    service_id BIGINT\n        REFERENCES services(id)\n        ON DELETE SET NULL,\n\n    category TEXT NOT NULL\n        CHECK (\n            category IN (\n                'general_info',\n                'working_hours',\n                'location',\n                'service_info',\n                'pricing',\n                'insurance',\n                'preparation',\n                'policy',\n                'faq',\n                'other'\n            )\n        ),\n\n    title TEXT NOT NULL,\n    answer_text TEXT NOT NULL,\n\n    keywords TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],\n\n    price_min NUMERIC(14, 2),\n    price_max NUMERIC(14, 2),\n    currency TEXT,\n\n    requires_human_confirmation BOOLEAN\n        NOT NULL DEFAULT FALSE,\n\n    valid_from DATE,\n    valid_to DATE,\n\n    source_note TEXT,\n\n    status TEXT NOT NULL DEFAULT 'draft'\n        CHECK (\n            status IN (\n                'draft',\n                'published',\n                'archived'\n            )\n        ),\n\n    created_by TEXT,\n    updated_by TEXT,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    CHECK (\n        price_min IS NULL\n        OR price_min >= 0\n    ),\n\n    CHECK (\n        price_max IS NULL\n        OR price_max >= 0\n    ),\n\n    CHECK (\n        price_min IS NULL\n        OR price_max IS NULL\n        OR price_max >= price_min\n    ),\n\n    CHECK (\n        valid_from IS NULL\n        OR valid_to IS NULL\n        OR valid_to >= valid_from\n    )\n);\n\nCREATE INDEX IF NOT EXISTS idx_knowledge_entries_active\n    ON clinic_knowledge_entries(\n        clinic_id,\n        status,\n        category\n    );\n\nCREATE INDEX IF NOT EXISTS idx_knowledge_entries_title_trgm\n    ON clinic_knowledge_entries\n    USING GIN (\n        LOWER(title) gin_trgm_ops\n    );\n\nCREATE INDEX IF NOT EXISTS idx_knowledge_entries_answer_trgm\n    ON clinic_knowledge_entries\n    USING GIN (\n        LOWER(answer_text) gin_trgm_ops\n    );\n\nCREATE INDEX IF NOT EXISTS idx_knowledge_entries_keywords\n    ON clinic_knowledge_entries\n    USING GIN (keywords);\n\nCREATE TABLE IF NOT EXISTS clinic_information_queries (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    patient_id BIGINT\n        REFERENCES patients(id)\n        ON DELETE SET NULL,\n\n    query_text TEXT NOT NULL,\n    normalized_query TEXT NOT NULL,\n\n    category_hint TEXT,\n\n    matched_entry_id BIGINT\n        REFERENCES clinic_knowledge_entries(id)\n        ON DELETE SET NULL,\n\n    match_score NUMERIC(8, 4),\n\n    status TEXT NOT NULL\n        CHECK (\n            status IN (\n                'answered',\n                'escalated',\n                'unanswered'\n            )\n        ),\n\n    answer_text TEXT,\n\n    source_channel TEXT NOT NULL DEFAULT 'whatsapp'\n        CHECK (\n            source_channel IN (\n                'whatsapp',\n                'sms',\n                'phone',\n                'telegram',\n                'web',\n                'manual'\n            )\n        ),\n\n    wants_human_response BOOLEAN\n        NOT NULL DEFAULT FALSE,\n\n    consent_to_contact BOOLEAN\n        NOT NULL DEFAULT FALSE,\n\n    handoff_task_id BIGINT\n        REFERENCES human_handoff_tasks(id)\n        ON DELETE SET NULL,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE INDEX IF NOT EXISTS idx_information_queries_clinic\n    ON clinic_information_queries(\n        clinic_id,\n        created_at DESC\n    );\n\nCREATE INDEX IF NOT EXISTS idx_information_queries_unanswered\n    ON clinic_information_queries(\n        status,\n        created_at DESC\n    )\n    WHERE status IN (\n        'escalated',\n        'unanswered'\n    );\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار پایگاه دانش و ثبت پرسش‌های عمومی، خدماتی و قیمتی ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "4e615ad0-cc35-4fa0-8763-7393bf8ac372",
+      "name": "Create Clinic Knowledge Base"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nاین Workflow پایگاه دانش کلینیک و جدول ثبت پرسش‌ها را ایجاد می‌کند.\n\nدسته‌ها شامل اطلاعات عمومی، ساعات کاری، آدرس، خدمات، قیمت، بیمه، آمادگی قبل از مراجعه و قوانین کلینیک است.\n\nسؤالات بدون پاسخ یا نیازمند تأیید انسانی می‌توانند وارد صف منشی شوند.",
+        "height": 350,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -580,
+        -290
+      ],
+      "id": "98964910-f840-437e-b573-646b23fbd6f1",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Clinic Knowledge Base",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

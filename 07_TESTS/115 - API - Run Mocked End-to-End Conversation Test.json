@@ -1,0 +1,428 @@
+{
+  "name": "115 - API - Run Mocked End-to-End Conversation Test",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1320,
+        180
+      ],
+      "id": "21fa3b96-1830-409e-a7a4-b546600ee18c",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "657f31ee-7e9b-4926-be79-5ed63a9c0a72",
+              "name": "suite_code",
+              "value": "mocked_e2e",
+              "type": "string"
+            },
+            {
+              "id": "ebe07f51-077a-4ea8-840e-f8a6f370cf81",
+              "name": "case_code",
+              "value": "conversation_clinic_hours",
+              "type": "string"
+            },
+            {
+              "id": "a12f042c-4379-4767-83df-126facbc73ee",
+              "name": "clinic_name",
+              "value": "کلینیک تست یکپارچه",
+              "type": "string"
+            },
+            {
+              "id": "8a313449-58fb-43df-bd47-ca5f837855d1",
+              "name": "requested_by",
+              "value": "integration-tester",
+              "type": "string"
+            },
+            {
+              "id": "0c6fe979-7b0d-4372-a455-186b30998df0",
+              "name": "webhook_base_url",
+              "value": "http://n8n:5678/webhook",
+              "type": "string"
+            },
+            {
+              "id": "41b78bba-1f78-44af-b86d-9aadbed4b5fe",
+              "name": "confirm_run",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1080,
+        180
+      ],
+      "id": "fc0cef92-d2c2-4392-af14-78009af13886",
+      "name": "Manual Integration Test Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/tests/run-conversation-case",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1080,
+        -80
+      ],
+      "id": "5ed03ee4-2c1e-45b4-8605-bb51e4b54dbc",
+      "name": "Webhook - Run Conversation Test Case"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst suite_code =\n  text(input.suite_code || 'mocked_e2e');\nconst case_code =\n  text(input.case_code);\nconst clinic_name =\n  text(\n    input.clinic_name ||\n    'کلینیک تست یکپارچه'\n  );\nconst requested_by =\n  text(\n    input.requested_by ||\n    'integration-tester'\n  );\nconst webhook_base_url =\n  text(\n    input.webhook_base_url ||\n    'http://n8n:5678/webhook'\n  ).replace(/\\/+$/, '');\nconst confirm_run =\n  bool(input.confirm_run);\n\nconst errors = [];\n\nfor (const [field, value] of [\n  ['suite_code', suite_code],\n  ['case_code', case_code],\n  ['clinic_name', clinic_name],\n  ['requested_by', requested_by],\n]) {\n  if (!value) {\n    errors.push({\n      field,\n      message: `${field} الزامی است.`,\n    });\n  }\n}\n\nif (!/^https?:\\/\\/.+/i.test(webhook_base_url)) {\n  errors.push({\n    field: 'webhook_base_url',\n    message: 'آدرس Webhook معتبر نیست.',\n  });\n}\n\nif (confirm_run !== true) {\n  errors.push({\n    field: 'confirm_run',\n    message: 'اجرای تست باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    suite_code,\n    case_code,\n    clinic_name,\n    requested_by,\n    webhook_base_url,\n    confirm_run,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -810,
+        40
+      ],
+      "id": "8300e145-35ba-4377-93ba-19d33899ccb8",
+      "name": "Normalize and Validate Test Run"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "121233c3-95cd-4a57-8d17-1e39444c665c",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -560,
+        40
+      ],
+      "id": "86385591-3390-48f1-95cc-29a77159119a",
+      "name": "Is Test Run Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS suite_code,\n        $2::TEXT AS case_code,\n        $3::TEXT AS clinic_name,\n        $4::TEXT AS requested_by\n),\n\nclinic_context AS (\n    SELECT\n        clinic.id AS clinic_id,\n        clinic.name AS clinic_name,\n        clinic.timezone\n    FROM clinics clinic\n    INNER JOIN request_data request\n        ON clinic.name =\n           request.clinic_name\n    WHERE clinic.is_active = TRUE\n    LIMIT 1\n),\n\ncase_context AS (\n    SELECT test_case.*\n    FROM integration_test_cases test_case\n    INNER JOIN request_data request\n        ON test_case.suite_code =\n           request.suite_code\n       AND test_case.case_code =\n           request.case_code\n    WHERE test_case.enabled = TRUE\n    LIMIT 1\n),\n\ngateway_context AS (\n    SELECT client.*\n    FROM channel_gateway_clients client\n    INNER JOIN clinic_context clinic\n        ON client.clinic_id =\n           clinic.clinic_id\n    WHERE client.client_name =\n          'integration-webchat'\n      AND client.channel =\n          'webchat'\n      AND client.enabled = TRUE\n    LIMIT 1\n),\n\npatient_context AS (\n    SELECT patient.*\n    FROM patients patient\n    INNER JOIN clinic_context clinic\n        ON patient.clinic_id =\n           clinic.clinic_id\n    WHERE patient.mobile =\n          '989120000001'\n      AND patient.is_active = TRUE\n    LIMIT 1\n),\n\ninserted_run AS (\n    INSERT INTO integration_test_runs (\n        suite_code,\n        clinic_id,\n        status,\n        requested_by,\n        environment_name,\n        metadata\n    )\n    SELECT\n        request.suite_code,\n        clinic.clinic_id,\n        'running',\n        request.requested_by,\n        'local-mock',\n        JSONB_BUILD_OBJECT(\n            'case_code',\n            request.case_code,\n            'mock_ai_required',\n            TRUE\n        )\n    FROM request_data request\n    CROSS JOIN clinic_context clinic\n    WHERE EXISTS (\n            SELECT 1\n            FROM case_context\n          )\n      AND EXISTS (\n            SELECT 1\n            FROM gateway_context\n          )\n      AND EXISTS (\n            SELECT 1\n            FROM patient_context\n          )\n    RETURNING *\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN FALSE\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM case_context\n        )\n            THEN FALSE\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM gateway_context\n        )\n            THEN FALSE\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM patient_context\n        )\n            THEN FALSE\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM inserted_run\n        )\n            THEN FALSE\n\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN 'test_clinic_not_found'\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM case_context\n        )\n            THEN 'test_case_not_found'\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM gateway_context\n        )\n            THEN 'test_gateway_client_not_found'\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM patient_context\n        )\n            THEN 'test_patient_not_found'\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM inserted_run\n        )\n            THEN 'test_run_not_created'\n\n        ELSE 'test_run_prepared'\n    END AS result,\n\n    (\n        SELECT id\n        FROM inserted_run\n    ) AS run_id,\n\n    (\n        SELECT run_key\n        FROM inserted_run\n    ) AS run_key,\n\n    (\n        SELECT id\n        FROM case_context\n    ) AS case_id,\n\n    (\n        SELECT case_code\n        FROM case_context\n    ) AS case_code,\n\n    (\n        SELECT title\n        FROM case_context\n    ) AS case_title,\n\n    (\n        SELECT request_template\n        FROM case_context\n    ) AS request_template,\n\n    (\n        SELECT expected_assertions\n        FROM case_context\n    ) AS expected_assertions,\n\n    (\n        SELECT clinic_id\n        FROM clinic_context\n    ) AS clinic_id,\n\n    (\n        SELECT clinic_name\n        FROM clinic_context\n    ) AS clinic_name,\n\n    (\n        SELECT id\n        FROM gateway_context\n    ) AS gateway_client_id,\n\n    (\n        SELECT client_name\n        FROM gateway_context\n    ) AS gateway_client_name,\n\n    (\n        SELECT channel\n        FROM gateway_context\n    ) AS gateway_channel,\n\n    (\n        SELECT provider_name\n        FROM gateway_context\n    ) AS provider_name,\n\n    (\n        SELECT mobile\n        FROM patient_context\n    ) AS mobile\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.suite_code,\n  $json.case_code,\n  $json.clinic_name,\n  $json.requested_by\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -300,
+        -40
+      ],
+      "id": "28927785-ddb0-411f-9997-fca1969f1918",
+      "name": "Prepare Integration Test Run"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "03162a2a-d3a3-4b77-9327-8568b39f1ebd",
+              "leftValue": "={{ $json.success === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -50,
+        -40
+      ],
+      "id": "be19c1c8-76a3-4627-a761-2b0cd6f34f77",
+      "name": "Is Test Environment Ready?"
+    },
+    {
+      "parameters": {
+        "jsCode": "if ($json.success !== true) {\n  return [{ json: $json }];\n}\n\nconst input =\n  $('Normalize and Validate Test Run').first().json;\n\nconst template =\n  $json.request_template || {};\n\nconst uniqueSuffix = [\n  $json.run_id,\n  $json.case_code,\n  Date.now(),\n].join('-');\n\nreturn [{\n  json: {\n    ...$json,\n    test_started_at_ms: Date.now(),\n    gateway_url:\n      `${input.webhook_base_url}/clinic/gateway/events/process`,\n    gateway_payload: {\n      gateway_event_type:\n        'inbound_message',\n      clinic_name:\n        $json.clinic_name,\n      client_name:\n        $json.gateway_client_name,\n      provider_name:\n        $json.provider_name ||\n        'mock-provider',\n      channel:\n        template.channel ||\n        $json.gateway_channel ||\n        'webchat',\n      api_key: '',\n      signature_verified: false,\n      verification_reference: '',\n      source_ip: '127.0.0.1',\n      external_event_id:\n        `test-event-${uniqueSuffix}`,\n      external_message_id:\n        `test-message-${uniqueSuffix}`,\n      external_conversation_id:\n        `test-conversation-${$json.run_id}`,\n      sender:\n        $json.mobile,\n      message_type:\n        template.message_type ||\n        'text',\n      message_text:\n        template.message_text ||\n        '',\n      attachments:\n        template.attachments ||\n        [],\n      language:\n        template.language ||\n        'fa',\n      request_timestamp:\n        new Date().toISOString(),\n      raw_payload: {\n        integration_test: true,\n        run_id: $json.run_id,\n        case_code: $json.case_code,\n      },\n      webhook_base_url:\n        input.webhook_base_url,\n      confirm_gateway: true,\n    },\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        -120
+      ],
+      "id": "9aaa3a3c-ff02-4d73-b07f-1be922e02afb",
+      "name": "Prepare Gateway Test Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.gateway_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.gateway_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        450,
+        -120
+      ],
+      "id": "b989918c-5993-4b17-8b4d-bfa3dc66199f",
+      "name": "Call Unified Gateway Under Test",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const prepared =\n  $('Prepare Gateway Test Request').first().json;\n\nconst response = $json || {};\nconst expected =\n  prepared.expected_assertions || {};\n\nconst findByKey = (\n  value,\n  targetKey\n) => {\n  if (\n    !value ||\n    typeof value !== 'object'\n  ) {\n    return undefined;\n  }\n\n  if (\n    Object.prototype.hasOwnProperty.call(\n      value,\n      targetKey\n    )\n  ) {\n    return value[targetKey];\n  }\n\n  for (const nested of Object.values(value)) {\n    if (\n      nested &&\n      typeof nested === 'object'\n    ) {\n      const found =\n        findByKey(\n          nested,\n          targetKey\n        );\n\n      if (found !== undefined) {\n        return found;\n      }\n    }\n  }\n\n  return undefined;\n};\n\nconst stringifyAll = (value) => {\n  try {\n    return JSON.stringify(value);\n  } catch {\n    return String(value);\n  }\n};\n\nconst assertions = [];\n\nif (\n  Object.prototype.hasOwnProperty.call(\n    expected,\n    'success'\n  )\n) {\n  const actual =\n    response.success === true;\n\n  assertions.push({\n    assertion: 'success',\n    expected: expected.success,\n    actual,\n    passed:\n      actual === expected.success,\n  });\n}\n\nif (expected.response_contains) {\n  const completeText =\n    stringifyAll(response);\n\n  assertions.push({\n    assertion:\n      'response_contains',\n    expected:\n      expected.response_contains,\n    actual:\n      completeText,\n    passed:\n      completeText.includes(\n        String(\n          expected.response_contains\n        )\n      ),\n  });\n}\n\nif (expected.conversation_status) {\n  const actual =\n    findByKey(\n      response,\n      'conversation_status'\n    );\n\n  assertions.push({\n    assertion:\n      'conversation_status',\n    expected:\n      expected.conversation_status,\n    actual:\n      actual ?? null,\n    passed:\n      actual ===\n      expected.conversation_status,\n  });\n}\n\nif (expected.result) {\n  const actual =\n    findByKey(\n      response,\n      'result'\n    );\n\n  assertions.push({\n    assertion: 'result',\n    expected:\n      expected.result,\n    actual:\n      actual ?? null,\n    passed:\n      actual === expected.result,\n  });\n}\n\nconst passed =\n  assertions.length > 0 &&\n  assertions.every(\n    (assertion) =>\n      assertion.passed === true\n  );\n\nreturn [{\n  json: {\n    run_id:\n      Number(prepared.run_id),\n    run_key:\n      prepared.run_key,\n    case_id:\n      Number(prepared.case_id),\n    case_code:\n      prepared.case_code,\n    case_title:\n      prepared.case_title,\n    test_status:\n      passed\n        ? 'passed'\n        : 'failed',\n    duration_ms:\n      Math.max(\n        0,\n        Date.now() -\n        Number(\n          prepared.test_started_at_ms ||\n          Date.now()\n        )\n      ),\n    request_payload:\n      prepared.gateway_payload,\n    request_payload_text:\n      JSON.stringify(\n        prepared.gateway_payload\n      ),\n    response_payload:\n      response,\n    response_payload_text:\n      JSON.stringify(response),\n    assertion_results:\n      assertions,\n    assertion_results_text:\n      JSON.stringify(assertions),\n    error_message:\n      passed\n        ? ''\n        : 'One or more assertions failed.',\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        -120
+      ],
+      "id": "b74f0188-4b9e-4864-a1cc-b0ce85c2f8bf",
+      "name": "Evaluate Conversation Test Assertions"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS run_id,\n        $2::BIGINT AS case_id,\n        $3::TEXT AS case_code,\n        $4::TEXT AS test_status,\n        $5::INTEGER AS duration_ms,\n        $6::JSONB AS request_payload,\n        $7::JSONB AS response_payload,\n        $8::JSONB AS assertion_results,\n        NULLIF($9::TEXT, '') AS error_message\n),\n\ninserted_result AS (\n    INSERT INTO integration_test_results (\n        run_id,\n        case_id,\n        case_code,\n        status,\n        duration_ms,\n        request_payload,\n        response_payload,\n        assertion_results,\n        error_message,\n        completed_at\n    )\n    SELECT\n        request.run_id,\n        request.case_id,\n        request.case_code,\n        request.test_status,\n        request.duration_ms,\n        request.request_payload,\n        request.response_payload,\n        request.assertion_results,\n        request.error_message,\n        NOW()\n    FROM request_data request\n    ON CONFLICT (\n        run_id,\n        case_code\n    )\n    DO UPDATE SET\n        status =\n            EXCLUDED.status,\n        duration_ms =\n            EXCLUDED.duration_ms,\n        request_payload =\n            EXCLUDED.request_payload,\n        response_payload =\n            EXCLUDED.response_payload,\n        assertion_results =\n            EXCLUDED.assertion_results,\n        error_message =\n            EXCLUDED.error_message,\n        completed_at = NOW()\n    RETURNING *\n),\n\nupdated_run AS (\n    UPDATE integration_test_runs run\n    SET\n        status = CASE\n            WHEN request.test_status =\n                 'passed'\n                THEN 'passed'\n            ELSE 'failed'\n        END,\n        completed_at = NOW(),\n        summary =\n            JSONB_BUILD_OBJECT(\n                'case_code',\n                    request.case_code,\n                'passed',\n                    request.test_status =\n                    'passed',\n                'duration_ms',\n                    request.duration_ms,\n                'assertion_count',\n                    JSONB_ARRAY_LENGTH(\n                        request.assertion_results\n                    )\n            )\n    FROM request_data request\n    WHERE run.id = request.run_id\n    RETURNING run.*\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM inserted_result\n        )\n            THEN FALSE\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN request.test_status =\n             'passed'\n            THEN 'integration_test_passed'\n        ELSE 'integration_test_failed'\n    END AS result,\n\n    request.run_id,\n    (\n        SELECT run_key\n        FROM updated_run\n    ) AS run_key,\n\n    request.case_code,\n    request.test_status AS status,\n    request.duration_ms,\n    request.assertion_results,\n    request.response_payload,\n\n    (\n        SELECT summary\n        FROM updated_run\n    ) AS run_summary\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.run_id,\n  $json.case_id,\n  $json.case_code,\n  $json.test_status,\n  $json.duration_ms,\n  $json.request_payload_text,\n  $json.response_payload_text,\n  $json.assertion_results_text,\n  $json.error_message\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        950,
+        -120
+      ],
+      "id": "7c48d911-7077-4fb0-b26f-28e28a153dea",
+      "name": "Save Integration Test Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_test_request',message:'اطلاعات اجرای تست نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -300,
+        160
+      ],
+      "id": "80b35cd2-6b31-4261-9c9c-ffcb5af1e2eb",
+      "name": "Return Test Validation Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:$json.result||'test_environment_not_ready',message:'محیط تست یا سناریوی موردنظر آماده نیست. ابتدا Workflowهای 113 و 114 را اجرا کنید.'}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        80
+      ],
+      "id": "7cdccfb4-8a43-4dc1-adb1-313c60ea7534",
+      "name": "Return Test Environment Error"
+    },
+    {
+      "parameters": {
+        "content": "## اجرای یک سناریوی End-to-End\n\nمسیر تست:\n115 → 108 → 106E → 119A → 52 → 106B → 106C → 119B\n\nسناریوهای Seed شده:\n- conversation_clinic_hours\n- conversation_patient_appointments\n- conversation_missing_information\n\n106A و 106D باید Deactivate و Mockهای 119A و 119B Active باشند.",
+        "height": 430,
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1560,
+        -330
+      ],
+      "id": "2313f633-7b3b-4bdb-825a-cc81a4ba418f",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Integration Test Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Integration Test Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Test Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Run Conversation Test Case": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Test Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Test Run": {
+      "main": [
+        [
+          {
+            "node": "Is Test Run Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Test Run Valid?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Integration Test Run",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Test Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Integration Test Run": {
+      "main": [
+        [
+          {
+            "node": "Is Test Environment Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Test Environment Ready?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Gateway Test Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Test Environment Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Gateway Test Request": {
+      "main": [
+        [
+          {
+            "node": "Call Unified Gateway Under Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Unified Gateway Under Test": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Conversation Test Assertions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Conversation Test Assertions": {
+      "main": [
+        [
+          {
+            "node": "Save Integration Test Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

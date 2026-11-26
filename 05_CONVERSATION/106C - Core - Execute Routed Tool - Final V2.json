@@ -1,0 +1,535 @@
+{
+  "name": "106C - Core - Execute Routed Tool - Final V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1320,
+        208
+      ],
+      "id": "89c7502d-ce6d-4472-b2d3-c263fadf41cd",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8868a2dd-4005-4723-834e-37995da0239f",
+              "name": "session_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "c8d004f9-cb66-4141-a0fc-13326bfc8a9c",
+              "name": "message_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "3de255e1-f45c-4e3e-a488-6341729a1638",
+              "name": "webhook_base_url",
+              "value": "http://localhost:5678/webhook",
+              "type": "string"
+            },
+            {
+              "id": "53e36a8d-13da-4387-b1a1-a45fcf19b928",
+              "name": "allow_retry",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "17ed44ec-0aac-44e9-90fc-2490fff46d38",
+              "name": "max_retry_attempts",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "49d4360a-ac26-46ef-882a-c75ade54e6c8",
+              "name": "confirm_execution",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1080,
+        208
+      ],
+      "id": "2e929494-d57d-4655-84a2-60d74b195c52",
+      "name": "Manual Routed Tool Execution"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/ai/execute-routed-tool",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1080,
+        -80
+      ],
+      "id": "641c75f9-127c-425c-b4a2-e46c8502c19f",
+      "name": "Webhook - Execute Routed Tool"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst session_id = Number(input.session_id);\nconst message_id = Number(input.message_id);\nconst webhook_base_url = text(\n  input.webhook_base_url || 'http://localhost:5678/webhook'\n).replace(/\\/+$/, '');\nconst allow_retry = toBoolean(input.allow_retry);\nconst max_retry_attempts = Number(input.max_retry_attempts ?? 3);\nconst confirm_execution = toBoolean(input.confirm_execution);\n\nconst errors = [];\n\nif (!Number.isInteger(session_id) || session_id < 1) {\n  errors.push({\n    field: 'session_id',\n    message: 'session_id باید یک عدد صحیح بزرگ‌تر از صفر باشد.',\n  });\n}\n\nif (!Number.isInteger(message_id) || message_id < 1) {\n  errors.push({\n    field: 'message_id',\n    message: 'message_id باید یک عدد صحیح بزرگ‌تر از صفر باشد.',\n  });\n}\n\nif (!/^https?:\\/\\/.+/i.test(webhook_base_url)) {\n  errors.push({\n    field: 'webhook_base_url',\n    message: 'آدرس پایه Webhook معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(max_retry_attempts) ||\n  max_retry_attempts < 1 ||\n  max_retry_attempts > 10\n) {\n  errors.push({\n    field: 'max_retry_attempts',\n    message: 'حداکثر تعداد تلاش باید بین 1 و 10 باشد.',\n  });\n}\n\nif (confirm_execution !== true) {\n  errors.push({\n    field: 'confirm_execution',\n    message: 'اجرای ابزار باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    session_id,\n    message_id,\n    webhook_base_url,\n    allow_retry,\n    max_retry_attempts,\n    confirm_execution,\n    validation_status: errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -808,
+        64
+      ],
+      "id": "9d49dc72-b008-4a71-acbd-cf10013b19ab",
+      "name": "Normalize and Validate Tool Execution"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f16a047a-fcea-4d5b-9185-bbb8d3851363",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -568,
+        64
+      ],
+      "id": "6c1b2bd4-bdc9-4c28-9ff1-d94fbe8f1014",
+      "name": "Is Tool Execution Request Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS session_id,\n        $2::BIGINT AS message_id\n),\n\nexecution_context AS (\n    SELECT\n        session.id AS session_id,\n        session.clinic_id,\n        session.patient_id,\n        session.status AS session_status,\n        session.pending_action,\n\n        clinic.name AS clinic_name,\n\n        message.id AS message_id,\n        message.tool_action,\n        message.tool_result,\n\n        message.tool_result -> 'safety'\n            AS safety_payload,\n\n        message.tool_result -> 'routing'\n            AS routing_payload\n\n    FROM request_data request\n\n    INNER JOIN conversation_sessions session\n        ON session.id = request.session_id\n\n    INNER JOIN clinics clinic\n        ON clinic.id = session.clinic_id\n\n    INNER JOIN conversation_messages message\n        ON message.id = request.message_id\n       AND message.session_id = session.id\n       AND message.direction = 'inbound'\n\n    LIMIT 1\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM execution_context\n        )\n            THEN FALSE\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM execution_context\n            WHERE routing_payload IS NULL\n        )\n            THEN FALSE\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM execution_context\n            WHERE routing_payload ->> 'route_status' <> 'ready'\n               OR COALESCE(\n                    (routing_payload ->> 'payload_ready')::BOOLEAN,\n                    FALSE\n                  ) = FALSE\n        )\n            THEN FALSE\n\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM execution_context\n        )\n            THEN 'message_or_session_not_found'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM execution_context\n            WHERE routing_payload IS NULL\n        )\n            THEN 'tool_route_not_found'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM execution_context\n            WHERE routing_payload ->> 'route_status' <> 'ready'\n               OR COALESCE(\n                    (routing_payload ->> 'payload_ready')::BOOLEAN,\n                    FALSE\n                  ) = FALSE\n        )\n            THEN 'tool_route_not_ready'\n\n        ELSE 'tool_execution_context_loaded'\n    END AS result,\n\n    (\n        SELECT ROW_TO_JSON(execution_context)\n        FROM execution_context\n    ) AS execution_context\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.session_id,\n  $json.message_id\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -312,
+        -48
+      ],
+      "id": "d7e47b77-53f3-47a4-b65a-5995e81690c7",
+      "name": "Load Ready Tool Route"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0bb2ddb2-6bcc-4235-9964-ebccc6f9bcb7",
+              "leftValue": "={{ $json.success === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -56,
+        -48
+      ],
+      "id": "c5c9ce7b-1709-44a7-84c0-f436b2d17698",
+      "name": "Is Tool Route Ready?"
+    },
+    {
+      "parameters": {
+        "jsCode": "if ($json.success !== true) {\n  return [{ json: $json }];\n}\n\nconst input = $('Normalize and Validate Tool Execution').first().json;\nconst context = $json.execution_context || {};\nconst routing = context.routing_payload || {};\n\nconst endpoint = String(routing.endpoint || '')\n  .trim()\n  .replace(/^\\/+/, '');\n\nconst method = String(routing.method || 'POST')\n  .trim()\n  .toUpperCase();\n\nif (\n  !endpoint ||\n  endpoint.includes('..') ||\n  endpoint.includes('://') ||\n  !/^[a-zA-Z0-9/_-]+$/.test(endpoint)\n) {\n  throw new Error('Stored tool route contains an unsafe endpoint.');\n}\n\nif (!['POST'].includes(method)) {\n  throw new Error('Stored tool route uses an unsupported HTTP method.');\n}\n\nconst toolPayload =\n  routing.payload &&\n  typeof routing.payload === 'object' &&\n  !Array.isArray(routing.payload)\n    ? routing.payload\n    : {};\n\nconst executionUrl =\n  `${input.webhook_base_url}/${endpoint}`;\n\nreturn [{\n  json: {\n    success: true,\n    result: 'tool_execution_prepared',\n    session_id: Number(context.session_id),\n    message_id: Number(context.message_id),\n    clinic_id: Number(context.clinic_id),\n    clinic_name: context.clinic_name,\n    safe_tool_action:\n      routing.safe_tool_action ||\n      context.tool_action ||\n      'none',\n    target_workflow_number:\n      routing.target_workflow_number ?? null,\n    target_workflow_name:\n      routing.target_workflow_name ?? null,\n    endpoint,\n    method,\n    tool_payload: toolPayload,\n    tool_payload_json: JSON.stringify(toolPayload),\n    execution_url: executionUrl,\n    allow_retry: input.allow_retry,\n    max_retry_attempts: input.max_retry_attempts,\n    execution_started_at_ms: Date.now(),\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        -144
+      ],
+      "id": "04166ad5-024f-4f56-97da-827453fed9db",
+      "name": "Prepare Tool Execution Request"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS clinic_id,\n        $2::BIGINT AS session_id,\n        $3::BIGINT AS message_id,\n        $4::TEXT AS tool_action,\n        NULLIF($5::INTEGER, 0) AS target_workflow_number,\n        NULLIF($6::TEXT, '') AS target_workflow_name,\n        $7::TEXT AS endpoint,\n        $8::TEXT AS http_method,\n        $9::JSONB AS request_payload,\n        $10::BOOLEAN AS allow_retry,\n        $11::INTEGER AS max_retry_attempts\n),\n\nkey_data AS (\n    SELECT\n        request.*,\n\n        MD5(\n            request.session_id::TEXT\n            || ':'\n            || request.message_id::TEXT\n            || ':'\n            || request.tool_action\n            || ':'\n            || request.endpoint\n            || ':'\n            || request.request_payload::TEXT\n        ) AS idempotency_key\n\n    FROM request_data request\n),\n\ninserted_log AS (\n    INSERT INTO tool_execution_logs (\n        clinic_id,\n        session_id,\n        input_message_id,\n        tool_action,\n        target_workflow_number,\n        target_workflow_name,\n        endpoint,\n        http_method,\n        request_payload,\n        status,\n        idempotency_key,\n        attempt_count,\n        started_at\n    )\n\n    SELECT\n        key.clinic_id,\n        key.session_id,\n        key.message_id,\n        key.tool_action,\n        key.target_workflow_number,\n        key.target_workflow_name,\n        key.endpoint,\n        key.http_method,\n        key.request_payload,\n        'running',\n        key.idempotency_key,\n        1,\n        NOW()\n\n    FROM key_data key\n\n    ON CONFLICT (idempotency_key)\n    DO NOTHING\n\n    RETURNING *\n),\n\nretried_log AS (\n    UPDATE tool_execution_logs log\n\n    SET\n        status = 'running',\n        attempt_count = log.attempt_count + 1,\n        started_at = NOW(),\n        completed_at = NULL,\n        duration_ms = NULL,\n        http_status = NULL,\n        response_payload = NULL,\n        error_type = NULL,\n        error_message = NULL,\n        updated_at = NOW()\n\n    FROM key_data key\n\n    WHERE NOT EXISTS (\n            SELECT 1\n            FROM inserted_log\n          )\n\n      AND key.allow_retry = TRUE\n      AND log.idempotency_key = key.idempotency_key\n      AND log.status = 'failed'\n      AND log.attempt_count < key.max_retry_attempts\n\n    RETURNING log.*\n),\n\nexecutable_log AS (\n    SELECT * FROM inserted_log\n    UNION ALL\n    SELECT * FROM retried_log\n),\n\nexisting_log AS (\n    SELECT log.*\n    FROM tool_execution_logs log\n\n    INNER JOIN key_data key\n        ON key.idempotency_key =\n           log.idempotency_key\n\n    WHERE NOT EXISTS (\n        SELECT 1\n        FROM executable_log\n    )\n\n    LIMIT 1\n),\n\nselected_log AS (\n    SELECT\n        executable.*,\n        TRUE AS should_execute\n    FROM executable_log executable\n\n    UNION ALL\n\n    SELECT\n        existing.*,\n        FALSE AS should_execute\n    FROM existing_log existing\n)\n\nSELECT\n    TRUE AS success,\n\n    CASE\n        WHEN EXISTS (\n            SELECT 1\n            FROM executable_log\n        )\n            THEN 'tool_execution_reserved'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM existing_log\n            WHERE status = 'succeeded'\n        )\n            THEN 'tool_execution_already_succeeded'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM existing_log\n            WHERE status = 'running'\n        )\n            THEN 'tool_execution_already_running'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM existing_log\n            WHERE status = 'failed'\n        )\n            THEN 'tool_execution_retry_required'\n\n        ELSE 'tool_execution_not_reserved'\n    END AS result,\n\n    (\n        SELECT id\n        FROM selected_log\n        LIMIT 1\n    ) AS execution_log_id,\n\n    COALESCE(\n        (\n            SELECT should_execute\n            FROM selected_log\n            LIMIT 1\n        ),\n        FALSE\n    ) AS should_execute,\n\n    (\n        SELECT status\n        FROM selected_log\n        LIMIT 1\n    ) AS execution_status,\n\n    (\n        SELECT attempt_count\n        FROM selected_log\n        LIMIT 1\n    ) AS attempt_count,\n\n    (\n        SELECT response_payload\n        FROM selected_log\n        LIMIT 1\n    ) AS existing_response_payload,\n\n    (\n        SELECT max_retry_attempts\n        FROM request_data\n    ) AS max_retry_attempts,\n\n    CASE\n        WHEN EXISTS (\n            SELECT 1\n            FROM existing_log\n            WHERE status = 'failed'\n              AND attempt_count >= (\n                    SELECT max_retry_attempts\n                    FROM request_data\n                  )\n        )\n            THEN TRUE\n        ELSE FALSE\n    END AS retry_limit_reached\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_id,\n  $json.session_id,\n  $json.message_id,\n  $json.safe_tool_action,\n  $json.target_workflow_number || 0,\n  $json.target_workflow_name || '',\n  $json.endpoint,\n  $json.method,\n  $json.tool_payload_json,\n  $json.allow_retry,\n  $json.max_retry_attempts\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        456,
+        -144
+      ],
+      "id": "c4c61e0b-c21d-4154-8ce4-8dd7d1626aab",
+      "name": "Reserve Tool Execution"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d28bb4ba-9bef-4caa-954f-98d645d222f7",
+              "leftValue": "={{ $json.should_execute === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        712,
+        -144
+      ],
+      "id": "d8548e52-ab14-46d4-8a5c-7b30462db234",
+      "name": "Should Execute Tool?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Prepare Tool Execution Request').first().json.execution_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Clinic-Internal-Call",
+              "value": "n8n-routed-tool-executor"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Prepare Tool Execution Request').first().json.tool_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        968,
+        -240
+      ],
+      "id": "d06f0f4a-9ba6-4524-bea1-9410a7599421",
+      "name": "Call Target Workflow Webhook",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $('Prepare Tool Execution Request').first().json;\nconst reservation = $('Reserve Tool Execution').first().json;\nconst raw = $json ?? {};\n\nconst statusCode = Number(\n  raw.statusCode ??\n  raw.status ??\n  raw.httpStatus ??\n  0\n);\n\nlet responseBody =\n  raw.body !== undefined\n    ? raw.body\n    : (\n        raw.data !== undefined\n          ? raw.data\n          : raw\n      );\n\nif (typeof responseBody === 'string') {\n  try {\n    responseBody = JSON.parse(responseBody);\n  } catch {\n    responseBody = {\n      text: responseBody,\n    };\n  }\n}\n\nconst connectionError =\n  raw.error !== undefined ||\n  raw.name === 'NodeApiError' ||\n  raw.name === 'NodeOperationError';\n\nconst successfulStatus =\n  statusCode === 0 ||\n  (statusCode >= 200 && statusCode < 300);\n\nconst toolReportedFailure =\n  responseBody &&\n  typeof responseBody === 'object' &&\n  responseBody.success === false;\n\nconst success =\n  !connectionError &&\n  successfulStatus &&\n  !toolReportedFailure;\n\nconst errorMessage = success\n  ? null\n  : String(\n      raw.message ||\n      raw.error?.message ||\n      responseBody?.message ||\n      responseBody?.error ||\n      `Tool execution failed with HTTP status ${statusCode || 'unknown'}`\n    ).slice(0, 4000);\n\nreturn [{\n  json: {\n    success,\n    result: success\n      ? 'routed_tool_executed'\n      : 'routed_tool_failed',\n    execution_log_id:\n      Number(reservation.execution_log_id),\n    session_id: request.session_id,\n    message_id: request.message_id,\n    safe_tool_action: request.safe_tool_action,\n    target_workflow_number:\n      request.target_workflow_number,\n    target_workflow_name:\n      request.target_workflow_name,\n    endpoint: request.endpoint,\n    execution_url: request.execution_url,\n    http_status: statusCode || null,\n    response_payload: responseBody,\n    response_payload_json:\n      JSON.stringify(responseBody ?? {}),\n    error_type: success\n      ? null\n      : (\n          connectionError\n            ? 'connection_or_node_error'\n            : (\n                toolReportedFailure\n                  ? 'tool_reported_failure'\n                  : 'http_error'\n              )\n        ),\n    error_message: errorMessage,\n    duration_ms: Math.max(\n      0,\n      Date.now() -\n        Number(\n          request.execution_started_at_ms ||\n          Date.now()\n        )\n    ),\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1224,
+        -240
+      ],
+      "id": "fc7c1965-0da0-4fd1-ad23-9e7cc4e90a8c",
+      "name": "Normalize Tool Execution Result"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS execution_log_id,\n        $2::BIGINT AS session_id,\n        $3::BIGINT AS message_id,\n        $4::BOOLEAN AS execution_success,\n        $5::TEXT AS tool_action,\n        NULLIF($6::INTEGER, 0) AS target_workflow_number,\n        NULLIF($7::TEXT, '') AS target_workflow_name,\n        NULLIF($8::INTEGER, 0) AS http_status,\n        $9::JSONB AS response_payload,\n        NULLIF($10::TEXT, '') AS error_type,\n        NULLIF($11::TEXT, '') AS error_message,\n        $12::INTEGER AS duration_ms\n),\n\nupdated_log AS (\n    UPDATE tool_execution_logs log\n\n    SET\n        status = CASE\n            WHEN request.execution_success = TRUE\n                THEN 'succeeded'\n            ELSE 'failed'\n        END,\n\n        completed_at = NOW(),\n        duration_ms = request.duration_ms,\n        http_status = request.http_status,\n        response_payload = request.response_payload,\n        error_type = request.error_type,\n        error_message = request.error_message,\n        updated_at = NOW()\n\n    FROM request_data request\n\n    WHERE log.id = request.execution_log_id\n\n    RETURNING log.*\n),\n\nupdated_message AS (\n    UPDATE conversation_messages message\n\n    SET\n        tool_result =\n            COALESCE(\n                message.tool_result,\n                '{}'::JSONB\n            )\n            || JSONB_BUILD_OBJECT(\n                'execution',\n                JSONB_BUILD_OBJECT(\n                    'execution_log_id',\n                        request.execution_log_id,\n\n                    'success',\n                        request.execution_success,\n\n                    'tool_action',\n                        request.tool_action,\n\n                    'target_workflow_number',\n                        request.target_workflow_number,\n\n                    'target_workflow_name',\n                        request.target_workflow_name,\n\n                    'http_status',\n                        request.http_status,\n\n                    'response',\n                        request.response_payload,\n\n                    'error_type',\n                        request.error_type,\n\n                    'error_message',\n                        request.error_message,\n\n                    'duration_ms',\n                        request.duration_ms,\n\n                    'completed_at',\n                        NOW()\n                )\n            )\n\n    FROM request_data request\n\n    WHERE message.id = request.message_id\n      AND message.session_id = request.session_id\n\n    RETURNING message.id\n),\n\nupdated_session AS (\n    UPDATE conversation_sessions session\n\n    SET\n        status = CASE\n            WHEN request.execution_success = TRUE\n                THEN 'active'\n            ELSE 'waiting_human'\n        END,\n\n        pending_action = CASE\n            WHEN request.execution_success = TRUE\n                THEN NULL\n            ELSE request.tool_action\n        END,\n\n        updated_at = NOW()\n\n    FROM request_data request\n\n    WHERE session.id = request.session_id\n\n      AND EXISTS (\n          SELECT 1\n          FROM updated_message\n      )\n\n    RETURNING\n        session.status,\n        session.pending_action\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM updated_log\n        )\n            THEN FALSE\n        ELSE request.execution_success\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM updated_log\n        )\n            THEN 'execution_log_not_found'\n\n        WHEN request.execution_success = TRUE\n            THEN 'tool_execution_completed'\n\n        ELSE 'tool_execution_failed'\n    END AS result,\n\n    request.execution_log_id,\n    request.session_id,\n    request.message_id,\n    request.tool_action,\n    request.target_workflow_number,\n    request.target_workflow_name,\n    request.http_status,\n    request.response_payload,\n    request.error_type,\n    request.error_message,\n    request.duration_ms,\n\n    (\n        SELECT status\n        FROM updated_session\n    ) AS session_status,\n\n    (\n        SELECT pending_action\n        FROM updated_session\n    ) AS pending_action,\n\n    CASE\n        WHEN request.execution_success = TRUE\n            THEN 'compose_response'\n        ELSE 'compose_error_response'\n    END AS next_action\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.execution_log_id,\n  $json.session_id,\n  $json.message_id,\n  $json.success,\n  $json.safe_tool_action,\n  $json.target_workflow_number || 0,\n  $json.target_workflow_name || '',\n  $json.http_status || 0,\n  $json.response_payload_json,\n  $json.error_type || '',\n  $json.error_message || '',\n  $json.duration_ms\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1480,
+        -240
+      ],
+      "id": "8d4f7111-8e35-4fc8-8a99-d3f884213b5e",
+      "name": "Finalize Tool Execution"
+    },
+    {
+      "parameters": {
+        "jsCode": "const reservation = $json;\nconst request = $('Prepare Tool Execution Request').first().json;\n\nreturn [{\n  json: {\n    success:\n      reservation.execution_status === 'succeeded',\n\n    result: reservation.result,\n\n    execution_log_id:\n      reservation.execution_log_id,\n\n    execution_status:\n      reservation.execution_status,\n\n    attempt_count:\n      reservation.attempt_count,\n\n    max_retry_attempts:\n      reservation.max_retry_attempts,\n\n    retry_limit_reached:\n      Boolean(reservation.retry_limit_reached),\n\n    session_id:\n      request.session_id,\n\n    message_id:\n      request.message_id,\n\n    safe_tool_action:\n      request.safe_tool_action,\n\n    existing_response_payload:\n      reservation.existing_response_payload ?? null,\n\n    next_action:\n      reservation.execution_status === 'succeeded'\n        ? 'compose_response'\n        : (\n            reservation.execution_status === 'running'\n              ? 'wait_for_existing_execution'\n              : (\n                  reservation.retry_limit_reached === true\n                    ? 'human_review_retry_limit_reached'\n                    : 'review_or_retry_execution'\n                )\n          ),\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        968,
+        -48
+      ],
+      "id": "37e2e481-dc81-45f2-b678-0a3724bf8741",
+      "name": "Return Existing Execution"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: 'invalid_request',\n    message: 'اطلاعات لازم برای اجرای ابزار ناقص یا نامعتبر است.',\n    errors: $json.errors ?? [],\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -312,
+        176
+      ],
+      "id": "d2ea9803-f489-4d00-a1a0-204732f02224",
+      "name": "Return Tool Execution Validation Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: $json.result || 'tool_execution_context_not_available',\n    message:\n      $json.result === 'tool_route_not_found'\n        ? 'ابتدا Workflow شماره 53 را اجرا کنید.'\n        : (\n            $json.result === 'tool_route_not_ready'\n              ? 'مسیر ابزار هنوز آماده اجرا نیست.'\n              : 'پیام یا جلسه مکالمه پیدا نشد.'\n          ),\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        32
+      ],
+      "id": "19d585a2-2649-40c2-92d2-794f1881c8ca",
+      "name": "Return Tool Route Error"
+    },
+    {
+      "parameters": {
+        "content": "## Executor نهایی Workflow مقصد\n\nاین نسخه جایگزین Workflow 56 است.\n\nویژگی‌های تکمیلی:\n- اجرای عمومی Endpoint ذخیره‌شده توسط Tool Router\n- Idempotency بر اساس پیام، ابزار، Endpoint و Payload\n- محدودیت Retry قابل تنظیم با max_retry_attempts\n- جلوگیری از Endpoint نسبی ناامن و HTTP Method غیرمجاز\n- ثبت نتیجه در tool_execution_logs و conversation_messages\n\nپیش‌فرض max_retry_attempts برابر 3 است.",
+        "height": 460,
+        "width": 540
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1540,
+        -340
+      ],
+      "id": "c0eae122-8eef-4dd1-bfb4-827dd854b324",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Routed Tool Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Routed Tool Execution": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Tool Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Execute Routed Tool": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Tool Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Tool Execution": {
+      "main": [
+        [
+          {
+            "node": "Is Tool Execution Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Tool Execution Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Load Ready Tool Route",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Tool Execution Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Ready Tool Route": {
+      "main": [
+        [
+          {
+            "node": "Is Tool Route Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Tool Route Ready?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Tool Execution Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Tool Route Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Tool Execution Request": {
+      "main": [
+        [
+          {
+            "node": "Reserve Tool Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reserve Tool Execution": {
+      "main": [
+        [
+          {
+            "node": "Should Execute Tool?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Execute Tool?": {
+      "main": [
+        [
+          {
+            "node": "Call Target Workflow Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Existing Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Target Workflow Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Tool Execution Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Tool Execution Result": {
+      "main": [
+        [
+          {
+            "node": "Finalize Tool Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

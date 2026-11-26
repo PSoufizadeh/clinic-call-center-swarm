@@ -1,0 +1,67 @@
+{
+  "name": "22 - DB - Add Waitlist Offers",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "c0aa3ccb-dfe2-4ad1-a467-8658e6bc0f86",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE EXTENSION IF NOT EXISTS btree_gist;\n\nCREATE TABLE IF NOT EXISTS appointment_waitlist_offers (\n    id BIGSERIAL PRIMARY KEY,\n\n    waitlist_id BIGINT NOT NULL\n        REFERENCES appointment_waitlist(id)\n        ON DELETE CASCADE,\n\n    doctor_id BIGINT NOT NULL\n        REFERENCES doctors(id)\n        ON DELETE CASCADE,\n\n    offer_token TEXT NOT NULL UNIQUE,\n\n    offered_starts_at TIMESTAMPTZ NOT NULL,\n    offered_ends_at TIMESTAMPTZ NOT NULL,\n\n    status TEXT NOT NULL DEFAULT 'offered'\n        CHECK (\n            status IN (\n                'offered',\n                'accepted',\n                'declined',\n                'expired',\n                'cancelled'\n            )\n        ),\n\n    offered_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    expires_at TIMESTAMPTZ NOT NULL,\n\n    responded_at TIMESTAMPTZ,\n    response_note TEXT,\n\n    source TEXT NOT NULL DEFAULT 'assistant',\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    CHECK (offered_ends_at > offered_starts_at),\n    CHECK (expires_at > offered_at)\n);\n\nCREATE UNIQUE INDEX IF NOT EXISTS uq_waitlist_active_offer\n    ON appointment_waitlist_offers(waitlist_id)\n    WHERE status = 'offered';\n\nCREATE UNIQUE INDEX IF NOT EXISTS uq_doctor_exact_active_offer\n    ON appointment_waitlist_offers(\n        doctor_id,\n        offered_starts_at,\n        offered_ends_at\n    )\n    WHERE status = 'offered';\n\nCREATE INDEX IF NOT EXISTS idx_waitlist_offers_expiry\n    ON appointment_waitlist_offers(\n        status,\n        expires_at\n    );\n\nCREATE INDEX IF NOT EXISTS idx_waitlist_offers_token\n    ON appointment_waitlist_offers(offer_token);\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار پیشنهاد زمان آزاد به بیماران لیست انتظار ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "177830f6-4e35-492a-99e6-392270b07fa1",
+      "name": "Create Waitlist Offers Structure"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nاین Workflow جدول `appointment_waitlist_offers` را ایجاد می‌کند.\n\nهر پیشنهاد شامل بیمار، زمان پیشنهادی، زمان انقضا، وضعیت پاسخ و یک توکن یکتا است.\n\nپس از اجرای موفق، Workflow را غیرفعال نگه دار.",
+        "height": 280,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        -240
+      ],
+      "id": "d26b5d9d-4624-4ea5-8575-567d2ebf93a5",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Waitlist Offers Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

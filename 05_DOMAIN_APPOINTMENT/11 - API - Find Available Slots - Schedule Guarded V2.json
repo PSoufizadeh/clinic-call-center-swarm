@@ -1,0 +1,243 @@
+{
+  "name": "11 - API - Find Available Slots - Schedule Guarded V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -880,
+        160
+      ],
+      "id": "bc543b05-01a8-438d-9371-d17f8f17b3cf",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1dac69c7-f028-4140-a4f9-359222dd2dce",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "9a6e6419-87ff-4d3c-94af-dcb26ae7ae9f",
+              "name": "doctor_name",
+              "value": "دکتر آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "91194a8e-d201-4ee4-b304-a38a4ed36f8b",
+              "name": "service_name",
+              "value": "ویزیت عمومی",
+              "type": "string"
+            },
+            {
+              "id": "016138bc-da11-40f7-a92b-5d8a7b50e225",
+              "name": "target_date",
+              "value": "2026-08-03",
+              "type": "string"
+            },
+            {
+              "id": "c0464d76-f4c8-409d-a828-8db9d0eb306d",
+              "name": "limit",
+              "value": 5,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -640,
+        160
+      ],
+      "id": "74c52025-a4db-4a3e-b51e-32eff15283b8",
+      "name": "Manual Slot Search Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/appointments/available-slots",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -640,
+        -96
+      ],
+      "id": "348a3b8d-3c98-4ef9-96ea-00b48777885f",
+      "name": "Webhook - Find Available Slots"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst clinic_name = text(input.clinic_name);\nconst doctor_name = text(input.doctor_name);\nconst service_name = text(input.service_name);\nconst target_date = text(input.target_date);\n\nconst parsedLimit = Number(input.limit ?? 5);\nconst limit = Number.isInteger(parsedLimit) ? parsedLimit : 5;\n\nconst errors = [];\n\nif (!clinic_name) {\n  errors.push({ field: 'clinic_name', message: 'نام کلینیک الزامی است.' });\n}\n\nif (!doctor_name) {\n  errors.push({ field: 'doctor_name', message: 'نام پزشک الزامی است.' });\n}\n\nif (!service_name) {\n  errors.push({ field: 'service_name', message: 'نام خدمت الزامی است.' });\n}\n\nif (!target_date) {\n  errors.push({ field: 'target_date', message: 'تاریخ موردنظر الزامی است.' });\n}\n\nfunction isRealIsoDate(value) {\n  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;\n\n  const [year, month, day] = value.split('-').map(Number);\n  const parsed = new Date(Date.UTC(year, month - 1, day));\n\n  return (\n    parsed.getUTCFullYear() === year &&\n    parsed.getUTCMonth() === month - 1 &&\n    parsed.getUTCDate() === day\n  );\n}\n\nif (target_date && !isRealIsoDate(target_date)) {\n  errors.push({\n    field: 'target_date',\n    message: 'تاریخ باید معتبر و با قالب YYYY-MM-DD باشد.',\n  });\n}\n\nif (limit < 1 || limit > 20) {\n  errors.push({\n    field: 'limit',\n    message: 'limit باید یک عدد صحیح بین 1 و 20 باشد.',\n  });\n}\n\nreturn [\n  {\n    json: {\n      clinic_name,\n      doctor_name,\n      service_name,\n      target_date,\n      limit,\n      validation_status: errors.length === 0 ? 'valid' : 'invalid',\n      errors,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -368,
+        32
+      ],
+      "id": "26e897ea-bbaa-4e79-b7f6-fc0c5d36a820",
+      "name": "Normalize and Validate Slot Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fa2b69a4-f2de-4b15-a5a5-1aef7d98eb70",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -128,
+        32
+      ],
+      "id": "5fbff80e-bc7c-4149-bfad-d5396bbdf341",
+      "name": "Is Slot Request Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::DATE AS target_date,\n        $2::TEXT AS clinic_name,\n        $3::TEXT AS doctor_name,\n        $4::TEXT AS service_name,\n        LEAST(GREATEST($5::INTEGER, 1), 20) AS result_limit\n),\n\ndoctor_context AS (\n    SELECT\n        c.id AS clinic_id,\n        c.name AS clinic_name,\n        c.timezone,\n\n        d.id AS doctor_id,\n        d.full_name AS doctor_name,\n        d.buffer_minutes,\n\n        s.id AS service_id,\n        s.name AS service_name,\n        s.duration_minutes,\n\n        ds.start_time,\n        ds.end_time,\n\n        r.target_date,\n        r.result_limit\n\n    FROM request_data r\n\n    INNER JOIN clinics c\n        ON c.name = r.clinic_name\n       AND c.is_active = TRUE\n\n    INNER JOIN doctors d\n        ON d.clinic_id = c.id\n       AND d.full_name = r.doctor_name\n       AND d.is_active = TRUE\n\n    INNER JOIN services s\n        ON s.clinic_id = c.id\n       AND s.name = r.service_name\n       AND s.is_active = TRUE\n\n    INNER JOIN doctor_schedules ds\n        ON ds.doctor_id = d.id\n       AND ds.is_active = TRUE\n       AND ds.weekday = EXTRACT(ISODOW FROM r.target_date)::INTEGER\n       AND (ds.valid_from IS NULL OR ds.valid_from <= r.target_date)\n       AND (ds.valid_to IS NULL OR ds.valid_to >= r.target_date)\n),\n\ngenerated_slots AS (\n    SELECT\n        dc.clinic_name,\n        dc.doctor_id,\n        dc.doctor_name,\n        dc.service_name,\n        dc.timezone,\n        dc.target_date,\n        dc.result_limit,\n\n        slot.slot_start_local,\n\n        slot.slot_start_local\n            + make_interval(mins => dc.duration_minutes)\n            AS slot_end_local,\n\n        slot.slot_start_local AT TIME ZONE dc.timezone\n            AS starts_at,\n\n        (\n            slot.slot_start_local\n            + make_interval(mins => dc.duration_minutes)\n        ) AT TIME ZONE dc.timezone\n            AS ends_at\n\n    FROM doctor_context dc\n\n    CROSS JOIN LATERAL generate_series(\n        dc.target_date + dc.start_time,\n\n        dc.target_date\n            + dc.end_time\n            - make_interval(mins => dc.duration_minutes),\n\n        make_interval(mins => dc.duration_minutes + dc.buffer_minutes)\n    ) AS slot(slot_start_local)\n),\n\navailable_slots AS (\n    SELECT\n        gs.*,\n        TO_CHAR(gs.slot_start_local, 'HH24:MI') AS available_start_time,\n        TO_CHAR(gs.slot_end_local, 'HH24:MI') AS available_end_time\n\n    FROM generated_slots gs\n\n    WHERE gs.starts_at > NOW()\n\n      AND NOT EXISTS (\n          SELECT 1\n          FROM schedule_exceptions se\n\n          WHERE se.doctor_id = gs.doctor_id\n            AND se.is_active = TRUE\n            AND se.exception_type = 'unavailable'\n\n            AND se.starts_at < gs.ends_at\n            AND se.ends_at > gs.starts_at\n      )\n\n      AND NOT EXISTS (\n          SELECT 1\n          FROM appointments a\n          WHERE a.doctor_id = gs.doctor_id\n            AND a.status IN ('pending', 'confirmed')\n            AND a.starts_at < gs.ends_at\n            AND a.ends_at > gs.starts_at\n      )\n),\n\nlimited_slots AS (\n    SELECT *\n    FROM available_slots\n    ORDER BY starts_at\n    LIMIT (SELECT result_limit FROM request_data)\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM doctor_context) THEN FALSE\n        WHEN NOT EXISTS (SELECT 1 FROM limited_slots) THEN FALSE\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM doctor_context)\n            THEN 'configuration_not_found'\n        WHEN NOT EXISTS (SELECT 1 FROM limited_slots)\n            THEN 'no_slots_available'\n        ELSE 'slots_found'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM doctor_context)\n            THEN 'کلینیک، پزشک، خدمت یا برنامه کاری مطابق ورودی پیدا نشد.'\n        WHEN NOT EXISTS (SELECT 1 FROM limited_slots)\n            THEN 'در تاریخ انتخاب‌شده زمان آزادی برای این پزشک وجود ندارد.'\n        ELSE 'زمان‌های آزاد با موفقیت پیدا شدند.'\n    END AS message,\n\n    r.clinic_name,\n    r.doctor_name,\n    r.service_name,\n    r.target_date,\n\n    (SELECT COUNT(*)::INTEGER FROM limited_slots) AS slot_count,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'start_time', available_start_time,\n                    'end_time', available_end_time,\n                    'starts_at', starts_at,\n                    'ends_at', ends_at\n                )\n                ORDER BY starts_at\n            )\n            FROM limited_slots\n        ),\n        '[]'::JSONB\n    ) AS slots\n\nFROM request_data r;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.target_date,\n  $json.clinic_name,\n  $json.doctor_name,\n  $json.service_name,\n  $json.limit\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        128,
+        -48
+      ],
+      "id": "bc241ec2-1ef8-47a3-a140-a3ae76d6bf5c",
+      "name": "Find Available Slots"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      result: 'invalid_request',\n      message: 'اطلاعات درخواست ناقص یا نامعتبر است.',\n      slot_count: 0,\n      slots: [],\n      errors: $json.errors ?? [],\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        128,
+        128
+      ],
+      "id": "e839a2a6-7ef7-4ccd-a1a5-8e37e14be3b7",
+      "name": "Return Slot Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## نسخه Schedule Guarded V2\n\nاین نسخه علاوه بر نوبت‌های موجود، بازه‌های فعال جدول `schedule_exceptions` را نیز از زمان‌های آزاد حذف می‌کند.\n\nابتدا Workflow شماره 17 را یک‌بار اجرا کن.\n\n**تست داخل n8n:** روی `Execute workflow` کلیک کن.",
+        "height": 260,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1080,
+        -256
+      ],
+      "id": "ac8fefa3-a902-4972-b185-b5bb7a8f582e",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Slot Search Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Slot Search Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Slot Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Find Available Slots": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Slot Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Slot Request": {
+      "main": [
+        [
+          {
+            "node": "Is Slot Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Slot Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Find Available Slots",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Slot Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

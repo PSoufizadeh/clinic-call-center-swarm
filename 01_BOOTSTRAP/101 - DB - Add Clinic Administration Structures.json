@@ -1,0 +1,67 @@
+{
+  "name": "101 - DB - Add Clinic Administration Structures",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "ea2c3ccf-c45d-4c6c-9f92-a28a4db718ad",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "ALTER TABLE clinics\n    ADD COLUMN IF NOT EXISTS address_text TEXT,\n    ADD COLUMN IF NOT EXISTS phone TEXT,\n    ADD COLUMN IF NOT EXISTS email TEXT,\n    ADD COLUMN IF NOT EXISTS description TEXT,\n    ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::JSONB,\n    ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();\n\nALTER TABLE doctors\n    ADD COLUMN IF NOT EXISTS title TEXT,\n    ADD COLUMN IF NOT EXISTS specialty TEXT,\n    ADD COLUMN IF NOT EXISTS phone TEXT,\n    ADD COLUMN IF NOT EXISTS email TEXT,\n    ADD COLUMN IF NOT EXISTS calendar_id TEXT,\n    ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::JSONB,\n    ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();\n\nALTER TABLE services\n    ADD COLUMN IF NOT EXISTS description TEXT,\n    ADD COLUMN IF NOT EXISTS price_amount NUMERIC(14,2),\n    ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'IQD',\n    ADD COLUMN IF NOT EXISTS requires_previsit_guidance BOOLEAN NOT NULL DEFAULT FALSE,\n    ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::JSONB,\n    ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();\n\nCREATE TABLE IF NOT EXISTS doctor_services (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    doctor_id BIGINT NOT NULL\n        REFERENCES doctors(id)\n        ON DELETE CASCADE,\n\n    service_id BIGINT NOT NULL\n        REFERENCES services(id)\n        ON DELETE CASCADE,\n\n    is_active BOOLEAN NOT NULL DEFAULT TRUE,\n\n    custom_duration_minutes INTEGER\n        CHECK (\n            custom_duration_minutes IS NULL\n            OR custom_duration_minutes BETWEEN 5 AND 480\n        ),\n\n    custom_price_amount NUMERIC(14,2),\n\n    metadata JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    UNIQUE (\n        doctor_id,\n        service_id\n    )\n);\n\nCREATE TABLE IF NOT EXISTS clinic_admin_events (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT\n        REFERENCES clinics(id)\n        ON DELETE SET NULL,\n\n    entity_type TEXT NOT NULL\n        CHECK (\n            entity_type IN (\n                'clinic',\n                'doctor',\n                'service',\n                'doctor_service',\n                'doctor_schedule'\n            )\n        ),\n\n    entity_id BIGINT,\n    action TEXT NOT NULL,\n\n    actor_name TEXT NOT NULL,\n    source_channel TEXT NOT NULL DEFAULT 'api',\n\n    before_data JSONB NOT NULL DEFAULT '{}'::JSONB,\n    after_data JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE INDEX IF NOT EXISTS idx_doctor_services_lookup\nON doctor_services(\n    clinic_id,\n    doctor_id,\n    service_id,\n    is_active\n);\n\nCREATE INDEX IF NOT EXISTS idx_clinic_admin_events_recent\nON clinic_admin_events(\n    clinic_id,\n    entity_type,\n    created_at DESC\n);\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار مدیریت کلینیک، پزشک، خدمت و ارتباط پزشک-خدمت ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "2a1e55ca-7f0a-48b9-84d6-1b159cbc6d06",
+      "name": "Create Clinic Administration Structures"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nفیلدهای مدیریتی به کلینیک، پزشک و خدمت اضافه می‌شوند.\n\nهمچنین ارتباط Doctor-Service و تاریخچه تغییرات مدیریتی ایجاد می‌شود.",
+        "height": 340,
+        "width": 510
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -590,
+        -270
+      ],
+      "id": "e38750ff-e64f-49a3-b302-32dfb7175514",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Clinic Administration Structures",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

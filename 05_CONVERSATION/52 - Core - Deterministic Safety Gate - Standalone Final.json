@@ -1,0 +1,354 @@
+{
+  "name": "52 - Core - Deterministic Safety Gate - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1080,
+        192
+      ],
+      "id": "aa7b594f-da93-48b6-ab63-79d6f050a951",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "13b19227-185a-488f-9054-d1b48f13ed3a",
+              "name": "session_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "ee96f187-5644-4e97-baed-85fb39a60e55",
+              "name": "message_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "b1f6cafc-f50c-4008-921d-d52d3c342993",
+              "name": "confidence_threshold",
+              "value": 0.55,
+              "type": "number"
+            },
+            {
+              "id": "1af24533-2147-4a3b-8b8e-16eebdcc8b46",
+              "name": "confirm_evaluation",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -840,
+        192
+      ],
+      "id": "ba80485d-1ecb-40c5-962c-772ae1e7690a",
+      "name": "Manual Safety Evaluation Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/ai/safety-gate",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -840,
+        -64
+      ],
+      "id": "12effa4f-2468-4af5-9543-53ba41165162",
+      "name": "Webhook - Evaluate AI Route Safety"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst session_id = Number(input.session_id);\nconst message_id = Number(input.message_id);\nconst confidence_threshold = Number(input.confidence_threshold ?? 0.55);\nconst confirm_evaluation = toBoolean(input.confirm_evaluation);\n\nconst errors = [];\n\nif (!Number.isInteger(session_id) || session_id < 1) {\n  errors.push({\n    field: 'session_id',\n    message: 'session_id باید یک عدد صحیح بزرگ‌تر از صفر باشد.',\n  });\n}\n\nif (!Number.isInteger(message_id) || message_id < 1) {\n  errors.push({\n    field: 'message_id',\n    message: 'message_id باید یک عدد صحیح بزرگ‌تر از صفر باشد.',\n  });\n}\n\nif (\n  !Number.isFinite(confidence_threshold) ||\n  confidence_threshold < 0 ||\n  confidence_threshold > 1\n) {\n  errors.push({\n    field: 'confidence_threshold',\n    message: 'آستانه اطمینان باید عددی بین صفر و یک باشد.',\n  });\n}\n\nif (confirm_evaluation !== true) {\n  errors.push({\n    field: 'confirm_evaluation',\n    message: 'اجرای Safety Gate باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    session_id,\n    message_id,\n    confidence_threshold,\n    confirm_evaluation,\n    validation_status: errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -576,
+        64
+      ],
+      "id": "447c6d03-52bf-4096-9761-1b8b7c4157df",
+      "name": "Normalize and Validate Safety Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f1fb7320-7e93-44e6-82f1-a6f5096b778a",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -336,
+        64
+      ],
+      "id": "fabba371-d229-4418-b3d8-9ac6829ccfdd",
+      "name": "Is Safety Request Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS session_id,\n        $2::BIGINT AS message_id,\n        $3::NUMERIC AS confidence_threshold\n),\n\nroute_context AS (\n    SELECT\n        session.id AS session_id,\n        session.clinic_id,\n        session.patient_id,\n        session.channel,\n        session.external_conversation_id,\n        session.language AS session_language,\n        session.status AS session_status,\n        session.last_intent,\n        session.pending_action,\n        session.collected_entities,\n        session.risk_flags AS session_risk_flags,\n\n        clinic.name AS clinic_name,\n\n        patient.full_name AS patient_name,\n        patient.mobile,\n\n        message.id AS message_id,\n        message.content_text,\n        message.content_json,\n        message.intent,\n        message.intent_confidence,\n        message.extracted_entities,\n        message.risk_flags AS message_risk_flags,\n        message.tool_action AS proposed_tool_action,\n\n        ai_run.id AS ai_run_id,\n        ai_run.parsed_output AS ai_output,\n\n        request.confidence_threshold\n\n    FROM request_data request\n\n    INNER JOIN conversation_sessions session\n        ON session.id = request.session_id\n\n    INNER JOIN clinics clinic\n        ON clinic.id = session.clinic_id\n\n    LEFT JOIN patients patient\n        ON patient.id = session.patient_id\n\n    INNER JOIN conversation_messages message\n        ON message.id = request.message_id\n       AND message.session_id = session.id\n       AND message.direction = 'inbound'\n\n    LEFT JOIN LATERAL (\n        SELECT\n            run.id,\n            run.parsed_output\n        FROM conversation_ai_runs run\n        WHERE run.session_id = session.id\n          AND run.input_message_id = message.id\n          AND run.status = 'success'\n        ORDER BY\n            run.created_at DESC,\n            run.id DESC\n        LIMIT 1\n    ) ai_run\n        ON TRUE\n\n    LIMIT 1\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM route_context\n        )\n            THEN FALSE\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM route_context\n            WHERE ai_output IS NULL\n        )\n            THEN FALSE\n\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM route_context\n        )\n            THEN 'message_or_session_not_found'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM route_context\n            WHERE ai_output IS NULL\n        )\n            THEN 'ai_route_not_found'\n\n        ELSE 'safety_context_loaded'\n    END AS result,\n\n    (\n        SELECT ROW_TO_JSON(route_context)\n        FROM route_context\n    ) AS safety_context\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.session_id,\n  $json.message_id,\n  $json.confidence_threshold\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -80,
+        -48
+      ],
+      "id": "37b4f908-a70d-43a2-97e8-ddd6184ae765",
+      "name": "Load Authoritative AI Route"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "85734ba7-d5c3-45bf-b29a-8fab9787be5f",
+              "leftValue": "={{ $json.success === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        176,
+        -48
+      ],
+      "id": "cfd66e4a-b903-46a0-8ede-3b8776f715fc",
+      "name": "Is Safety Context Available?"
+    },
+    {
+      "parameters": {
+        "jsCode": "if ($json.success !== true) {\n  return [{ json: $json }];\n}\n\nconst context = $json.safety_context || {};\nconst ai = context.ai_output || {};\n\nconst uniqueStrings = (value) => {\n  if (!Array.isArray(value)) return [];\n  return [...new Set(\n    value\n      .map((item) => String(item || '').trim())\n      .filter(Boolean)\n  )];\n};\n\nconst riskFlags = uniqueStrings(\n  ai.risk_flags ??\n  context.message_risk_flags ??\n  []\n).filter((item) => item !== 'none');\n\nconst missingFields = uniqueStrings(ai.missing_fields ?? []);\nconst intent = String(ai.intent || context.intent || 'unclear');\nconst confidence = Math.max(\n  0,\n  Math.min(\n    1,\n    Number(ai.confidence ?? context.intent_confidence ?? 0)\n  )\n);\n\nconst proposedTool = String(\n  ai.tool_action ||\n  context.proposed_tool_action ||\n  'none'\n);\n\nconst requiresHuman = Boolean(ai.requires_human);\nconst requiresConfirmation = Boolean(ai.requires_confirmation);\nconst nextQuestion =\n  ai.next_question === null || ai.next_question === undefined\n    ? null\n    : String(ai.next_question).trim() || null;\n\nconst entities =\n  ai.entities &&\n  typeof ai.entities === 'object' &&\n  !Array.isArray(ai.entities)\n    ? ai.entities\n    : (\n        context.extracted_entities &&\n        typeof context.extracted_entities === 'object'\n          ? context.extracted_entities\n          : {}\n      );\n\nconst urgentRiskFlags = [\n  'breathing_difficulty',\n  'face_lip_tongue_swelling',\n  'loss_of_consciousness',\n  'seizure',\n  'chest_pain',\n  'possible_overdose',\n  'severe_bleeding',\n  'self_harm_or_violence',\n];\n\nconst writeTools = [\n  'create_appointment',\n  'cancel_appointment',\n  'reschedule_appointment',\n  'process_confirmation_response',\n  'process_waitlist_response',\n];\n\nconst sensitiveIntents = [\n  'medication_issue',\n  'emergency',\n];\n\nconst urgentFlags = riskFlags.filter(\n  (flag) => urgentRiskFlags.includes(flag)\n);\n\nlet safetyDecision = 'allow';\nlet safeToolAction = proposedTool;\nlet blockReason = null;\nlet patientFacingInstruction = null;\nlet sessionStatus = 'active';\nlet pendingAction = null;\nlet nextAction = 'route_tool';\n\nif (urgentFlags.length > 0 || intent === 'emergency') {\n  safetyDecision = 'urgent_handoff';\n  safeToolAction = 'urgent_human_handoff';\n  blockReason = 'urgent_risk_detected';\n  patientFacingInstruction =\n    'این پیام می‌تواند نشان‌دهنده وضعیت فوری باشد. بیمار نباید منتظر پاسخ خودکار بماند و باید فوراً از خدمات اورژانسی محلی یا کمک حضوری استفاده کند.';\n  sessionStatus = 'waiting_human';\n  pendingAction = 'urgent_human_handoff';\n  nextAction = 'create_urgent_handoff';\n\n} else if (\n  confidence < Number(context.confidence_threshold ?? 0.55) ||\n  intent === 'unclear'\n) {\n  safetyDecision = 'ask_clarification';\n  safeToolAction = 'none';\n  blockReason = 'low_confidence_or_unclear_intent';\n  patientFacingInstruction =\n    nextQuestion ||\n    'لطفاً درخواست خود را با جزئیات بیشتری توضیح دهید.';\n  sessionStatus = 'waiting_patient';\n  pendingAction = proposedTool !== 'none'\n    ? proposedTool\n    : null;\n  nextAction = 'ask_clarifying_question';\n\n} else if (missingFields.length > 0) {\n  safetyDecision = 'ask_missing_information';\n  safeToolAction = 'none';\n  blockReason = 'required_information_missing';\n  patientFacingInstruction =\n    nextQuestion ||\n    'برای ادامه، اطلاعات تکمیلی موردنیاز را ارسال کنید.';\n  sessionStatus = 'waiting_patient';\n  pendingAction = proposedTool !== 'none'\n    ? proposedTool\n    : null;\n  nextAction = 'ask_missing_information';\n\n} else if (\n  writeTools.includes(proposedTool) &&\n  requiresConfirmation === true\n) {\n  safetyDecision = 'request_confirmation';\n  safeToolAction = 'none';\n  blockReason = 'explicit_confirmation_required';\n  patientFacingInstruction =\n    nextQuestion ||\n    'لطفاً انجام این اقدام را با ذکر جزئیات نهایی تأیید کنید.';\n  sessionStatus = 'waiting_patient';\n  pendingAction = proposedTool;\n  nextAction = 'request_action_confirmation';\n\n} else if (\n  riskFlags.includes('privacy_concern') ||\n  (\n    requiresHuman === true &&\n    !sensitiveIntents.includes(intent)\n  )\n) {\n  safetyDecision = 'human_handoff';\n  safeToolAction = 'human_handoff';\n  blockReason = riskFlags.includes('privacy_concern')\n    ? 'privacy_or_sensitive_data_concern'\n    : 'ai_requested_human_review';\n  patientFacingInstruction =\n    'درخواست شما برای بررسی به مسئول انسانی ارجاع شد.';\n  sessionStatus = 'waiting_human';\n  pendingAction = 'human_handoff';\n  nextAction = 'create_human_handoff';\n\n} else if (intent === 'medication_issue') {\n  safetyDecision = 'allow_with_human_review';\n  safeToolAction = 'intake_medication_issue';\n  blockReason = 'medication_issue_requires_structured_intake';\n  patientFacingInstruction = null;\n  sessionStatus = 'active';\n  pendingAction = 'intake_medication_issue';\n  nextAction = 'route_tool';\n\n} else if (proposedTool === 'none') {\n  safetyDecision = 'response_only';\n  safeToolAction = 'none';\n  blockReason = null;\n  patientFacingInstruction = nextQuestion;\n  sessionStatus = 'active';\n  pendingAction = null;\n  nextAction = 'compose_response';\n}\n\nconst safetyPayload = {\n  stage: 'deterministic_safety_gate',\n  version: 'safety-v1',\n  evaluated_at: new Date().toISOString(),\n  safety_decision: safetyDecision,\n  proposed_tool_action: proposedTool,\n  safe_tool_action: safeToolAction,\n  block_reason: blockReason,\n  urgent_flags: urgentFlags,\n  risk_flags: riskFlags,\n  missing_fields: missingFields,\n  requires_human: requiresHuman,\n  requires_confirmation: requiresConfirmation,\n  patient_facing_instruction: patientFacingInstruction,\n  next_action: nextAction,\n};\n\nreturn [{\n  json: {\n    success: true,\n    result: 'safety_decision_created',\n    session_id: Number(context.session_id),\n    message_id: Number(context.message_id),\n    ai_run_id: context.ai_run_id ?? null,\n    clinic_name: context.clinic_name,\n    patient_name: context.patient_name,\n    mobile: context.mobile,\n    language: ai.language || context.session_language || 'unknown',\n    intent,\n    confidence,\n    entities,\n    entities_json: JSON.stringify(entities),\n    risk_flags: riskFlags,\n    risk_flags_json: JSON.stringify(riskFlags),\n    missing_fields: missingFields,\n    safety_decision: safetyDecision,\n    proposed_tool_action: proposedTool,\n    safe_tool_action: safeToolAction,\n    block_reason: blockReason,\n    patient_facing_instruction: patientFacingInstruction,\n    session_status: sessionStatus,\n    pending_action: pendingAction,\n    next_action: nextAction,\n    safety_payload: safetyPayload,\n    safety_payload_json: JSON.stringify(safetyPayload),\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        -144
+      ],
+      "id": "f27f6215-9ea5-412b-8252-20920c966802",
+      "name": "Apply Deterministic Safety Rules"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS session_id,\n        $2::BIGINT AS message_id,\n        $3::TEXT AS safety_decision,\n        $4::TEXT AS proposed_tool_action,\n        $5::TEXT AS safe_tool_action,\n        NULLIF($6::TEXT, '') AS block_reason,\n        $7::JSONB AS risk_flags,\n        $8::JSONB AS safety_payload,\n        $9::TEXT AS session_status,\n        NULLIF($10::TEXT, '') AS pending_action\n),\n\nupdated_message AS (\n    UPDATE conversation_messages message\n\n    SET\n        risk_flags = request.risk_flags,\n        tool_action = request.safe_tool_action,\n\n        tool_result =\n            COALESCE(\n                message.tool_result,\n                '{}'::JSONB\n            )\n            || JSONB_BUILD_OBJECT(\n                'safety',\n                request.safety_payload\n            )\n\n    FROM request_data request\n\n    WHERE message.id = request.message_id\n      AND message.session_id = request.session_id\n\n    RETURNING message.id\n),\n\nupdated_session AS (\n    UPDATE conversation_sessions session\n\n    SET\n        status = request.session_status,\n        pending_action = request.pending_action,\n        risk_flags = request.risk_flags,\n        updated_at = NOW()\n\n    FROM request_data request\n\n    WHERE session.id = request.session_id\n\n      AND EXISTS (\n          SELECT 1\n          FROM updated_message\n      )\n\n    RETURNING session.id, session.status, session.pending_action\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM updated_message\n        )\n            THEN FALSE\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM updated_message\n        )\n            THEN 'message_or_session_not_found'\n\n        WHEN request.safety_decision =\n             'urgent_handoff'\n            THEN 'urgent_safety_handoff_required'\n\n        WHEN request.safety_decision IN (\n            'human_handoff',\n            'allow_with_human_review'\n        )\n            THEN 'human_review_required'\n\n        WHEN request.safety_decision IN (\n            'ask_clarification',\n            'ask_missing_information',\n            'request_confirmation'\n        )\n            THEN 'patient_input_required'\n\n        ELSE 'safety_gate_passed'\n    END AS result,\n\n    request.session_id,\n    request.message_id,\n    request.safety_decision,\n    request.proposed_tool_action,\n    request.safe_tool_action,\n    request.block_reason,\n    request.risk_flags,\n\n    (\n        SELECT status\n        FROM updated_session\n    ) AS session_status,\n\n    (\n        SELECT pending_action\n        FROM updated_session\n    ) AS pending_action\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.session_id,\n  $json.message_id,\n  $json.safety_decision,\n  $json.proposed_tool_action,\n  $json.safe_tool_action,\n  $json.block_reason || '',\n  $json.risk_flags_json,\n  $json.safety_payload_json,\n  $json.session_status,\n  $json.pending_action || ''\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        688,
+        -144
+      ],
+      "id": "8679a8fd-90c8-4e57-8c06-11ddfeb982c6",
+      "name": "Save Safety Decision"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: 'invalid_request',\n    message: 'اطلاعات لازم برای Safety Gate ناقص یا نامعتبر است.',\n    errors: $json.errors ?? [],\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        176
+      ],
+      "id": "03b5c4a4-ad96-469e-92f0-342ef68cb97a",
+      "name": "Return Safety Validation Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: $json.result || 'safety_context_not_available',\n    message:\n      $json.result === 'ai_route_not_found'\n        ? 'ابتدا پیام باید توسط Workflow شماره 51 تحلیل شود.'\n        : 'پیام یا جلسه مکالمه پیدا نشد.',\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        48
+      ],
+      "id": "9738967b-5ef2-4275-807b-781c49beea57",
+      "name": "Return Safety Context Error"
+    },
+    {
+      "parameters": {
+        "content": "## لایه ایمنی قطعی\n\nاین Workflow بعد از شماره 51 اجرا می‌شود و تصمیم مدل را بدون استفاده مجدد از AI بررسی می‌کند.\n\nقواعد اصلی:\n- علائم فوری → ارجاع فوری\n- اطمینان پایین → سؤال روشن‌کننده\n- اطلاعات ناقص → درخواست اطلاعات\n- عملیات نوشتنی → تأیید صریح بیمار\n- نگرانی حریم خصوصی → ارجاع انسانی\n\nفقط session_id و message_id لازم است؛ سایر اطلاعات از PostgreSQL خوانده می‌شوند.",
+        "height": 440,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1300,
+        -330
+      ],
+      "id": "ea948477-674f-49e9-ad57-6acdfa61215f",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Safety Evaluation Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Safety Evaluation Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Safety Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Evaluate AI Route Safety": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Safety Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Safety Request": {
+      "main": [
+        [
+          {
+            "node": "Is Safety Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Safety Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Load Authoritative AI Route",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Safety Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Authoritative AI Route": {
+      "main": [
+        [
+          {
+            "node": "Is Safety Context Available?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Safety Context Available?": {
+      "main": [
+        [
+          {
+            "node": "Apply Deterministic Safety Rules",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Safety Context Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply Deterministic Safety Rules": {
+      "main": [
+        [
+          {
+            "node": "Save Safety Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

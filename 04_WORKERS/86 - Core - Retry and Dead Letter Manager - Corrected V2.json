@@ -1,0 +1,231 @@
+{
+  "name": "86 - Core - Retry and Dead Letter Manager - Corrected V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "0d2786c8-c850-4441-8ea7-4fe7578b2c35",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b79a5df3-a4c1-435c-bfdf-744652a17823",
+              "name": "stuck_processing_minutes",
+              "value": 15,
+              "type": "number"
+            },
+            {
+              "id": "182e9117-f06a-4f40-9962-09151a4084df",
+              "name": "retry_batch_size",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "d030f979-e7e3-4916-b4ba-fd948057d5c1",
+              "name": "confirm_maintenance",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "3ea75ee3-69a2-45bd-9d68-63031d7a5650",
+      "name": "Manual Retry Maintenance"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/communications/messages/retry-maintenance",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "50671646-c912-48e9-a969-e4ed1a737db5",
+      "name": "Webhook - Retry Maintenance"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input=$json.body??$json;\nconst text=v=>v===null||v===undefined?'':String(v).trim();\nconst bool=v=>typeof v==='boolean'?v:['true','1','yes','on'].includes(text(v).toLowerCase());\n\nconst stuck_processing_minutes=Number(input.stuck_processing_minutes??15);\nconst retry_batch_size=Number(input.retry_batch_size??100);\nconst confirm_maintenance=bool(input.confirm_maintenance);\nconst errors=[];\n\nif(!Number.isInteger(stuck_processing_minutes)||stuck_processing_minutes<5||stuck_processing_minutes>1440){\n  errors.push({field:'stuck_processing_minutes',message:'زمان Stuck باید بین 5 و 1440 دقیقه باشد.'});\n}\nif(!Number.isInteger(retry_batch_size)||retry_batch_size<1||retry_batch_size>1000){\n  errors.push({field:'retry_batch_size',message:'اندازه Batch باید بین 1 و 1000 باشد.'});\n}\nif(confirm_maintenance!==true){\n  errors.push({field:'confirm_maintenance',message:'اجرای نگهداری باید تأیید شود.'});\n}\n\nreturn [{json:{\n  stuck_processing_minutes,retry_batch_size,confirm_maintenance,\n  validation_status:errors.length?'invalid':'valid',errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "8b154841-cf6a-427e-817c-75fb4715d61e",
+      "name": "Normalize and Validate Retry Maintenance"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "788fe694-5543-4cb1-b42b-dddc1184d32c",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "bda439fc-2444-49bf-8b55-baa15e55a795",
+      "name": "Is Retry Maintenance Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH r AS (\n  SELECT $1::INTEGER stuck_minutes,$2::INTEGER batch_size\n),\nreleased_stuck AS (\n  UPDATE outbound_messages m\n  SET status='failed',\n      last_error_code='dispatch_timeout',\n      last_error_message='Message remained in processing state beyond the allowed interval.',\n      failed_at=NOW(),\n      next_attempt_at=NOW(),\n      updated_at=NOW()\n  FROM r\n  WHERE m.status='processing'\n    AND m.updated_at < NOW()-MAKE_INTERVAL(mins=>r.stuck_minutes)\n  RETURNING m.id\n),\nexhausted AS (\n  SELECT m.*\n  FROM outbound_messages m\n  WHERE m.status='failed'\n    AND m.attempt_count>=m.max_attempts\n  ORDER BY m.updated_at\n  FOR UPDATE SKIP LOCKED\n  LIMIT (SELECT batch_size FROM r)\n),\ndead_letters AS (\n  INSERT INTO outbound_message_dead_letters(\n    outbound_message_id,final_error_code,final_error_message,\n    attempts_snapshot,message_snapshot\n  )\n  SELECT\n    e.id,e.last_error_code,e.last_error_message,\n    COALESCE((\n      SELECT JSONB_AGG(TO_JSONB(a) ORDER BY a.attempt_number)\n      FROM outbound_message_attempts a\n      WHERE a.outbound_message_id=e.id\n    ),'[]'::JSONB),\n    TO_JSONB(e)\n  FROM exhausted e\n  ON CONFLICT(outbound_message_id) DO NOTHING\n  RETURNING outbound_message_id\n),\nmarked_dead AS (\n  UPDATE outbound_messages m\n  SET status='dead_letter',updated_at=NOW()\n  FROM exhausted e\n  WHERE m.id=e.id\n  RETURNING m.id\n),\nretryable AS (\n  SELECT m.id\n  FROM outbound_messages m,r\n  WHERE m.status IN ('failed','scheduled')\n    AND m.next_attempt_at<=NOW()\n    AND m.attempt_count<m.max_attempts\n  ORDER BY m.priority DESC,m.next_attempt_at,m.created_at\n  FOR UPDATE SKIP LOCKED\n  LIMIT (\n    SELECT batch_size\n    FROM r\n  )\n),\nrequeued AS (\n  UPDATE outbound_messages m\n  SET status='queued',updated_at=NOW()\n  FROM retryable x\n  WHERE m.id=x.id\n  RETURNING m.id\n)\nSELECT\n  TRUE success,\n  'message_retry_maintenance_completed' result,\n  (SELECT COUNT(*) FROM released_stuck) released_stuck_count,\n  (SELECT COUNT(*) FROM requeued) requeued_count,\n  (SELECT COUNT(*) FROM marked_dead) dead_lettered_count,\n  (SELECT COUNT(*) FROM outbound_message_dead_letters WHERE resolved=FALSE) unresolved_dead_letter_count;",
+        "options": {
+          "queryReplacement": "={{ [ $json.stuck_processing_minutes,$json.retry_batch_size ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "18d13586-a2c7-4143-b3d9-ed44b18f0ea0",
+      "name": "Run Retry and Dead Letter Maintenance"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'تنظیمات Retry Maintenance نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "b41f6589-37dc-4434-8df6-3bf7d4f66d9d",
+      "name": "Return Retry Maintenance Error"
+    },
+    {
+      "parameters": {
+        "content": "## Retry و Dead Letter\n\nکارکرد:\n- آزادسازی پیام‌های گیرکرده در processing\n- بازگرداندن پیام‌های Retryable به queued\n- انتقال پیام‌های Exhausted به Dead Letter\n\nاین Workflow باید بعداً با Schedule اجرا شود.",
+        "height": 370,
+        "width": 510
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -290
+      ],
+      "id": "7ac8d9b1-29c9-454a-a02e-d2429468c695",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Retry Maintenance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Retry Maintenance": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Retry Maintenance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Retry Maintenance": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Retry Maintenance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Retry Maintenance": {
+      "main": [
+        [
+          {
+            "node": "Is Retry Maintenance Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Retry Maintenance Valid?": {
+      "main": [
+        [
+          {
+            "node": "Run Retry and Dead Letter Maintenance",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Retry Maintenance Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

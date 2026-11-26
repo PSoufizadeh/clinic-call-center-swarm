@@ -1,0 +1,303 @@
+{
+  "name": "103 - API - Manage Doctors - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "0d934cef-ee8b-45d5-80af-88f72c4b0baa",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "123c38e5-b2be-4a51-97e2-109d2b24c698",
+              "name": "action",
+              "value": "get",
+              "type": "string"
+            },
+            {
+              "id": "32c5800c-650b-4f26-a0e4-3a0fdf183b10",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "3aa8386f-7875-45b9-a2e1-85e54c167e13",
+              "name": "doctor_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "a959d2f4-cbea-405a-b73b-04ebe95f0b70",
+              "name": "doctor_name",
+              "value": "دکتر آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "b5fe6ca2-5897-4cb1-9869-ab6f6577f8af",
+              "name": "title",
+              "value": "دکتر",
+              "type": "string"
+            },
+            {
+              "id": "2b84fce5-952b-4e0a-b97f-1a27ea210860",
+              "name": "specialty",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "9ed33471-1c7e-4cf1-ab31-303c97974e65",
+              "name": "phone",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "5d31e33c-9022-4187-8b0d-e2320333c3cb",
+              "name": "email",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "34df1271-b856-4a8d-b54f-ee894264b202",
+              "name": "buffer_minutes",
+              "value": 5,
+              "type": "number"
+            },
+            {
+              "id": "5b370abc-9eae-493c-a7c4-93307d42613b",
+              "name": "calendar_id",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "9a344d27-5f12-4aec-93ce-3ae657e26ef8",
+              "name": "metadata",
+              "value": "{}",
+              "type": "string"
+            },
+            {
+              "id": "23daa7b6-b90a-42bf-ab34-3ba8aece0025",
+              "name": "actor_name",
+              "value": "مدیر سیستم",
+              "type": "string"
+            },
+            {
+              "id": "8b2d5e26-ca06-4722-909a-db0056d6ec1e",
+              "name": "source_channel",
+              "value": "api",
+              "type": "string"
+            },
+            {
+              "id": "e655f7f7-0cef-4e19-b8db-e960ee80a07c",
+              "name": "limit",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "bd8a87be-d3ac-4862-b4d7-665587bb041d",
+              "name": "confirm_action",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "7f821283-b8c9-49e0-8b24-7df43eb04648",
+      "name": "Manual Manage Doctor"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/admin/doctors/manage",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "652633b6-ac4e-4e90-8bba-3ad4e26375ea",
+      "name": "Webhook - Manage Doctor"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input=$json.body??$json;\nconst text=v=>v===null||v===undefined?'':String(v).trim();\nconst bool=v=>typeof v==='boolean'?v:['true','1','yes','on'].includes(text(v).toLowerCase());\n\nconst action=text(input.action||'get').toLowerCase();\nconst clinic_name=text(input.clinic_name);\nconst doctor_id=Number(input.doctor_id??0);\nconst doctor_name=text(input.doctor_name);\nconst title=text(input.title);\nconst specialty=text(input.specialty);\nconst phone=text(input.phone);\nconst email=text(input.email);\nconst buffer_minutes=Number(input.buffer_minutes??0);\nconst calendar_id=text(input.calendar_id);\nconst actor_name=text(input.actor_name);\nconst source_channel=text(input.source_channel||'api').toLowerCase();\nconst limit=Number(input.limit??100);\nconst confirm_action=bool(input.confirm_action);\n\nlet metadata=input.metadata??{};\ntry{if(typeof metadata==='string')metadata=JSON.parse(metadata||'{}');}catch{metadata=null;}\n\nconst actions=['create','update','activate','deactivate','get','list'];\nconst errors=[];\n\nif(!actions.includes(action))errors.push({field:'action',message:'اقدام معتبر نیست.'});\nif(!clinic_name)errors.push({field:'clinic_name',message:'نام کلینیک الزامی است.'});\nif(!Number.isInteger(doctor_id)||doctor_id<0)errors.push({field:'doctor_id',message:'شناسه پزشک معتبر نیست.'});\nif(['create','update','activate','deactivate','get'].includes(action)&&doctor_id<1&&!doctor_name){\n  errors.push({field:'doctor_reference',message:'شناسه یا نام پزشک الزامی است.'});\n}\nif(action==='create'&&!doctor_name)errors.push({field:'doctor_name',message:'نام پزشک الزامی است.'});\nif(!Number.isInteger(buffer_minutes)||buffer_minutes<0||buffer_minutes>180){\n  errors.push({field:'buffer_minutes',message:'زمان Buffer باید بین صفر و 180 دقیقه باشد.'});\n}\nif(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))errors.push({field:'email',message:'ایمیل معتبر نیست.'});\nif(!metadata||Array.isArray(metadata)||typeof metadata!=='object'){\n  errors.push({field:'metadata',message:'metadata باید شیء JSON باشد.'});metadata={};\n}\nif(!['api','manual','import','system'].includes(source_channel))errors.push({field:'source_channel',message:'کانال منبع معتبر نیست.'});\nif(!Number.isInteger(limit)||limit<1||limit>500)errors.push({field:'limit',message:'Limit معتبر نیست.'});\nif(!['get','list'].includes(action)&&!actor_name)errors.push({field:'actor_name',message:'نام انجام‌دهنده الزامی است.'});\nif(!['get','list'].includes(action)&&confirm_action!==true)errors.push({field:'confirm_action',message:'اقدام باید تأیید شود.'});\n\nreturn [{json:{\n action,clinic_name,doctor_id,doctor_name,title,specialty,phone,email,\n buffer_minutes,calendar_id,metadata_text:JSON.stringify(metadata),\n actor_name,source_channel,limit,confirm_action,\n validation_status:errors.length?'invalid':'valid',errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "141e30a1-171c-493a-87c8-0f6ac4b2cd70",
+      "name": "Normalize and Validate Manage Doctor"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3604c90f-23a3-4736-9334-9b11976f7e6c",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "0ce95caf-ef24-44dd-ad94-9c482af72faa",
+      "name": "Is Manage Doctor Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH r AS (\n  SELECT $1::TEXT action,$2::TEXT clinic_name,NULLIF($3::BIGINT,0) doctor_id,\n         NULLIF($4::TEXT,'') doctor_name,NULLIF($5::TEXT,'') title,\n         NULLIF($6::TEXT,'') specialty,NULLIF($7::TEXT,'') phone,\n         NULLIF($8::TEXT,'') email,$9::INTEGER buffer_minutes,\n         NULLIF($10::TEXT,'') calendar_id,$11::JSONB metadata,\n         NULLIF($12::TEXT,'') actor_name,$13::TEXT source_channel,\n         $14::INTEGER result_limit\n),\nc AS (\n  SELECT clinics.id clinic_id,r.*\n  FROM clinics,r\n  WHERE clinics.name=r.clinic_name\n  LIMIT 1\n),\ntarget AS (\n  SELECT d.*\n  FROM doctors d,c\n  WHERE d.clinic_id=c.clinic_id\n    AND (\n      (c.doctor_id IS NOT NULL AND d.id=c.doctor_id)\n      OR\n      (c.doctor_id IS NULL AND c.doctor_name IS NOT NULL AND d.full_name=c.doctor_name)\n    )\n  ORDER BY d.id\n  LIMIT 1\n),\ninserted AS (\n  INSERT INTO doctors(\n    clinic_id,full_name,title,specialty,phone,email,buffer_minutes,\n    calendar_id,is_active,metadata,updated_at\n  )\n  SELECT c.clinic_id,c.doctor_name,c.title,c.specialty,c.phone,c.email,\n         c.buffer_minutes,c.calendar_id,TRUE,c.metadata,NOW()\n  FROM c\n  WHERE c.action='create'\n    AND NOT EXISTS(SELECT 1 FROM target)\n  RETURNING *\n),\nupdated AS (\n  UPDATE doctors d\n  SET full_name=CASE WHEN c.action='update' AND c.doctor_name IS NOT NULL THEN c.doctor_name ELSE d.full_name END,\n      title=CASE WHEN c.action='update' THEN COALESCE(c.title,d.title) ELSE d.title END,\n      specialty=CASE WHEN c.action='update' THEN COALESCE(c.specialty,d.specialty) ELSE d.specialty END,\n      phone=CASE WHEN c.action='update' THEN COALESCE(c.phone,d.phone) ELSE d.phone END,\n      email=CASE WHEN c.action='update' THEN COALESCE(c.email,d.email) ELSE d.email END,\n      buffer_minutes=CASE WHEN c.action='update' THEN c.buffer_minutes ELSE d.buffer_minutes END,\n      calendar_id=CASE WHEN c.action='update' THEN COALESCE(c.calendar_id,d.calendar_id) ELSE d.calendar_id END,\n      metadata=CASE WHEN c.action='update' THEN d.metadata||c.metadata ELSE d.metadata END,\n      is_active=CASE WHEN c.action='activate' THEN TRUE WHEN c.action='deactivate' THEN FALSE ELSE d.is_active END,\n      updated_at=NOW()\n  FROM c\n  WHERE d.id=(SELECT id FROM target)\n    AND c.action IN ('update','activate','deactivate')\n  RETURNING d.*\n),\neffective AS (\n  SELECT inserted.* FROM inserted\n  UNION ALL\n  SELECT updated.* FROM updated\n  UNION ALL\n  SELECT target.* FROM target,c WHERE c.action='get'\n  LIMIT 1\n),\nadmin_event AS (\n  INSERT INTO clinic_admin_events(\n    clinic_id,entity_type,entity_id,action,actor_name,source_channel,before_data,after_data\n  )\n  SELECT\n    c.clinic_id,'doctor',\n    COALESCE((SELECT id FROM effective),(SELECT id FROM target)),\n    c.action,c.actor_name,c.source_channel,\n    COALESCE((SELECT TO_JSONB(target) FROM target),'{}'::JSONB),\n    COALESCE((SELECT TO_JSONB(effective) FROM effective),'{}'::JSONB)\n  FROM c\n  WHERE c.action IN ('create','update','activate','deactivate')\n    AND EXISTS(SELECT 1 FROM effective)\n  RETURNING id\n),\nlisted AS (\n  SELECT d.id,d.full_name,d.title,d.specialty,d.phone,d.email,d.buffer_minutes,\n         d.calendar_id,d.is_active,d.metadata,d.created_at,d.updated_at,\n         COALESCE((\n           SELECT COUNT(*)\n           FROM doctor_services ds\n           WHERE ds.doctor_id=d.id AND ds.is_active=TRUE\n         ),0) active_service_count\n  FROM doctors d,c\n  WHERE c.action='list'\n    AND d.clinic_id=c.clinic_id\n  ORDER BY d.full_name,d.id\n  LIMIT (SELECT result_limit FROM c)\n)\nSELECT\n  CASE WHEN NOT EXISTS(SELECT 1 FROM c) THEN FALSE\n       WHEN c.action='create' AND EXISTS(SELECT 1 FROM target) THEN FALSE\n       WHEN c.action IN ('update','activate','deactivate','get') AND NOT EXISTS(SELECT 1 FROM target) THEN FALSE\n       ELSE TRUE END success,\n  CASE WHEN NOT EXISTS(SELECT 1 FROM c) THEN 'clinic_not_found'\n       WHEN c.action='create' AND EXISTS(SELECT 1 FROM target) THEN 'doctor_already_exists'\n       WHEN c.action IN ('update','activate','deactivate','get') AND NOT EXISTS(SELECT 1 FROM target) THEN 'doctor_not_found'\n       WHEN c.action='create' THEN 'doctor_created'\n       WHEN c.action='update' THEN 'doctor_updated'\n       WHEN c.action='activate' THEN 'doctor_activated'\n       WHEN c.action='deactivate' THEN 'doctor_deactivated'\n       WHEN c.action='get' THEN 'doctor_loaded'\n       ELSE 'doctors_listed' END result,\n  (SELECT TO_JSONB(effective) FROM effective) doctor,\n  COALESCE((SELECT JSONB_AGG(TO_JSONB(listed)) FROM listed),'[]'::JSONB) doctors,\n  (SELECT id FROM admin_event) admin_event_id\nFROM c\nUNION ALL\nSELECT FALSE,'clinic_not_found',NULL::JSONB,'[]'::JSONB,NULL::BIGINT\nFROM r\nWHERE NOT EXISTS(SELECT 1 FROM c);",
+        "options": {
+          "queryReplacement": "={{ [ $json.action,$json.clinic_name,$json.doctor_id,$json.doctor_name,$json.title,$json.specialty,$json.phone,$json.email,$json.buffer_minutes,$json.calendar_id,$json.metadata_text,$json.actor_name,$json.source_channel,$json.limit ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "1aedf18a-86f5-426b-9a28-1f68e2b1cce9",
+      "name": "Manage Doctor"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات Manage Doctor نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "23d643a1-2054-48da-81f4-7706a98ab833",
+      "name": "Return Manage Doctor Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## مدیریت پزشکان\n\nاقدام‌ها: create, update, activate, deactivate, get, list\n\nنام، تخصص، Buffer، Calendar ID و Metadata قابل مدیریت است.",
+        "height": 360,
+        "width": 510
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -280
+      ],
+      "id": "2e947bfc-26f7-45ee-8e7e-2b893de8b3fb",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Manage Doctor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Manage Doctor": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Manage Doctor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Manage Doctor": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Manage Doctor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Manage Doctor": {
+      "main": [
+        [
+          {
+            "node": "Is Manage Doctor Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Manage Doctor Valid?": {
+      "main": [
+        [
+          {
+            "node": "Manage Doctor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Manage Doctor Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

@@ -1,0 +1,255 @@
+{
+  "name": "32 - API - List Human Handoff Queue - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "b769f753-4775-4e89-8bf2-1134c7ec7434",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "afb3e227-de06-4d8c-8154-3a889d1bfd07",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "e6480f21-77e3-4127-a36d-e9776fd8ed68",
+              "name": "status_filter",
+              "value": "active",
+              "type": "string"
+            },
+            {
+              "id": "a33f0fbb-da10-4736-b8fc-d9543282d524",
+              "name": "priority_filter",
+              "value": "all",
+              "type": "string"
+            },
+            {
+              "id": "c389bd97-1930-4cdb-ba05-d6060ce62937",
+              "name": "task_type_filter",
+              "value": "all",
+              "type": "string"
+            },
+            {
+              "id": "cb9a568a-1eac-4847-bc9e-16ebc6241bc3",
+              "name": "assigned_to",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "5ce3bfb8-8ff5-481d-9065-c0c080af1c9c",
+              "name": "overdue_only",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "a038ef79-1abc-434f-9ed2-42fda8eb485e",
+              "name": "limit",
+              "value": 100,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "2cef46a2-0204-4c72-a748-7424a2b58812",
+      "name": "Manual Handoff Queue Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/handoffs/list",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "2b0fbaf2-341b-40d7-be04-b513495df5d6",
+      "name": "Webhook - List Handoff Queue"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json.query ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst clinic_name = text(input.clinic_name);\nconst status_filter = text(input.status_filter || 'active').toLowerCase();\nconst priority_filter = text(input.priority_filter || 'all').toLowerCase();\nconst task_type_filter = text(input.task_type_filter || 'all').toLowerCase();\nconst assigned_to = text(input.assigned_to);\nconst overdue_only = toBoolean(input.overdue_only);\nconst limit = Number(input.limit ?? 100);\n\nconst allowedStatuses = [\n  'active',\n  'open',\n  'in_progress',\n  'resolved',\n  'cancelled',\n  'all',\n];\n\nconst allowedPriorities = [\n  'urgent',\n  'high',\n  'normal',\n  'low',\n  'all',\n];\n\nconst allowedTaskTypes = [\n  'confirmation_no_response',\n  'reschedule_request',\n  'calendar_sync_issue',\n  'medical_review',\n  'complaint',\n  'manual_followup',\n  'all',\n];\n\nconst errors = [];\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (!allowedStatuses.includes(status_filter)) {\n  errors.push({\n    field: 'status_filter',\n    message: 'فیلتر وضعیت معتبر نیست.',\n  });\n}\n\nif (!allowedPriorities.includes(priority_filter)) {\n  errors.push({\n    field: 'priority_filter',\n    message: 'فیلتر اولویت معتبر نیست.',\n  });\n}\n\nif (!allowedTaskTypes.includes(task_type_filter)) {\n  errors.push({\n    field: 'task_type_filter',\n    message: 'فیلتر نوع تسک معتبر نیست.',\n  });\n}\n\nif (!Number.isInteger(limit) || limit < 1 || limit > 500) {\n  errors.push({\n    field: 'limit',\n    message: 'limit باید یک عدد صحیح بین 1 و 500 باشد.',\n  });\n}\n\nreturn [{\n  json: {\n    clinic_name,\n    status_filter,\n    priority_filter,\n    task_type_filter,\n    assigned_to,\n    overdue_only,\n    limit,\n    validation_status: errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "528b92d6-7b27-4681-9aff-b0b398c5f028",
+      "name": "Normalize and Validate Handoff Queue"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dc93f9aa-b2d9-42a0-9700-6c97cd2fd0b8",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "afea8d82-1c33-4079-bc2a-3a02849e07f9",
+      "name": "Is Handoff Queue Request Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        $2::TEXT AS status_filter,\n        $3::TEXT AS priority_filter,\n        $4::TEXT AS task_type_filter,\n        NULLIF($5::TEXT, '') AS assigned_to,\n        $6::BOOLEAN AS overdue_only,\n        LEAST(GREATEST($7::INTEGER, 1), 500) AS result_limit\n),\n\nclinic_context AS (\n    SELECT\n        clinic.id AS clinic_id,\n        clinic.name AS clinic_name,\n        clinic.timezone,\n        request.status_filter,\n        request.priority_filter,\n        request.task_type_filter,\n        request.assigned_to,\n        request.overdue_only,\n        request.result_limit\n\n    FROM request_data request\n\n    INNER JOIN clinics clinic\n        ON clinic.name = request.clinic_name\n       AND clinic.is_active = TRUE\n\n    ORDER BY clinic.id\n    LIMIT 1\n),\n\nfiltered_tasks AS (\n    SELECT\n        task.id AS handoff_task_id,\n        task.task_type,\n        task.source_type,\n        task.source_record_id,\n        task.priority,\n        task.status AS task_status,\n        task.reason,\n        task.due_at,\n        task.assigned_to,\n        task.attempt_count,\n        task.last_attempt_at,\n        task.last_contact_channel,\n        task.last_contact_outcome,\n        task.resolution_code,\n        task.resolution_note,\n        task.created_at,\n        task.updated_at,\n        task.resolved_at,\n\n        clinic.clinic_name,\n        clinic.timezone,\n\n        patient.id AS patient_id,\n        patient.full_name AS patient_name,\n        patient.mobile,\n\n        appointment.id AS appointment_id,\n        appointment.starts_at,\n        appointment.ends_at,\n        appointment.status AS appointment_status,\n        appointment.google_calendar_event_id,\n\n        doctor.full_name AS doctor_name,\n        service.name AS service_name,\n\n        CASE\n            WHEN task.due_at IS NOT NULL\n             AND task.due_at < NOW()\n             AND task.status IN ('open', 'in_progress')\n                THEN TRUE\n            ELSE FALSE\n        END AS is_overdue,\n\n        CASE task.priority\n            WHEN 'urgent' THEN 1\n            WHEN 'high' THEN 2\n            WHEN 'normal' THEN 3\n            WHEN 'low' THEN 4\n            ELSE 5\n        END AS priority_rank\n\n    FROM human_handoff_tasks task\n\n    INNER JOIN clinic_context clinic\n        ON clinic.clinic_id = task.clinic_id\n\n    LEFT JOIN patients patient\n        ON patient.id = task.patient_id\n\n    LEFT JOIN appointments appointment\n        ON appointment.id = task.appointment_id\n\n    LEFT JOIN doctors doctor\n        ON doctor.id = appointment.doctor_id\n\n    LEFT JOIN services service\n        ON service.id = appointment.service_id\n\n    WHERE (\n        clinic.status_filter = 'all'\n\n        OR (\n            clinic.status_filter = 'active'\n            AND task.status IN ('open', 'in_progress')\n        )\n\n        OR task.status = clinic.status_filter\n    )\n\n      AND (\n        clinic.priority_filter = 'all'\n        OR task.priority = clinic.priority_filter\n      )\n\n      AND (\n        clinic.task_type_filter = 'all'\n        OR task.task_type = clinic.task_type_filter\n      )\n\n      AND (\n        clinic.assigned_to IS NULL\n        OR task.assigned_to = clinic.assigned_to\n      )\n\n      AND (\n        clinic.overdue_only = FALSE\n\n        OR (\n            task.due_at IS NOT NULL\n            AND task.due_at < NOW()\n            AND task.status IN ('open', 'in_progress')\n        )\n      )\n\n    ORDER BY\n        priority_rank ASC,\n        task.due_at ASC NULLS LAST,\n        appointment.starts_at ASC NULLS LAST,\n        task.created_at ASC\n\n    LIMIT (\n        SELECT result_limit\n        FROM clinic_context\n    )\n),\n\nqueue_summary AS (\n    SELECT\n        COUNT(*)::INTEGER AS total_count,\n\n        COUNT(*) FILTER (\n            WHERE task_status = 'open'\n        )::INTEGER AS open_count,\n\n        COUNT(*) FILTER (\n            WHERE task_status = 'in_progress'\n        )::INTEGER AS in_progress_count,\n\n        COUNT(*) FILTER (\n            WHERE is_overdue = TRUE\n        )::INTEGER AS overdue_count,\n\n        COUNT(*) FILTER (\n            WHERE priority = 'urgent'\n        )::INTEGER AS urgent_count,\n\n        COUNT(*) FILTER (\n            WHERE priority = 'high'\n        )::INTEGER AS high_count\n\n    FROM filtered_tasks\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN FALSE\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN 'clinic_not_found'\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM filtered_tasks\n        )\n            THEN 'handoff_queue_empty'\n\n        ELSE 'handoff_queue_loaded'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN 'کلینیک مطابق ورودی پیدا نشد.'\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM filtered_tasks\n        )\n            THEN 'تسکی مطابق فیلترهای انتخاب‌شده در صف وجود ندارد.'\n\n        ELSE 'صف پیگیری منشی با موفقیت دریافت شد.'\n    END AS message,\n\n    request.clinic_name,\n\n    (\n        SELECT total_count\n        FROM queue_summary\n    ) AS total_count,\n\n    (\n        SELECT open_count\n        FROM queue_summary\n    ) AS open_count,\n\n    (\n        SELECT in_progress_count\n        FROM queue_summary\n    ) AS in_progress_count,\n\n    (\n        SELECT overdue_count\n        FROM queue_summary\n    ) AS overdue_count,\n\n    (\n        SELECT urgent_count\n        FROM queue_summary\n    ) AS urgent_count,\n\n    (\n        SELECT high_count\n        FROM queue_summary\n    ) AS high_count,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'handoff_task_id',\n                        handoff_task_id,\n\n                    'task_type',\n                        task_type,\n\n                    'priority',\n                        priority,\n\n                    'task_status',\n                        task_status,\n\n                    'is_overdue',\n                        is_overdue,\n\n                    'assigned_to',\n                        assigned_to,\n\n                    'reason',\n                        reason,\n\n                    'due_at',\n                        due_at,\n\n                    'attempt_count',\n                        attempt_count,\n\n                    'last_attempt_at',\n                        last_attempt_at,\n\n                    'last_contact_channel',\n                        last_contact_channel,\n\n                    'last_contact_outcome',\n                        last_contact_outcome,\n\n                    'patient_id',\n                        patient_id,\n\n                    'patient_name',\n                        patient_name,\n\n                    'mobile',\n                        mobile,\n\n                    'appointment_id',\n                        appointment_id,\n\n                    'doctor_name',\n                        doctor_name,\n\n                    'service_name',\n                        service_name,\n\n                    'appointment_date',\n                        CASE\n                            WHEN starts_at IS NULL\n                                THEN NULL\n                            ELSE TO_CHAR(\n                                starts_at\n                                AT TIME ZONE timezone,\n                                'YYYY-MM-DD'\n                            )\n                        END,\n\n                    'start_time',\n                        CASE\n                            WHEN starts_at IS NULL\n                                THEN NULL\n                            ELSE TO_CHAR(\n                                starts_at\n                                AT TIME ZONE timezone,\n                                'HH24:MI'\n                            )\n                        END,\n\n                    'appointment_status',\n                        appointment_status,\n\n                    'source_type',\n                        source_type,\n\n                    'source_record_id',\n                        source_record_id,\n\n                    'next_action',\n                        CASE\n                            WHEN task_status = 'open'\n                                THEN 'claim_task'\n                            WHEN task_status = 'in_progress'\n                                THEN 'process_task'\n                            ELSE 'view_task'\n                        END\n                )\n                ORDER BY\n                    priority_rank,\n                    due_at ASC NULLS LAST,\n                    starts_at ASC NULLS LAST,\n                    created_at\n            )\n            FROM filtered_tasks\n        ),\n        '[]'::JSONB\n    ) AS handoff_tasks\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.status_filter,\n  $json.priority_filter,\n  $json.task_type_filter,\n  $json.assigned_to,\n  $json.overdue_only,\n  $json.limit\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "604ed1d3-c13e-428c-a0d2-87fc5530762c",
+      "name": "Load Human Handoff Queue"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: 'invalid_request',\n    message: 'فیلترهای صف پیگیری ناقص یا نامعتبر است.',\n    total_count: 0,\n    handoff_tasks: [],\n    errors: $json.errors ?? [],\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "b3c45e29-ac99-44a4-b078-b4cb38c85015",
+      "name": "Return Handoff Queue Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## مشاهده صف منشی انسانی\n\nابتدا Workflow شماره 31 را یک‌بار اجرا کن.\n\nفیلترهای اصلی:\n- status_filter: active / open / in_progress / resolved / cancelled / all\n- priority_filter: urgent / high / normal / low / all\n- task_type_filter: نوع تسک یا all\n- assigned_to: نام مسئول یا خالی\n- overdue_only: فقط تسک‌های عقب‌افتاده\n\nخروجی علاوه بر فهرست، خلاصه تعداد تسک‌های باز، درحال انجام، فوری و عقب‌افتاده را می‌دهد.",
+        "height": 390,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1140,
+        -290
+      ],
+      "id": "22612b64-d5ae-47ad-9d43-55783561e0d3",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Handoff Queue Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Handoff Queue Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Handoff Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - List Handoff Queue": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Handoff Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Handoff Queue": {
+      "main": [
+        [
+          {
+            "node": "Is Handoff Queue Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Handoff Queue Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Load Human Handoff Queue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Handoff Queue Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

@@ -1,0 +1,273 @@
+{
+  "name": "87 - API - Manage Communication Channel Adapters - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "0c95f8bd-9aee-409f-8220-92a2de656b76",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f51e9c17-632b-4b13-a1d3-10590ecc8a06",
+              "name": "action",
+              "value": "list",
+              "type": "string"
+            },
+            {
+              "id": "ee57b644-2bd9-482d-a402-f0ad28f4c03d",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "93ca8dd0-b2e3-471a-8aaa-b538e15ffdff",
+              "name": "channel",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "a5c3b8f6-bf49-40d1-9a06-4d79a99f6e3a",
+              "name": "adapter_name",
+              "value": "WhatsApp Internal Adapter",
+              "type": "string"
+            },
+            {
+              "id": "4f1d5f83-4a41-4631-98ea-a61f10c26fb4",
+              "name": "adapter_url",
+              "value": "http://host.docker.internal:8080/send",
+              "type": "string"
+            },
+            {
+              "id": "489e546d-5d44-4e29-8480-116db0572e38",
+              "name": "credential_reference",
+              "value": "whatsapp-provider-credential",
+              "type": "string"
+            },
+            {
+              "id": "d5f2218b-7314-49cf-bef8-7277b3cf52d7",
+              "name": "enabled",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "5bdb0b6d-da3b-40e2-b63a-16312d036304",
+              "name": "request_timeout_seconds",
+              "value": 30,
+              "type": "number"
+            },
+            {
+              "id": "5e09118c-59ae-49ea-9221-84128066fccc",
+              "name": "metadata",
+              "value": "{}",
+              "type": "string"
+            },
+            {
+              "id": "a991376e-5f2e-48dc-a5b9-b40d9a2ca82a",
+              "name": "confirm_action",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "a8e10255-d56b-4c34-a146-84e755c52b52",
+      "name": "Manual Adapter Management"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/communications/adapters/manage",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "fbd85338-6851-47a2-9b50-222558d532bc",
+      "name": "Webhook - Manage Channel Adapters"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input=$json.body??$json;\nconst text=v=>v===null||v===undefined?'':String(v).trim();\nconst bool=v=>typeof v==='boolean'?v:['true','1','yes','on'].includes(text(v).toLowerCase());\n\nconst action=text(input.action||'list').toLowerCase();\nconst clinic_name=text(input.clinic_name);\nconst channel=text(input.channel).toLowerCase();\nconst adapter_name=text(input.adapter_name);\nconst adapter_url=text(input.adapter_url);\nconst credential_reference=text(input.credential_reference);\nconst enabled=bool(input.enabled);\nconst request_timeout_seconds=Number(input.request_timeout_seconds??30);\nconst confirm_action=bool(input.confirm_action);\n\nlet metadata=input.metadata??{};\ntry{if(typeof metadata==='string')metadata=JSON.parse(metadata||'{}');}catch{metadata=null;}\n\nconst actions=['upsert','enable','disable','list'];\nconst channels=['whatsapp','sms','email','phone','web_push','in_app'];\nconst errors=[];\n\nif(!actions.includes(action))errors.push({field:'action',message:'اقدام معتبر نیست.'});\nif(!clinic_name)errors.push({field:'clinic_name',message:'نام کلینیک الزامی است.'});\nif(action!=='list'&&!channels.includes(channel))errors.push({field:'channel',message:'کانال معتبر نیست.'});\nif(action==='upsert'&&!adapter_name)errors.push({field:'adapter_name',message:'نام Adapter الزامی است.'});\nif(action==='upsert'&&!/^https?:\\/\\/.+/i.test(adapter_url))errors.push({field:'adapter_url',message:'آدرس Adapter معتبر نیست.'});\nif(!Number.isInteger(request_timeout_seconds)||request_timeout_seconds<1||request_timeout_seconds>300){\n  errors.push({field:'request_timeout_seconds',message:'Timeout باید بین 1 و 300 ثانیه باشد.'});\n}\nif(!metadata||Array.isArray(metadata)||typeof metadata!=='object'){\n  errors.push({field:'metadata',message:'metadata باید شیء JSON باشد.'});metadata={};\n}\nif(action!=='list'&&confirm_action!==true){\n  errors.push({field:'confirm_action',message:'تغییر Adapter باید تأیید شود.'});\n}\n\nreturn [{json:{\n action,clinic_name,channel,adapter_name,adapter_url,credential_reference,\n enabled,request_timeout_seconds,metadata_text:JSON.stringify(metadata),\n confirm_action,validation_status:errors.length?'invalid':'valid',errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "d726f4c8-17ac-4905-a3f9-7e3f700040f6",
+      "name": "Normalize and Validate Adapter Management"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f975ee74-d68d-4d8f-a476-8daeabeae315",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "79d88c18-e3c2-40e0-8f94-69f02fa48747",
+      "name": "Is Adapter Management Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH r AS (\n  SELECT $1::TEXT action,$2::TEXT clinic_name,NULLIF($3::TEXT,'') channel,\n         NULLIF($4::TEXT,'') adapter_name,NULLIF($5::TEXT,'') adapter_url,\n         NULLIF($6::TEXT,'') credential_reference,$7::BOOLEAN enabled,\n         $8::INTEGER timeout_seconds,$9::JSONB metadata\n),\nc AS (\n  SELECT clinics.id clinic_id,r.*\n  FROM clinics,r WHERE clinics.name=r.clinic_name AND clinics.is_active=TRUE LIMIT 1\n),\nupserted AS (\n  INSERT INTO communication_channel_adapters(\n    clinic_id,channel,adapter_name,adapter_url,credential_reference,\n    enabled,request_timeout_seconds,metadata,updated_at\n  )\n  SELECT c.clinic_id,c.channel,c.adapter_name,c.adapter_url,c.credential_reference,\n         c.enabled,c.timeout_seconds,c.metadata,NOW()\n  FROM c WHERE c.action='upsert'\n  ON CONFLICT(clinic_id,channel) DO UPDATE SET\n    adapter_name=EXCLUDED.adapter_name,\n    adapter_url=EXCLUDED.adapter_url,\n    credential_reference=EXCLUDED.credential_reference,\n    enabled=EXCLUDED.enabled,\n    request_timeout_seconds=EXCLUDED.request_timeout_seconds,\n    metadata=communication_channel_adapters.metadata||EXCLUDED.metadata,\n    updated_at=NOW()\n  RETURNING *\n),\nstatus_changed AS (\n  UPDATE communication_channel_adapters a\n  SET enabled=(c.action='enable'),updated_at=NOW()\n  FROM c\n  WHERE c.action IN ('enable','disable')\n    AND a.clinic_id=c.clinic_id\n    AND a.channel=c.channel\n  RETURNING a.*\n),\nlisted AS (\n  SELECT a.id,a.channel,a.adapter_name,a.adapter_url,a.credential_reference,\n         a.enabled,a.request_timeout_seconds,a.metadata,a.created_at,a.updated_at\n  FROM communication_channel_adapters a JOIN c ON c.clinic_id=a.clinic_id\n  WHERE c.action='list'\n  ORDER BY a.channel\n)\nSELECT\n  CASE WHEN NOT EXISTS(SELECT 1 FROM c) THEN FALSE\n       WHEN r.action='upsert' AND NOT EXISTS(SELECT 1 FROM upserted) THEN FALSE\n       WHEN r.action IN ('enable','disable') AND NOT EXISTS(SELECT 1 FROM status_changed) THEN FALSE\n       ELSE TRUE END success,\n  CASE WHEN NOT EXISTS(SELECT 1 FROM c) THEN 'clinic_not_found'\n       WHEN r.action='upsert' THEN 'channel_adapter_upserted'\n       WHEN r.action='enable' THEN 'channel_adapter_enabled'\n       WHEN r.action='disable' THEN 'channel_adapter_disabled'\n       ELSE 'channel_adapters_listed' END result,\n  COALESCE((SELECT id FROM upserted),(SELECT id FROM status_changed)) adapter_id,\n  COALESCE((SELECT JSONB_AGG(TO_JSONB(listed)) FROM listed),'[]'::JSONB) adapters\nFROM r;",
+        "options": {
+          "queryReplacement": "={{ [ $json.action,$json.clinic_name,$json.channel,$json.adapter_name,$json.adapter_url,$json.credential_reference,$json.enabled,$json.request_timeout_seconds,$json.metadata_text ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "9ce7183d-6ee9-4136-96da-853726818e12",
+      "name": "Manage Communication Channel Adapter"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات Adapter نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "f0b8e407-b286-4147-850e-d47ae49a740a",
+      "name": "Return Adapter Management Error"
+    },
+    {
+      "parameters": {
+        "content": "## تنظیم Adapter کانال\n\nاقدام‌ها: upsert, enable, disable, list\n\nAdapter URL باید یک سرویس داخلی یا واسط Provider باشد.\n\nSecret واقعی در دیتابیس قرار نده؛ فقط credential_reference ثبت می‌شود.",
+        "height": 360,
+        "width": 510
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -280
+      ],
+      "id": "c391ff61-dd01-4cd0-b86e-bdb8a659694e",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Adapter Management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Adapter Management": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Adapter Management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Manage Channel Adapters": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Adapter Management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Adapter Management": {
+      "main": [
+        [
+          {
+            "node": "Is Adapter Management Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Adapter Management Valid?": {
+      "main": [
+        [
+          {
+            "node": "Manage Communication Channel Adapter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Adapter Management Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

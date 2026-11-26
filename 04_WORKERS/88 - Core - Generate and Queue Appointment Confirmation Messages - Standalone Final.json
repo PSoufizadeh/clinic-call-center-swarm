@@ -1,0 +1,446 @@
+{
+  "name": "88 - Core - Generate and Queue Appointment Confirmation Messages - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1300,
+        220
+      ],
+      "id": "b4a87923-bd64-4c97-bcc7-2a8502f37006",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4686f856-3c46-49ea-bb2a-be5b9862aea9",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "b13cc535-4936-4503-8e6f-9fef2a6e0828",
+              "name": "window_start_hours",
+              "value": 20,
+              "type": "number"
+            },
+            {
+              "id": "93907fda-2694-43d5-bf7a-2428d28faa29",
+              "name": "window_end_hours",
+              "value": 28,
+              "type": "number"
+            },
+            {
+              "id": "6ffa72a6-8812-4bcb-b3c4-b4088fb4b1f5",
+              "name": "response_deadline_hours",
+              "value": 12,
+              "type": "number"
+            },
+            {
+              "id": "4367bc87-43fe-4c7f-af46-4bfe9e32b588",
+              "name": "channel",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "1e9d71e2-5c43-4e9f-9ae4-a96c6517d644",
+              "name": "limit",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "2f46e202-7e47-4a6c-b205-9a57eb8b4477",
+              "name": "webhook_base_url",
+              "value": "http://localhost:5678/webhook",
+              "type": "string"
+            },
+            {
+              "id": "ccb016b2-2893-42c7-8aef-7b836fcf87cf",
+              "name": "confirm_run",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1060,
+        220
+      ],
+      "id": "4518fae0-d0bf-4c6b-9457-3aa1de5ab1cb",
+      "name": "Manual Confirmation Messaging"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/communications/appointment-confirmations/generate-and-queue",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1060,
+        -80
+      ],
+      "id": "f654345e-3d40-4553-85fd-7017d482f2bf",
+      "name": "Webhook - Generate and Queue Confirmations"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input=$json.body??$json;\nconst text=v=>v===null||v===undefined?'':String(v).trim();\nconst bool=v=>typeof v==='boolean'?v:['true','1','yes','on'].includes(text(v).toLowerCase());\n\nconst clinic_name=text(input.clinic_name);\nconst window_start_hours=Number(input.window_start_hours??20);\nconst window_end_hours=Number(input.window_end_hours??28);\nconst response_deadline_hours=Number(input.response_deadline_hours??12);\nconst channel=text(input.channel||'whatsapp').toLowerCase();\nconst limit=Number(input.limit??100);\nconst webhook_base_url=text(input.webhook_base_url||'http://localhost:5678/webhook').replace(/\\/+$/,'');\nconst confirm_run=bool(input.confirm_run);\n\nconst errors=[];\nif(!clinic_name)errors.push({field:'clinic_name',message:'نام کلینیک الزامی است.'});\nif(!Number.isInteger(window_start_hours)||window_start_hours<0||window_start_hours>720)errors.push({field:'window_start_hours',message:'بازه شروع معتبر نیست.'});\nif(!Number.isInteger(window_end_hours)||window_end_hours<1||window_end_hours>720||window_end_hours<=window_start_hours)errors.push({field:'window_end_hours',message:'بازه پایان باید از شروع بزرگ‌تر باشد.'});\nif(!Number.isInteger(response_deadline_hours)||response_deadline_hours<1||response_deadline_hours>168)errors.push({field:'response_deadline_hours',message:'مهلت پاسخ معتبر نیست.'});\nif(!['whatsapp','sms','email','phone','web_push','in_app'].includes(channel))errors.push({field:'channel',message:'کانال معتبر نیست.'});\nif(!Number.isInteger(limit)||limit<1||limit>500)errors.push({field:'limit',message:'Limit معتبر نیست.'});\nif(!/^https?:\\/\\/.+/i.test(webhook_base_url))errors.push({field:'webhook_base_url',message:'آدرس Webhook معتبر نیست.'});\nif(confirm_run!==true)errors.push({field:'confirm_run',message:'اجرای فرایند باید تأیید شود.'});\n\nreturn [{json:{\n clinic_name,window_start_hours,window_end_hours,response_deadline_hours,\n channel,limit,webhook_base_url,\n generate_url:`${webhook_base_url}/clinic/appointments/generate-confirmations`,\n queue_url:`${webhook_base_url}/clinic/communications/messages/queue`,\n confirm_run,validation_status:errors.length?'invalid':'valid',errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -788,
+        64
+      ],
+      "id": "add7c44b-5998-4f2b-96e8-d0d79f6ae0c6",
+      "name": "Normalize and Validate Confirmation Messaging"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "22c9cc1e-7095-45c4-aa69-67eb66b55c0b",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -548,
+        64
+      ],
+      "id": "8799c5d9-67c2-4631-852f-509a5a1d4633",
+      "name": "Is Confirmation Messaging Valid?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.generate_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { clinic_name:$json.clinic_name,window_start_hours:$json.window_start_hours,window_end_hours:$json.window_end_hours,response_deadline_hours:$json.response_deadline_hours,channel:$json.channel,limit:$json.limit,confirm_generation:true } }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -292,
+        -48
+      ],
+      "id": "2796f324-0fad-4072-b25a-7e0528a11463",
+      "name": "Generate Appointment Confirmations",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response=$json??{};\nconst requests=Array.isArray(response.confirmation_requests)?response.confirmation_requests:[];\nconst config=$('Normalize and Validate Confirmation Messaging').first().json;\n\nif(!requests.length){\n  return [{json:{\n    success:true,\n    has_confirmation:false,\n    result:response.result||'no_confirmation_requests',\n    clinic_name:config.clinic_name,\n    generated_count:Number(response.confirmation_request_count||0),\n    queued_count:0\n  }}];\n}\n\nreturn requests.map(item=>({json:{\n  ...item,\n  has_confirmation:true,\n  clinic_name:config.clinic_name,\n  webhook_base_url:config.webhook_base_url,\n  queue_url:config.queue_url\n}}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -36,
+        -48
+      ],
+      "id": "24ceb64a-1133-42a9-82de-553e3dd8808f",
+      "name": "Expand Confirmation Requests"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "848d72bb-8b13-48fe-aff7-49905134d941",
+              "leftValue": "={{ $json.has_confirmation === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        220,
+        -48
+      ],
+      "id": "52554042-8849-4eea-981b-e474d5ab415f",
+      "name": "Is There a Confirmation Request?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item=$json;\nconst message=[\n  `یادآوری نوبت شما در ${item.clinic_name}`,\n  `پزشک: ${item.doctor_name}`,\n  `خدمت: ${item.service_name}`,\n  `تاریخ: ${item.appointment_date}`,\n  `ساعت: ${item.start_time}`,\n  '',\n  'لطفاً نوبت را تأیید کنید یا در صورت نیاز درخواست جابه‌جایی یا لغو را اعلام کنید.',\n  `کد پیگیری: ${item.confirmation_token}`\n].join('\\n');\n\nreturn [{json:{\n  queue_url:item.queue_url,\n  confirmation_request_id:Number(item.confirmation_request_id),\n  appointment_id:Number(item.appointment_id),\n  queue_payload:{\n    clinic_name:item.clinic_name,\n    mobile:item.mobile,\n    channel:item.channel||'whatsapp',\n    purpose:'appointment_reminder',\n    message_type:'template',\n    template_code:'appointment_confirmation',\n    language:'fa',\n    subject:'',\n    message_text:message,\n    payload:{\n      confirmation_request_id:Number(item.confirmation_request_id),\n      confirmation_token:item.confirmation_token,\n      appointment_id:Number(item.appointment_id),\n      doctor_name:item.doctor_name,\n      service_name:item.service_name,\n      appointment_date:item.appointment_date,\n      start_time:item.start_time,\n      expires_at:item.expires_at,\n      response_endpoint:'clinic/appointments/process-confirmation-response'\n    },\n    related_entity_type:'appointment',\n    related_entity_id:Number(item.appointment_id),\n    request_reference:`appointment-confirmation:${item.confirmation_request_id}`,\n    idempotency_key:`appointment-confirmation:${item.confirmation_request_id}`,\n    priority:6,\n    scheduled_at:new Date().toISOString(),\n    max_attempts:5,\n    webhook_base_url:item.webhook_base_url,\n    confirm_queue:true\n  }\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        476,
+        -144
+      ],
+      "id": "e9c063a0-9bba-4770-823c-47c48c294f3f",
+      "name": "Build Appointment Confirmation Message"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.queue_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.queue_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        732,
+        -144
+      ],
+      "id": "5c71917c-f2c8-4168-9e91-01d005006c6b",
+      "name": "Queue Appointment Confirmation Message",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const original=$('Build Appointment Confirmation Message').item.json;\nreturn [{json:{\n  success:$json.success===true,\n  result:$json.result||'queue_result_unknown',\n  confirmation_request_id:original.confirmation_request_id,\n  appointment_id:original.appointment_id,\n  outbound_message_id:$json.outbound_message_id??null,\n  message_status:$json.message_status??null,\n  permission_decision:$json.permission_decision??null,\n  next_action:$json.next_action??null\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        988,
+        -144
+      ],
+      "id": "6af880b5-ad13-434d-806a-31e6533de6af",
+      "name": "Return Confirmation Queue Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'تنظیمات تولید و صف تأیید نوبت نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -292,
+        176
+      ],
+      "id": "726f99dd-4901-4ded-b321-b927eb9e5dba",
+      "name": "Return Confirmation Messaging Error"
+    },
+    {
+      "parameters": {
+        "content": "## Bridge تأیید نوبت به موتور پیام\n\nWorkflow 27 درخواست تأیید را می‌سازد.\n\nاین Workflow برای هر درخواست، یک پیام Idempotent در Workflow 83 صف می‌کند.",
+        "height": 350,
+        "width": 510
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1540,
+        -280
+      ],
+      "id": "c83fb52e-642e-4bb4-a609-709fa1c5fb33",
+      "name": "How to Use"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:true,result:$json.result||'no_confirmation_requests',clinic_name:$json.clinic_name,generated_count:$json.generated_count||0,queued_count:0,message:'درخواست تأیید جدیدی برای صف‌کردن وجود ندارد.'}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        476,
+        48
+      ],
+      "id": "295bb421-9f88-4f07-913c-1d40a5f00fa9",
+      "name": "Return No Confirmation Requests"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Confirmation Messaging",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Confirmation Messaging": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Confirmation Messaging",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Generate and Queue Confirmations": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Confirmation Messaging",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Confirmation Messaging": {
+      "main": [
+        [
+          {
+            "node": "Is Confirmation Messaging Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Confirmation Messaging Valid?": {
+      "main": [
+        [
+          {
+            "node": "Generate Appointment Confirmations",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Confirmation Messaging Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Appointment Confirmations": {
+      "main": [
+        [
+          {
+            "node": "Expand Confirmation Requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand Confirmation Requests": {
+      "main": [
+        [
+          {
+            "node": "Is There a Confirmation Request?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is There a Confirmation Request?": {
+      "main": [
+        [
+          {
+            "node": "Build Appointment Confirmation Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return No Confirmation Requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Appointment Confirmation Message": {
+      "main": [
+        [
+          {
+            "node": "Queue Appointment Confirmation Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queue Appointment Confirmation Message": {
+      "main": [
+        [
+          {
+            "node": "Return Confirmation Queue Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

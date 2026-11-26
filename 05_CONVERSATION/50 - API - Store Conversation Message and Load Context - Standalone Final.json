@@ -1,0 +1,291 @@
+{
+  "name": "50 - API - Store Conversation Message and Load Context - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "f349688e-1aca-4c68-a74f-acee3532711d",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "febaeaae-7d24-4dcc-89ee-ffb7539dca38",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "ce109fa1-9add-411e-8e59-29d2b457d76c",
+              "name": "channel",
+              "value": "webchat",
+              "type": "string"
+            },
+            {
+              "id": "77d0e589-983d-46fe-a2e6-c56affbcfadd",
+              "name": "external_conversation_id",
+              "value": "test-conversation-001",
+              "type": "string"
+            },
+            {
+              "id": "de8b7aee-9e76-4cdd-802b-04a88c80a1e2",
+              "name": "mobile",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "20be012a-695f-452d-a6d2-1fdea2907df1",
+              "name": "direction",
+              "value": "inbound",
+              "type": "string"
+            },
+            {
+              "id": "c2d832fa-65ca-48fe-8ae6-55880908d782",
+              "name": "sender_type",
+              "value": "patient",
+              "type": "string"
+            },
+            {
+              "id": "658b5c9f-dfa2-41df-9396-ba0497bdda6c",
+              "name": "message_type",
+              "value": "text",
+              "type": "string"
+            },
+            {
+              "id": "55c3a738-bb8f-4b43-88fb-8edef239051a",
+              "name": "message_text",
+              "value": "برای هفته بعد وقت دندان‌پزشکی می‌خواهم.",
+              "type": "string"
+            },
+            {
+              "id": "25c0b75c-c3c2-4a9c-a939-6cafead68b7c",
+              "name": "message_payload",
+              "value": "{}",
+              "type": "string"
+            },
+            {
+              "id": "1bc62390-c425-40ed-85e2-3ae25ab146f4",
+              "name": "language",
+              "value": "fa",
+              "type": "string"
+            },
+            {
+              "id": "166a6e72-e497-4231-b64c-4ea763824519",
+              "name": "session_expiry_hours",
+              "value": 24,
+              "type": "number"
+            },
+            {
+              "id": "9c3e4856-e059-439f-94da-ff317a646f41",
+              "name": "context_message_limit",
+              "value": 20,
+              "type": "number"
+            },
+            {
+              "id": "e84db157-f5c1-47ee-87bd-5035b099b761",
+              "name": "confirm_message",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "5026e919-399d-465f-a12f-ec7919970ec0",
+      "name": "Manual Conversation Message"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/conversations/message",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "b79a92c2-e4f6-4d28-b9aa-6208c0035824",
+      "name": "Webhook - Store Conversation Message"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst clinic_name = text(input.clinic_name);\nconst channel = text(input.channel || 'webchat').toLowerCase();\nconst external_conversation_id = text(input.external_conversation_id);\nconst mobile = text(input.mobile);\nconst direction = text(input.direction || 'inbound').toLowerCase();\nconst sender_type = text(input.sender_type || 'patient').toLowerCase();\nconst message_type = text(input.message_type || 'text').toLowerCase();\nconst message_text = text(input.message_text);\nconst language = text(input.language || 'fa').toLowerCase();\nconst session_expiry_hours = Number(input.session_expiry_hours ?? 24);\nconst context_message_limit = Number(input.context_message_limit ?? 20);\nconst confirm_message = toBoolean(input.confirm_message);\n\nlet messagePayload = input.message_payload ?? {};\nif (typeof messagePayload === 'string') {\n  const raw = messagePayload.trim();\n  if (!raw) {\n    messagePayload = {};\n  } else {\n    try {\n      messagePayload = JSON.parse(raw);\n    } catch {\n      messagePayload = null;\n    }\n  }\n}\n\nconst channels = [\n  'whatsapp',\n  'sms',\n  'phone',\n  'telegram',\n  'webchat',\n  'manual',\n  'api',\n];\n\nconst directions = ['inbound', 'outbound', 'internal'];\nconst senders = ['patient', 'assistant', 'human', 'system'];\nconst messageTypes = ['text', 'audio', 'image', 'file', 'event'];\nconst languages = ['fa', 'en', 'ar', 'unknown'];\n\nconst errors = [];\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (!channels.includes(channel)) {\n  errors.push({\n    field: 'channel',\n    message: 'کانال مکالمه معتبر نیست.',\n  });\n}\n\nif (!external_conversation_id) {\n  errors.push({\n    field: 'external_conversation_id',\n    message: 'شناسه خارجی مکالمه الزامی است.',\n  });\n}\n\nif (external_conversation_id.length > 500) {\n  errors.push({\n    field: 'external_conversation_id',\n    message: 'شناسه مکالمه بیش از حد طولانی است.',\n  });\n}\n\nif (mobile && !/^\\+?[0-9]{8,15}$/.test(mobile)) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل معتبر نیست.',\n  });\n}\n\nif (!directions.includes(direction)) {\n  errors.push({\n    field: 'direction',\n    message: 'جهت پیام معتبر نیست.',\n  });\n}\n\nif (!senders.includes(sender_type)) {\n  errors.push({\n    field: 'sender_type',\n    message: 'نوع فرستنده معتبر نیست.',\n  });\n}\n\nif (!messageTypes.includes(message_type)) {\n  errors.push({\n    field: 'message_type',\n    message: 'نوع پیام معتبر نیست.',\n  });\n}\n\nif (!message_text && (!messagePayload || Object.keys(messagePayload).length === 0)) {\n  errors.push({\n    field: 'message_text',\n    message: 'متن یا داده ساختاریافته پیام الزامی است.',\n  });\n}\n\nif (message_text.length > 12000) {\n  errors.push({\n    field: 'message_text',\n    message: 'متن پیام نباید بیشتر از 12000 کاراکتر باشد.',\n  });\n}\n\nif (messagePayload === null || Array.isArray(messagePayload) || typeof messagePayload !== 'object') {\n  errors.push({\n    field: 'message_payload',\n    message: 'message_payload باید یک شیء JSON معتبر باشد.',\n  });\n}\n\nif (!languages.includes(language)) {\n  errors.push({\n    field: 'language',\n    message: 'زبان مکالمه معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(session_expiry_hours) ||\n  session_expiry_hours < 1 ||\n  session_expiry_hours > 720\n) {\n  errors.push({\n    field: 'session_expiry_hours',\n    message: 'زمان اعتبار جلسه باید بین 1 و 720 ساعت باشد.',\n  });\n}\n\nif (\n  !Number.isInteger(context_message_limit) ||\n  context_message_limit < 1 ||\n  context_message_limit > 100\n) {\n  errors.push({\n    field: 'context_message_limit',\n    message: 'تعداد پیام‌های زمینه باید بین 1 و 100 باشد.',\n  });\n}\n\nif (confirm_message !== true) {\n  errors.push({\n    field: 'confirm_message',\n    message: 'ثبت پیام باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    clinic_name,\n    channel,\n    external_conversation_id,\n    mobile,\n    direction,\n    sender_type,\n    message_type,\n    message_text,\n    message_payload_json: JSON.stringify(messagePayload || {}),\n    language,\n    session_expiry_hours,\n    context_message_limit,\n    confirm_message,\n    validation_status: errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "3d95ffb7-2718-48f9-ba5e-fb258cad9aee",
+      "name": "Normalize and Validate Conversation Message"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "85f940d0-eb04-4222-94f0-8ffd0cf9c54b",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "2a77cdb4-00b2-42e1-924f-f89eb581420b",
+      "name": "Is Conversation Message Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        $2::TEXT AS channel,\n        $3::TEXT AS external_conversation_id,\n        NULLIF($4::TEXT, '') AS mobile,\n        $5::TEXT AS direction,\n        $6::TEXT AS sender_type,\n        $7::TEXT AS message_type,\n        NULLIF($8::TEXT, '') AS message_text,\n        $9::JSONB AS message_payload,\n        $10::TEXT AS language,\n        LEAST(GREATEST($11::INTEGER, 1), 720) AS session_expiry_hours,\n        LEAST(GREATEST($12::INTEGER, 1), 100) AS context_message_limit\n),\n\nclinic_context AS (\n    SELECT\n        clinic.id AS clinic_id,\n        clinic.name AS clinic_name,\n        request.*\n\n    FROM request_data request\n\n    INNER JOIN clinics clinic\n        ON clinic.name = request.clinic_name\n       AND clinic.is_active = TRUE\n\n    ORDER BY clinic.id\n    LIMIT 1\n),\n\npatient_context AS (\n    SELECT\n        patient.id AS patient_id,\n        patient.full_name AS patient_name,\n        patient.mobile\n\n    FROM patients patient\n\n    INNER JOIN clinic_context context\n        ON context.clinic_id = patient.clinic_id\n       AND context.mobile = patient.mobile\n\n    LIMIT 1\n),\n\nupserted_session AS (\n    INSERT INTO conversation_sessions (\n        session_key,\n        clinic_id,\n        patient_id,\n        channel,\n        external_conversation_id,\n        status,\n        language,\n        last_message_at,\n        expires_at\n    )\n\n    SELECT\n        MD5(\n            context.clinic_id::TEXT\n            || ':'\n            || context.channel\n            || ':'\n            || context.external_conversation_id\n        ),\n        context.clinic_id,\n        (\n            SELECT patient_id\n            FROM patient_context\n        ),\n        context.channel,\n        context.external_conversation_id,\n        'active',\n        context.language,\n        NOW(),\n        NOW() + MAKE_INTERVAL(\n            hours => context.session_expiry_hours\n        )\n\n    FROM clinic_context context\n\n    ON CONFLICT (\n        clinic_id,\n        channel,\n        external_conversation_id\n    )\n    DO UPDATE SET\n        patient_id = COALESCE(\n            conversation_sessions.patient_id,\n            EXCLUDED.patient_id\n        ),\n        status = CASE\n            WHEN conversation_sessions.status = 'closed'\n                THEN 'active'\n            ELSE conversation_sessions.status\n        END,\n        language = EXCLUDED.language,\n        last_message_at = NOW(),\n        expires_at = EXCLUDED.expires_at,\n        updated_at = NOW()\n\n    RETURNING *\n),\n\ninserted_message AS (\n    INSERT INTO conversation_messages (\n        session_id,\n        direction,\n        sender_type,\n        message_type,\n        content_text,\n        content_json\n    )\n\n    SELECT\n        session.id,\n        context.direction,\n        context.sender_type,\n        context.message_type,\n        context.message_text,\n        NULLIF(\n            context.message_payload,\n            '{}'::JSONB\n        )\n\n    FROM upserted_session session\n    CROSS JOIN clinic_context context\n\n    RETURNING *\n),\n\nrecent_message_rows AS (\n    SELECT *\n    FROM (\n        SELECT\n            message.id AS message_id,\n            message.direction,\n            message.sender_type,\n            message.message_type,\n            message.content_text,\n            message.content_json,\n            message.intent,\n            message.intent_confidence,\n            message.extracted_entities,\n            message.risk_flags,\n            message.tool_action,\n            message.tool_result,\n            message.created_at\n\n        FROM conversation_messages message\n\n        INNER JOIN upserted_session session\n            ON session.id = message.session_id\n\n        ORDER BY\n            message.created_at DESC,\n            message.id DESC\n\n        LIMIT (\n            SELECT context_message_limit\n            FROM clinic_context\n        )\n    ) recent\n\n    ORDER BY\n        recent.created_at ASC,\n        recent.message_id ASC\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN FALSE\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN 'clinic_not_found'\n        ELSE 'conversation_message_stored'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN 'کلینیک مطابق ورودی پیدا نشد.'\n        ELSE 'پیام ثبت و زمینه مکالمه دریافت شد.'\n    END AS message,\n\n    (\n        SELECT id\n        FROM upserted_session\n    ) AS session_id,\n\n    (\n        SELECT session_key\n        FROM upserted_session\n    ) AS session_key,\n\n    (\n        SELECT id\n        FROM inserted_message\n    ) AS message_id,\n\n    (\n        SELECT patient_id\n        FROM upserted_session\n    ) AS patient_id,\n\n    (\n        SELECT patient_name\n        FROM patient_context\n    ) AS patient_name,\n\n    (\n        SELECT status\n        FROM upserted_session\n    ) AS session_status,\n\n    (\n        SELECT language\n        FROM upserted_session\n    ) AS language,\n\n    (\n        SELECT last_intent\n        FROM upserted_session\n    ) AS last_intent,\n\n    (\n        SELECT pending_action\n        FROM upserted_session\n    ) AS pending_action,\n\n    (\n        SELECT collected_entities\n        FROM upserted_session\n    ) AS collected_entities,\n\n    (\n        SELECT risk_flags\n        FROM upserted_session\n    ) AS session_risk_flags,\n\n    (\n        SELECT context_summary\n        FROM upserted_session\n    ) AS context_summary,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'message_id', message_id,\n                    'direction', direction,\n                    'sender_type', sender_type,\n                    'message_type', message_type,\n                    'content_text', content_text,\n                    'content_json', content_json,\n                    'intent', intent,\n                    'intent_confidence', intent_confidence,\n                    'extracted_entities', extracted_entities,\n                    'risk_flags', risk_flags,\n                    'tool_action', tool_action,\n                    'tool_result', tool_result,\n                    'created_at', created_at\n                )\n                ORDER BY created_at, message_id\n            )\n            FROM recent_message_rows\n        ),\n        '[]'::JSONB\n    ) AS recent_messages,\n\n    'analyze_message_with_ai'::TEXT AS next_action\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.channel,\n  $json.external_conversation_id,\n  $json.mobile,\n  $json.direction,\n  $json.sender_type,\n  $json.message_type,\n  $json.message_text,\n  $json.message_payload_json,\n  $json.language,\n  $json.session_expiry_hours,\n  $json.context_message_limit\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "e8e50593-a1b6-454b-9f8c-f3360aa4635f",
+      "name": "Store Message and Load Context"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: 'invalid_request',\n    message: 'اطلاعات پیام یا جلسه مکالمه ناقص یا نامعتبر است.',\n    errors: $json.errors ?? [],\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "60f1df0e-28d1-4875-96b5-228557c4c584",
+      "name": "Return Conversation Message Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## درگاه ثبت پیام و بازیابی حافظه\n\n1. ابتدا Workflow شماره 49 را یک‌بار اجرا کن.\n\n2. external_conversation_id شناسه گفت‌وگو در WhatsApp، وب‌چت، تلفن یا کانال دیگر است.\n\n3. هر پیام در PostgreSQL ذخیره می‌شود و آخرین پیام‌های جلسه برای مدل زبانی برگردانده می‌شوند.\n\n4. این Workflow هنوز مدل زبانی را اجرا نمی‌کند؛ خروجی آن ورودی Workflow شماره 51 است.",
+        "height": 400,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1140,
+        -300
+      ],
+      "id": "0373bdb4-8f6c-428c-b0d3-3d90cf36ad76",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Conversation Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Conversation Message": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Conversation Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Store Conversation Message": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Conversation Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Conversation Message": {
+      "main": [
+        [
+          {
+            "node": "Is Conversation Message Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Conversation Message Valid?": {
+      "main": [
+        [
+          {
+            "node": "Store Message and Load Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Conversation Message Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

@@ -1,0 +1,67 @@
+{
+  "name": "26 - DB - Add Appointment Confirmation Requests",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "186f0cae-4cf5-4cf2-a25f-d55ab07b9ef5",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS appointment_confirmation_requests (\n    id BIGSERIAL PRIMARY KEY,\n\n    appointment_id BIGINT NOT NULL\n        REFERENCES appointments(id)\n        ON DELETE CASCADE,\n\n    confirmation_token TEXT NOT NULL UNIQUE,\n\n    status TEXT NOT NULL DEFAULT 'pending'\n        CHECK (\n            status IN (\n                'pending',\n                'confirmed',\n                'reschedule_requested',\n                'cancelled',\n                'expired'\n            )\n        ),\n\n    channel TEXT NOT NULL DEFAULT 'whatsapp'\n        CHECK (\n            channel IN (\n                'whatsapp',\n                'sms',\n                'phone',\n                'telegram',\n                'web',\n                'manual'\n            )\n        ),\n\n    request_created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    sent_at TIMESTAMPTZ,\n    expires_at TIMESTAMPTZ NOT NULL,\n\n    responded_at TIMESTAMPTZ,\n    response_note TEXT,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    CHECK (expires_at > request_created_at)\n);\n\nCREATE UNIQUE INDEX IF NOT EXISTS uq_active_confirmation_request\n    ON appointment_confirmation_requests(appointment_id)\n    WHERE status = 'pending';\n\nCREATE INDEX IF NOT EXISTS idx_confirmation_requests_expiry\n    ON appointment_confirmation_requests(status, expires_at);\n\nCREATE INDEX IF NOT EXISTS idx_confirmation_requests_token\n    ON appointment_confirmation_requests(confirmation_token);\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار درخواست‌های تأیید نوبت پیش از مراجعه ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "c3368127-f644-4ae8-ab81-e9428010262d",
+      "name": "Create Confirmation Requests Structure"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nاین Workflow جدول `appointment_confirmation_requests` را برای یادآوری و دریافت تأیید بیمار پیش از مراجعه ایجاد می‌کند.\n\nپس از اجرای موفق، آن را غیرفعال نگه دار.",
+        "height": 260,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        -240
+      ],
+      "id": "606dab9b-5739-49bf-8efa-87f7696684d5",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Confirmation Requests Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

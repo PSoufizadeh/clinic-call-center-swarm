@@ -1,0 +1,67 @@
+{
+  "name": "64 - DB - Add Clinic Knowledge Documents and RAG",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "6ddc3466-c5f6-4d65-9c0d-60754d07e4ad",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE EXTENSION IF NOT EXISTS pg_trgm;\n\nCREATE TABLE IF NOT EXISTS clinic_knowledge_documents (\n  id BIGSERIAL PRIMARY KEY,\n  clinic_id BIGINT NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,\n  service_id BIGINT REFERENCES services(id) ON DELETE SET NULL,\n  title TEXT NOT NULL,\n  source_type TEXT NOT NULL CHECK (source_type IN ('pdf','docx','txt','html','manual_text','qa','other')),\n  original_filename TEXT,mime_type TEXT,\n  specialty TEXT NOT NULL DEFAULT 'general',topic TEXT,\n  version_label TEXT NOT NULL DEFAULT '1.0',\n  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','processing','review','published','archived','failed')),\n  source_priority INTEGER NOT NULL DEFAULT 50 CHECK (source_priority BETWEEN 1 AND 100),\n  raw_text TEXT,content_hash TEXT,\n  allowed_use TEXT NOT NULL DEFAULT 'patient_information' CHECK (allowed_use IN ('patient_information','pre_visit_guidance','post_visit_guidance','clinical_information','internal_only')),\n  response_policy JSONB NOT NULL DEFAULT '{}'::JSONB,\n  metadata JSONB NOT NULL DEFAULT '{}'::JSONB,\n  valid_from DATE,valid_to DATE,approved_by TEXT,approved_at TIMESTAMPTZ,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n  UNIQUE(clinic_id,title,version_label)\n);\n\nCREATE TABLE IF NOT EXISTS clinic_knowledge_chunks (\n  id BIGSERIAL PRIMARY KEY,\n  document_id BIGINT NOT NULL REFERENCES clinic_knowledge_documents(id) ON DELETE CASCADE,\n  chunk_index INTEGER NOT NULL CHECK (chunk_index>=0),\n  page_start INTEGER,page_end INTEGER,section_title TEXT,\n  content TEXT NOT NULL,content_hash TEXT NOT NULL,\n  token_estimate INTEGER CHECK (token_estimate IS NULL OR token_estimate>=0),\n  keywords JSONB NOT NULL DEFAULT '[]'::JSONB,\n  embedding JSONB,embedding_model TEXT,embedding_dimensions INTEGER,\n  embedding_status TEXT NOT NULL DEFAULT 'not_requested' CHECK (embedding_status IN ('not_requested','pending','ready','failed')),\n  search_vector TSVECTOR GENERATED ALWAYS AS (TO_TSVECTOR('simple',COALESCE(section_title,'')||' '||COALESCE(content,''))) STORED,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n  UNIQUE(document_id,chunk_index)\n);\n\nCREATE TABLE IF NOT EXISTS clinic_knowledge_qa (\n  id BIGSERIAL PRIMARY KEY,\n  clinic_id BIGINT NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,\n  document_id BIGINT REFERENCES clinic_knowledge_documents(id) ON DELETE CASCADE,\n  service_id BIGINT REFERENCES services(id) ON DELETE SET NULL,\n  specialty TEXT NOT NULL DEFAULT 'general',topic TEXT,\n  question TEXT NOT NULL,answer TEXT NOT NULL,\n  question_variants JSONB NOT NULL DEFAULT '[]'::JSONB,\n  keywords JSONB NOT NULL DEFAULT '[]'::JSONB,\n  requires_human_confirmation BOOLEAN NOT NULL DEFAULT FALSE,\n  safety_category TEXT NOT NULL DEFAULT 'general' CHECK (safety_category IN ('general','medication','post_procedure','urgent_if_red_flags','human_only')),\n  source_priority INTEGER NOT NULL DEFAULT 70 CHECK (source_priority BETWEEN 1 AND 100),\n  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','published','archived')),\n  valid_from DATE,valid_to DATE,approved_by TEXT,approved_at TIMESTAMPTZ,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE TABLE IF NOT EXISTS clinic_knowledge_ingestion_jobs (\n  id BIGSERIAL PRIMARY KEY,\n  document_id BIGINT NOT NULL REFERENCES clinic_knowledge_documents(id) ON DELETE CASCADE,\n  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','processing','completed','failed')),\n  chunk_size_chars INTEGER NOT NULL DEFAULT 1800,\n  overlap_chars INTEGER NOT NULL DEFAULT 250,\n  chunks_created INTEGER NOT NULL DEFAULT 0,error_message TEXT,\n  started_at TIMESTAMPTZ,completed_at TIMESTAMPTZ,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE UNIQUE INDEX IF NOT EXISTS uq_knowledge_ingestion_document\nON clinic_knowledge_ingestion_jobs(document_id);\n\nCREATE TABLE IF NOT EXISTS clinical_knowledge_queries (\n  id BIGSERIAL PRIMARY KEY,\n  clinic_id BIGINT NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,\n  patient_id BIGINT REFERENCES patients(id) ON DELETE SET NULL,\n  session_id BIGINT REFERENCES conversation_sessions(id) ON DELETE SET NULL,\n  input_message_id BIGINT REFERENCES conversation_messages(id) ON DELETE SET NULL,\n  clinical_intake_case_id BIGINT REFERENCES clinical_intake_cases(id) ON DELETE SET NULL,\n  question TEXT NOT NULL,normalized_query TEXT,specialty TEXT,\n  service_id BIGINT REFERENCES services(id) ON DELETE SET NULL,\n  risk_flags JSONB NOT NULL DEFAULT '[]'::JSONB,\n  retrieved_chunk_ids JSONB NOT NULL DEFAULT '[]'::JSONB,\n  retrieved_qa_ids JSONB NOT NULL DEFAULT '[]'::JSONB,\n  answer_text TEXT,citations JSONB NOT NULL DEFAULT '[]'::JSONB,\n  answer_status TEXT NOT NULL DEFAULT 'retrieval_pending' CHECK (answer_status IN ('retrieval_pending','retrieved','answered','no_reliable_answer','human_review','urgent_handoff','failed')),\n  model_provider TEXT,model_name TEXT,prompt_version TEXT,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE INDEX IF NOT EXISTS idx_knowledge_documents_published ON clinic_knowledge_documents(clinic_id,status,specialty,source_priority DESC,updated_at DESC);\nCREATE INDEX IF NOT EXISTS idx_knowledge_chunks_document ON clinic_knowledge_chunks(document_id,chunk_index);\nCREATE INDEX IF NOT EXISTS idx_knowledge_chunks_search ON clinic_knowledge_chunks USING GIN(search_vector);\nCREATE INDEX IF NOT EXISTS idx_knowledge_chunks_trgm ON clinic_knowledge_chunks USING GIN(content gin_trgm_ops);\nCREATE INDEX IF NOT EXISTS idx_knowledge_qa_published ON clinic_knowledge_qa(clinic_id,status,specialty,source_priority DESC);\nCREATE INDEX IF NOT EXISTS idx_knowledge_qa_question_trgm ON clinic_knowledge_qa USING GIN(question gin_trgm_ops);\nCREATE INDEX IF NOT EXISTS idx_clinical_knowledge_queries_recent ON clinical_knowledge_queries(clinic_id,created_at DESC);\n\nSELECT TRUE success,'migration_completed' result,'ساختار RAG و دانش تخصصی ایجاد شد.' message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "714b124e-3cbf-4bd1-9494-f09923eeaaa5",
+      "name": "Create RAG Knowledge Structure"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nاسناد، Chunkها، Q&A، Job پردازش و Queryهای RAG ایجاد می‌شوند.\n\nEmbedding اختیاری است و Migration به pgvector وابسته نیست.",
+        "height": 330,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -570,
+        -260
+      ],
+      "id": "e19bf813-b965-459b-b5a0-f2c68eb683bd",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create RAG Knowledge Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

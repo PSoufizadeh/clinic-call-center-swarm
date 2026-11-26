@@ -1,0 +1,267 @@
+{
+  "name": "57 - Core - Human Handoff Orchestrator - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "9e84bb7b-7a87-42d6-a5c5-18bef9ed816e",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "17c424e3-4ebb-45f7-89e8-a239e85c1734",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "e388593b-7011-41ee-a8cc-de8887c3e15f",
+              "name": "session_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "ef686175-ad6d-4fde-a8ef-1b4f1068bb7f",
+              "name": "message_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "0734abbd-5c50-475d-ad7e-75b00142f47d",
+              "name": "mobile",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "80d425b5-34bd-4330-92d6-cfa878010914",
+              "name": "urgency",
+              "value": "normal",
+              "type": "string"
+            },
+            {
+              "id": "0d4de6be-dac2-44ed-86fb-b36f7fc000ca",
+              "name": "reason",
+              "value": "درخواست نیازمند بررسی انسانی است.",
+              "type": "string"
+            },
+            {
+              "id": "3d23fef2-6d11-46d5-9522-41bff1a9d19c",
+              "name": "patient_message",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "956c3992-c765-4bec-b2b4-f7d2845afe1c",
+              "name": "risk_flags",
+              "value": "[]",
+              "type": "string"
+            },
+            {
+              "id": "7c3782aa-8f71-42d7-b691-6f7434528962",
+              "name": "confirm_handoff",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "5cea8667-13c8-4ceb-b7cb-24c68f4ec16f",
+      "name": "Manual Human Handoff Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/handoff/create",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "a3368262-8226-4130-85a3-d251b7f30b3d",
+      "name": "Webhook - Create Conversation Handoff"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst clinic_name = text(input.clinic_name);\nconst session_id = Number(input.session_id);\nconst message_id = Number(input.message_id);\nconst mobile = text(input.mobile);\nconst urgency = text(input.urgency || 'normal').toLowerCase();\nconst reason = text(input.reason);\nconst patient_message = text(input.patient_message);\nconst confirm_handoff = toBoolean(input.confirm_handoff);\n\nlet riskFlags = input.risk_flags ?? [];\nif (typeof riskFlags === 'string') {\n  try {\n    riskFlags = JSON.parse(riskFlags || '[]');\n  } catch {\n    riskFlags = null;\n  }\n}\n\nconst allowedUrgencies = [\n  'low',\n  'normal',\n  'high',\n  'urgent',\n];\n\nconst errors = [];\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (!Number.isInteger(session_id) || session_id < 1) {\n  errors.push({\n    field: 'session_id',\n    message: 'session_id باید یک عدد صحیح بزرگ‌تر از صفر باشد.',\n  });\n}\n\nif (!Number.isInteger(message_id) || message_id < 1) {\n  errors.push({\n    field: 'message_id',\n    message: 'message_id باید یک عدد صحیح بزرگ‌تر از صفر باشد.',\n  });\n}\n\nif (mobile && !/^\\+?[0-9]{8,15}$/.test(mobile)) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل معتبر نیست.',\n  });\n}\n\nif (!allowedUrgencies.includes(urgency)) {\n  errors.push({\n    field: 'urgency',\n    message: 'اولویت ارجاع معتبر نیست.',\n  });\n}\n\nif (!reason) {\n  errors.push({\n    field: 'reason',\n    message: 'علت ارجاع انسانی الزامی است.',\n  });\n}\n\nif (reason.length > 4000) {\n  errors.push({\n    field: 'reason',\n    message: 'علت ارجاع بیش از حد طولانی است.',\n  });\n}\n\nif (\n  riskFlags === null ||\n  !Array.isArray(riskFlags)\n) {\n  errors.push({\n    field: 'risk_flags',\n    message: 'risk_flags باید یک آرایه JSON معتبر باشد.',\n  });\n}\n\nif (confirm_handoff !== true) {\n  errors.push({\n    field: 'confirm_handoff',\n    message: 'ارجاع انسانی باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    clinic_name,\n    session_id,\n    message_id,\n    mobile,\n    urgency,\n    reason,\n    patient_message,\n    risk_flags: riskFlags || [],\n    risk_flags_json: JSON.stringify(riskFlags || []),\n    confirm_handoff,\n    validation_status: errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "19fa7fef-b277-48c5-838d-1ca0ad9f0087",
+      "name": "Normalize and Validate Human Handoff"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1a1fcbca-ea6f-481a-94f1-34a11a0ed9a5",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "4cdac19c-2cfa-4142-b917-b2310fcafea8",
+      "name": "Is Human Handoff Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        $2::BIGINT AS session_id,\n        $3::BIGINT AS message_id,\n        NULLIF($4::TEXT, '') AS mobile,\n        $5::TEXT AS urgency,\n        $6::TEXT AS reason,\n        NULLIF($7::TEXT, '') AS patient_message,\n        $8::JSONB AS risk_flags\n),\n\nhandoff_context AS (\n    SELECT\n        clinic.id AS clinic_id,\n        clinic.name AS clinic_name,\n\n        session.id AS session_id,\n        COALESCE(\n            session.patient_id,\n            mobile_patient.id\n        ) AS patient_id,\n\n        message.id AS message_id,\n        message.content_text,\n\n        COALESCE(\n            request.patient_message,\n            message.content_text\n        ) AS patient_message,\n\n        request.mobile,\n        request.urgency,\n        request.reason,\n        request.risk_flags,\n\n        CASE\n            WHEN (\n                session.collected_entities ->> 'appointment_id'\n            ) ~ '^[0-9]+$'\n                THEN (\n                    session.collected_entities ->> 'appointment_id'\n                )::BIGINT\n            ELSE NULL\n        END AS appointment_id,\n\n        CASE request.urgency\n            WHEN 'urgent'\n                THEN NOW()\n\n            WHEN 'high'\n                THEN NOW() + INTERVAL '1 hour'\n\n            WHEN 'normal'\n                THEN NOW() + INTERVAL '4 hours'\n\n            ELSE NOW() + INTERVAL '1 day'\n        END AS due_at\n\n    FROM request_data request\n\n    INNER JOIN clinics clinic\n        ON clinic.name = request.clinic_name\n       AND clinic.is_active = TRUE\n\n    INNER JOIN conversation_sessions session\n        ON session.id = request.session_id\n       AND session.clinic_id = clinic.id\n\n    INNER JOIN conversation_messages message\n        ON message.id = request.message_id\n       AND message.session_id = session.id\n\n    LEFT JOIN patients mobile_patient\n        ON mobile_patient.clinic_id = clinic.id\n       AND mobile_patient.mobile = request.mobile\n\n    LIMIT 1\n),\n\nupserted_task AS (\n    INSERT INTO human_handoff_tasks (\n        clinic_id,\n        patient_id,\n        appointment_id,\n        task_type,\n        source_type,\n        source_record_id,\n        priority,\n        status,\n        reason,\n        due_at\n    )\n\n    SELECT\n        context.clinic_id,\n        context.patient_id,\n        context.appointment_id,\n        'conversation_handoff',\n        'conversation_message',\n        context.message_id,\n        context.urgency,\n        'open',\n\n        CONCAT(\n            context.reason,\n            CASE\n                WHEN context.patient_message IS NOT NULL\n                    THEN CONCAT(\n                        ' پیام بیمار: ',\n                        context.patient_message\n                    )\n                ELSE ''\n            END,\n            CASE\n                WHEN JSONB_ARRAY_LENGTH(\n                    context.risk_flags\n                ) > 0\n                    THEN CONCAT(\n                        ' پرچم‌های ریسک: ',\n                        context.risk_flags::TEXT\n                    )\n                ELSE ''\n            END\n        ),\n\n        context.due_at\n\n    FROM handoff_context context\n\n    ON CONFLICT (\n        source_type,\n        source_record_id,\n        task_type\n    )\n    WHERE source_record_id IS NOT NULL\n\n    DO UPDATE SET\n        priority = CASE\n            WHEN EXCLUDED.priority = 'urgent'\n                THEN 'urgent'\n\n            WHEN EXCLUDED.priority = 'high'\n             AND human_handoff_tasks.priority IN (\n                    'low',\n                    'normal'\n                 )\n                THEN 'high'\n\n            WHEN EXCLUDED.priority = 'normal'\n             AND human_handoff_tasks.priority = 'low'\n                THEN 'normal'\n\n            ELSE human_handoff_tasks.priority\n        END,\n\n        reason = EXCLUDED.reason,\n\n        due_at = LEAST(\n            COALESCE(\n                human_handoff_tasks.due_at,\n                EXCLUDED.due_at\n            ),\n            EXCLUDED.due_at\n        ),\n\n        status = CASE\n            WHEN human_handoff_tasks.status = 'cancelled'\n                THEN 'open'\n            ELSE human_handoff_tasks.status\n        END,\n\n        updated_at = NOW()\n\n    RETURNING *\n),\n\nupdated_message AS (\n    UPDATE conversation_messages message\n\n    SET\n        tool_action = CASE\n            WHEN context.urgency = 'urgent'\n                THEN 'urgent_human_handoff'\n            ELSE 'human_handoff'\n        END,\n\n        tool_result =\n            COALESCE(\n                message.tool_result,\n                '{}'::JSONB\n            )\n            || JSONB_BUILD_OBJECT(\n                'handoff',\n                JSONB_BUILD_OBJECT(\n                    'handoff_task_id',\n                        task.id,\n\n                    'priority',\n                        task.priority,\n\n                    'status',\n                        task.status,\n\n                    'due_at',\n                        task.due_at,\n\n                    'reason',\n                        task.reason,\n\n                    'created_at',\n                        task.created_at\n                )\n            )\n\n    FROM handoff_context context\n\n    CROSS JOIN upserted_task task\n\n    WHERE message.id = context.message_id\n      AND message.session_id = context.session_id\n\n    RETURNING message.id\n),\n\nupdated_session AS (\n    UPDATE conversation_sessions session\n\n    SET\n        patient_id = COALESCE(\n            session.patient_id,\n            context.patient_id\n        ),\n\n        status = 'waiting_human',\n\n        pending_action = CASE\n            WHEN context.urgency = 'urgent'\n                THEN 'urgent_human_handoff'\n            ELSE 'human_handoff'\n        END,\n\n        risk_flags = context.risk_flags,\n        updated_at = NOW()\n\n    FROM handoff_context context\n\n    WHERE session.id = context.session_id\n\n      AND EXISTS (\n          SELECT 1\n          FROM updated_message\n      )\n\n    RETURNING\n        session.id,\n        session.status,\n        session.pending_action\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM handoff_context\n        )\n            THEN FALSE\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM upserted_task\n        )\n            THEN TRUE\n\n        ELSE FALSE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM handoff_context\n        )\n            THEN 'conversation_context_not_found'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM upserted_task\n            WHERE priority = 'urgent'\n        )\n            THEN 'urgent_handoff_created'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM upserted_task\n        )\n            THEN 'human_handoff_created'\n\n        ELSE 'human_handoff_conflict'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM handoff_context\n        )\n            THEN 'کلینیک، مکالمه یا پیام مطابق ورودی پیدا نشد.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM upserted_task\n            WHERE priority = 'urgent'\n        )\n            THEN 'ارجاع فوری انسانی ایجاد و در صف قرار گرفت.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM upserted_task\n        )\n            THEN 'ارجاع انسانی ایجاد و در صف پیگیری قرار گرفت.'\n\n        ELSE 'ارجاع انسانی ایجاد نشد.'\n    END AS message,\n\n    (\n        SELECT id\n        FROM upserted_task\n    ) AS handoff_task_id,\n\n    (\n        SELECT priority\n        FROM upserted_task\n    ) AS priority,\n\n    (\n        SELECT status\n        FROM upserted_task\n    ) AS handoff_status,\n\n    (\n        SELECT due_at\n        FROM upserted_task\n    ) AS due_at,\n\n    (\n        SELECT patient_id\n        FROM handoff_context\n    ) AS patient_id,\n\n    (\n        SELECT appointment_id\n        FROM handoff_context\n    ) AS appointment_id,\n\n    (\n        SELECT status\n        FROM updated_session\n    ) AS session_status,\n\n    (\n        SELECT pending_action\n        FROM updated_session\n    ) AS pending_action,\n\n    'compose_handoff_response'::TEXT AS next_action\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.session_id,\n  $json.message_id,\n  $json.mobile,\n  $json.urgency,\n  $json.reason,\n  $json.patient_message,\n  $json.risk_flags_json\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "f69526d4-2ece-4094-8183-0b0c8bbb0ee0",
+      "name": "Create or Update Human Handoff"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: 'invalid_request',\n    message: 'اطلاعات ارجاع انسانی ناقص یا نامعتبر است.',\n    errors: $json.errors ?? [],\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "8228e20a-f5ce-4ed9-8296-6e04bf9c5baa",
+      "name": "Return Handoff Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## ارجاع انسانی یکپارچه\n\nاین Workflow مقصد مسیرهای `human_handoff` و `urgent_human_handoff` است.\n\nوظایف:\n- ایجاد تسک در `human_handoff_tasks`\n- جلوگیری از تسک تکراری برای همان پیام\n- تعیین مهلت متناسب با اولویت\n- اتصال بیمار و نوبت در صورت وجود\n- قراردادن مکالمه در وضعیت `waiting_human`\n\nبرای استفاده، ابتدا Workflow شماره 55 باید اجرا شده باشد.",
+        "height": 410,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1150,
+        -310
+      ],
+      "id": "2093ab4b-4d75-4cb9-85ab-61488800ff34",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Human Handoff Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Human Handoff Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Human Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Create Conversation Handoff": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Human Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Human Handoff": {
+      "main": [
+        [
+          {
+            "node": "Is Human Handoff Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Human Handoff Valid?": {
+      "main": [
+        [
+          {
+            "node": "Create or Update Human Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Handoff Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

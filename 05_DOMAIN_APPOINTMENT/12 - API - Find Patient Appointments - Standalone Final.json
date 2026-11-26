@@ -1,0 +1,229 @@
+{
+  "name": "12 - API - Find Patient Appointments - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        64,
+        -32
+      ],
+      "id": "1cc7b4bf-ba88-460e-b228-e439117c01e7",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f23039ba-1a26-49c3-b7cf-2872acd8e473",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "6bdbb2f2-b971-4ac0-b652-401e0fdc0956",
+              "name": "mobile",
+              "value": "09000000000",
+              "type": "string"
+            },
+            {
+              "id": "66588cb7-ec7f-46b5-a0f0-55ff64bdfe9b",
+              "name": "status_filter",
+              "value": "active",
+              "type": "string"
+            },
+            {
+              "id": "cfab9959-923f-49c4-ba92-08319b706092",
+              "name": "include_past",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "5a5786ad-9f86-4096-9e0f-b8a5dcb45573",
+              "name": "limit",
+              "value": 10,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        288,
+        -32
+      ],
+      "id": "afcb9697-e7dd-4b86-91d3-244d9be8585e",
+      "name": "Manual Patient Search Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/appointments/find-by-patient",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        288,
+        160
+      ],
+      "id": "88ffd605-22ff-46db-85f2-e99412545816",
+      "name": "Webhook - Find Patient Appointments"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value, defaultValue = false) => {\n  if (value === null || value === undefined || value === '') return defaultValue;\n  if (typeof value === 'boolean') return value;\n\n  const normalized = String(value).trim().toLowerCase();\n  if (['true', '1', 'yes', 'on'].includes(normalized)) return true;\n  if (['false', '0', 'no', 'off'].includes(normalized)) return false;\n\n  return defaultValue;\n};\n\nconst clinic_name = text(input.clinic_name);\nconst mobile = text(input.mobile);\nconst status_filter = text(input.status_filter || 'active').toLowerCase();\nconst include_past = toBoolean(input.include_past, false);\n\nconst parsedLimit = Number(input.limit ?? 10);\nconst limit = Number.isInteger(parsedLimit) ? parsedLimit : 10;\n\nconst allowedStatuses = [\n  'active',\n  'all',\n  'pending',\n  'confirmed',\n  'cancelled',\n  'completed',\n  'no_show',\n  'rescheduled',\n];\n\nconst errors = [];\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (!mobile) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل بیمار الزامی است.',\n  });\n}\n\nif (mobile && !/^\\+?[0-9]{8,15}$/.test(mobile)) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل باید فقط شامل اعداد و در صورت نیاز علامت + باشد.',\n  });\n}\n\nif (!allowedStatuses.includes(status_filter)) {\n  errors.push({\n    field: 'status_filter',\n    message: `status_filter باید یکی از این مقادیر باشد: ${allowedStatuses.join(', ')}`,\n  });\n}\n\nif (!Number.isInteger(limit) || limit < 1 || limit > 50) {\n  errors.push({\n    field: 'limit',\n    message: 'limit باید یک عدد صحیح بین 1 و 50 باشد.',\n  });\n}\n\nreturn [\n  {\n    json: {\n      clinic_name,\n      mobile,\n      status_filter,\n      include_past,\n      limit,\n      validation_status: errors.length === 0 ? 'valid' : 'invalid',\n      errors,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        64
+      ],
+      "id": "283ce9d4-a585-43f2-a747-3c18657b77ed",
+      "name": "Normalize and Validate Patient Search"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "805b0965-012f-4f87-a1a4-eafe658f454f",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        736,
+        64
+      ],
+      "id": "08746e72-9246-488e-a09a-3abf8328e7a5",
+      "name": "Is Patient Search Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        $2::TEXT AS mobile,\n        $3::TEXT AS status_filter,\n        $4::BOOLEAN AS include_past,\n        LEAST(GREATEST($5::INTEGER, 1), 50) AS result_limit\n),\n\nclinic_context AS (\n    SELECT\n        c.id AS clinic_id,\n        c.name AS clinic_name,\n        c.timezone\n    FROM clinics c\n    INNER JOIN request_data r\n        ON c.name = r.clinic_name\n    WHERE c.is_active = TRUE\n    ORDER BY c.id\n    LIMIT 1\n),\n\npatient_context AS (\n    SELECT\n        p.id AS patient_id,\n        p.clinic_id,\n        p.full_name AS patient_name,\n        p.mobile\n    FROM patients p\n    INNER JOIN clinic_context c\n        ON c.clinic_id = p.clinic_id\n    INNER JOIN request_data r\n        ON p.mobile = r.mobile\n    WHERE p.is_active = TRUE\n    ORDER BY p.id\n    LIMIT 1\n),\n\nfiltered_appointments AS (\n    SELECT\n        a.id AS appointment_id,\n        a.starts_at,\n        a.ends_at,\n        a.status,\n        a.booking_source,\n        a.visit_reason,\n        a.google_calendar_event_id,\n\n        d.full_name AS doctor_name,\n        d.specialty,\n\n        s.name AS service_name,\n\n        c.timezone,\n\n        TO_CHAR(\n            a.starts_at AT TIME ZONE c.timezone,\n            'YYYY-MM-DD'\n        ) AS appointment_date,\n\n        TO_CHAR(\n            a.starts_at AT TIME ZONE c.timezone,\n            'HH24:MI'\n        ) AS start_time,\n\n        TO_CHAR(\n            a.ends_at AT TIME ZONE c.timezone,\n            'HH24:MI'\n        ) AS end_time\n\n    FROM appointments a\n\n    INNER JOIN patient_context p\n        ON p.patient_id = a.patient_id\n\n    INNER JOIN clinic_context c\n        ON c.clinic_id = a.clinic_id\n\n    INNER JOIN doctors d\n        ON d.id = a.doctor_id\n\n    LEFT JOIN services s\n        ON s.id = a.service_id\n\n    CROSS JOIN request_data r\n\n    WHERE (\n        r.status_filter = 'all'\n\n        OR (\n            r.status_filter = 'active'\n            AND a.status IN ('pending', 'confirmed')\n        )\n\n        OR a.status = r.status_filter\n    )\n\n    AND (\n        r.include_past = TRUE\n        OR a.ends_at >= NOW()\n    )\n\n    ORDER BY\n        CASE\n            WHEN a.ends_at >= NOW() THEN 0\n            ELSE 1\n        END,\n        a.starts_at ASC\n\n    LIMIT (\n        SELECT result_limit\n        FROM request_data\n    )\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM clinic_context)\n            THEN FALSE\n        WHEN NOT EXISTS (SELECT 1 FROM patient_context)\n            THEN FALSE\n        WHEN NOT EXISTS (SELECT 1 FROM filtered_appointments)\n            THEN FALSE\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM clinic_context)\n            THEN 'clinic_not_found'\n        WHEN NOT EXISTS (SELECT 1 FROM patient_context)\n            THEN 'patient_not_found'\n        WHEN NOT EXISTS (SELECT 1 FROM filtered_appointments)\n            THEN 'no_appointments_found'\n        ELSE 'appointments_found'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM clinic_context)\n            THEN 'کلینیک مطابق ورودی پیدا نشد.'\n        WHEN NOT EXISTS (SELECT 1 FROM patient_context)\n            THEN 'بیماری با این شماره موبایل در کلینیک پیدا نشد.'\n        WHEN NOT EXISTS (SELECT 1 FROM filtered_appointments)\n            THEN 'نوبتی مطابق فیلتر انتخاب‌شده پیدا نشد.'\n        ELSE 'نوبت‌های بیمار با موفقیت پیدا شدند.'\n    END AS message,\n\n    r.clinic_name,\n    r.mobile,\n    r.status_filter,\n    r.include_past,\n\n    (\n        SELECT patient_id\n        FROM patient_context\n    ) AS patient_id,\n\n    (\n        SELECT patient_name\n        FROM patient_context\n    ) AS patient_name,\n\n    (\n        SELECT COUNT(*)::INTEGER\n        FROM filtered_appointments\n    ) AS appointment_count,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'appointment_id', appointment_id,\n                    'doctor_name', doctor_name,\n                    'specialty', specialty,\n                    'service_name', service_name,\n                    'appointment_date', appointment_date,\n                    'start_time', start_time,\n                    'end_time', end_time,\n                    'starts_at', starts_at,\n                    'ends_at', ends_at,\n                    'status', status,\n                    'booking_source', booking_source,\n                    'visit_reason', visit_reason,\n                    'google_calendar_event_id', google_calendar_event_id\n                )\n                ORDER BY starts_at\n            )\n            FROM filtered_appointments\n        ),\n        '[]'::JSONB\n    ) AS appointments\n\nFROM request_data r;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.mobile,\n  $json.status_filter,\n  $json.include_past,\n  $json.limit\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        960,
+        -32
+      ],
+      "id": "e0689a33-8fe1-457c-97d2-bcd844020de4",
+      "name": "Find Patient Appointments"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      result: 'invalid_request',\n      message: 'اطلاعات درخواست ناقص یا نامعتبر است.',\n      appointment_count: 0,\n      appointments: [],\n      errors: $json.errors ?? [],\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        160
+      ],
+      "id": "3afda103-cdec-4e38-aafc-4929c613c21d",
+      "name": "Return Patient Search Validation Error"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Patient Search Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Patient Search Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Patient Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Find Patient Appointments": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Patient Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Patient Search": {
+      "main": [
+        [
+          {
+            "node": "Is Patient Search Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Patient Search Valid?": {
+      "main": [
+        [
+          {
+            "node": "Find Patient Appointments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Patient Search Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": [],
+  "id": "Slf3bEGn7PhzHvQg"
+}

@@ -1,0 +1,321 @@
+{
+  "name": "63 - API - Manage Clinical Question Templates - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "639963b1-eebd-4742-b255-f04bb8f2663d",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5112c5e2-d7a7-4b7f-8c9b-8fec3bababdc",
+              "name": "action",
+              "value": "list",
+              "type": "string"
+            },
+            {
+              "id": "960d5894-646a-4550-9905-cd3e8972f165",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "ba7f00a3-cf0f-4895-8215-3e686e7d9558",
+              "name": "scope",
+              "value": "clinic",
+              "type": "string"
+            },
+            {
+              "id": "b2c6d7c5-7a07-4a00-bcaa-01d0c1508667",
+              "name": "template_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "928404f9-950b-4fb6-ba22-d9dd8be1e67e",
+              "name": "symptom_category",
+              "value": "all",
+              "type": "string"
+            },
+            {
+              "id": "d8b321f3-2d05-4a96-8307-086bd9bdad2c",
+              "name": "question_code",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "7d3c3f97-98e9-4f6b-926f-b7c3b8992110",
+              "name": "question_text_fa",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "a4cf2cd3-8c97-4c21-9815-48d5f14c1d83",
+              "name": "question_text_en",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "eccbfed0-ff29-4743-b5cd-e8ba1cfe03c2",
+              "name": "question_text_ar",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "4a20ad54-98f8-4136-a3f3-3c068f968b70",
+              "name": "answer_type",
+              "value": "boolean",
+              "type": "string"
+            },
+            {
+              "id": "48664818-0411-428e-88b9-933cb0f8a736",
+              "name": "options_json",
+              "value": "[]",
+              "type": "string"
+            },
+            {
+              "id": "7dcb1e93-650e-4a57-b3a4-4b5d9da61aff",
+              "name": "required",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "64aa8741-0937-4bb7-a752-31e3495b21d7",
+              "name": "maps_to_case_field",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "642df92a-bf77-418d-9c30-59958f03a8a5",
+              "name": "risk_if_true",
+              "value": "none",
+              "type": "string"
+            },
+            {
+              "id": "1dfae9fc-a1a6-4abd-84d6-6a5920351c18",
+              "name": "sort_order",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "7f8b2055-fd3e-47e2-955f-edf16674e7b2",
+              "name": "active",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "4f2591da-9e46-4c02-9e95-87436a3b3cda",
+              "name": "bulk_items",
+              "value": "[]",
+              "type": "string"
+            },
+            {
+              "id": "f0484c65-61ff-4ebc-bea6-d5753377b298",
+              "name": "confirm_action",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "88589d73-0db6-4fbd-a3db-8b2688502255",
+      "name": "Manual Clinical Question Management"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/clinical-intake/questions/manage",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "51086779-b05f-4929-930b-17e4da92162f",
+      "name": "Webhook - Manage Clinical Questions"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\nconst text = (v) => v === null || v === undefined ? '' : String(v).trim();\nconst bool = (v) => typeof v === 'boolean' ? v : ['true','1','yes','on'].includes(text(v).toLowerCase());\n\nconst action = text(input.action || 'list').toLowerCase();\nconst clinic_name = text(input.clinic_name);\nconst scope = text(input.scope || 'clinic').toLowerCase();\nconst template_id = Number(input.template_id ?? 0);\nconst symptom_category = text(input.symptom_category || 'general').toLowerCase();\nconst question_code = text(input.question_code);\nconst question_text_fa = text(input.question_text_fa);\nconst question_text_en = text(input.question_text_en);\nconst question_text_ar = text(input.question_text_ar);\nconst answer_type = text(input.answer_type || 'boolean').toLowerCase();\nconst required = bool(input.required);\nconst maps_to_case_field = text(input.maps_to_case_field);\nconst risk_if_true = text(input.risk_if_true || 'none').toLowerCase();\nconst sort_order = Number(input.sort_order ?? 100);\nconst active = bool(input.active);\nconst confirm_action = bool(input.confirm_action);\n\nlet options_json = input.options_json ?? [];\nlet bulk_items = input.bulk_items ?? [];\ntry {\n  if (typeof options_json === 'string') options_json = JSON.parse(options_json || '[]');\n} catch { options_json = null; }\ntry {\n  if (typeof bulk_items === 'string') bulk_items = JSON.parse(bulk_items || '[]');\n} catch { bulk_items = null; }\n\nconst errors = [];\nconst actions = ['create','update','activate','deactivate','list','bulk_upsert'];\nconst answerTypes = ['boolean','number','text','select','multiselect'];\n\nif (!actions.includes(action)) errors.push({field:'action',message:'اقدام معتبر نیست.'});\nif (!['clinic','global'].includes(scope)) errors.push({field:'scope',message:'scope معتبر نیست.'});\nif (scope === 'clinic' && !clinic_name) errors.push({field:'clinic_name',message:'نام کلینیک الزامی است.'});\nif (['update','activate','deactivate'].includes(action) && (!Number.isInteger(template_id) || template_id < 1)) {\n  errors.push({field:'template_id',message:'شناسه سؤال الزامی است.'});\n}\nif (action === 'create' && (!question_code || !question_text_fa)) {\n  errors.push({field:'question',message:'کد سؤال و متن فارسی الزامی است.'});\n}\nif (!answerTypes.includes(answer_type)) errors.push({field:'answer_type',message:'نوع پاسخ معتبر نیست.'});\nif (!Array.isArray(options_json)) {\n  errors.push({field:'options_json',message:'options_json باید آرایه باشد.'});\n  options_json = [];\n}\nif (['select','multiselect'].includes(answer_type) && options_json.length < 1) {\n  errors.push({field:'options_json',message:'برای سؤال انتخابی گزینه لازم است.'});\n}\nif (!['none','high','urgent'].includes(risk_if_true)) {\n  errors.push({field:'risk_if_true',message:'سطح ریسک معتبر نیست.'});\n}\nif (!Number.isInteger(sort_order) || sort_order < 0 || sort_order > 100000) {\n  errors.push({field:'sort_order',message:'ترتیب نمایش معتبر نیست.'});\n}\nif (action === 'bulk_upsert' && (!Array.isArray(bulk_items) || bulk_items.length < 1 || bulk_items.length > 500)) {\n  errors.push({field:'bulk_items',message:'bulk_items باید آرایه‌ای با 1 تا 500 سؤال باشد.'});\n}\nif (!Array.isArray(bulk_items)) bulk_items = [];\nif (action !== 'list' && confirm_action !== true) {\n  errors.push({field:'confirm_action',message:'تغییر باید تأیید شود.'});\n}\n\nreturn [{json:{\n  action, clinic_name, scope, template_id, symptom_category, question_code,\n  question_text_fa, question_text_en, question_text_ar, answer_type,\n  options_json_text: JSON.stringify(options_json), required, maps_to_case_field,\n  risk_if_true, sort_order, active, bulk_items_json: JSON.stringify(bulk_items),\n  validation_status: errors.length ? 'invalid' : 'valid', errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "2730e393-9dc0-4bfe-975d-5d0e908b46f1",
+      "name": "Normalize and Validate Question Management"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e3d34989-930c-4e4d-a7f4-5975b4bf8e4e",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "1024b6e5-090a-4f7b-aa8c-8d0a9c7eb796",
+      "name": "Is Question Management Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH r AS (\n  SELECT\n    $1::TEXT action, NULLIF($2::TEXT,'') clinic_name, $3::TEXT scope,\n    NULLIF($4::BIGINT,0) template_id, $5::TEXT symptom_category,\n    NULLIF($6::TEXT,'') question_code, NULLIF($7::TEXT,'') question_text_fa,\n    NULLIF($8::TEXT,'') question_text_en, NULLIF($9::TEXT,'') question_text_ar,\n    $10::TEXT answer_type, $11::JSONB options_json, $12::BOOLEAN required,\n    NULLIF($13::TEXT,'') maps_to_case_field, $14::TEXT risk_if_true,\n    $15::INTEGER sort_order, $16::BOOLEAN active, $17::JSONB bulk_items\n),\nc AS (\n  SELECT clinics.id clinic_id\n  FROM clinics, r\n  WHERE clinics.name = r.clinic_name AND clinics.is_active = TRUE\n  LIMIT 1\n),\nctx AS (\n  SELECT r.*, CASE WHEN scope='global' THEN NULL ELSE (SELECT clinic_id FROM c) END target_clinic_id\n  FROM r\n),\ncreated AS (\n  INSERT INTO clinical_intake_question_templates (\n    clinic_id,symptom_category,question_code,question_text_fa,question_text_en,\n    question_text_ar,answer_type,options_json,required,maps_to_case_field,\n    risk_if_true,active,sort_order\n  )\n  SELECT target_clinic_id,symptom_category,question_code,question_text_fa,\n         question_text_en,question_text_ar,answer_type,options_json,required,\n         maps_to_case_field,risk_if_true,active,sort_order\n  FROM ctx\n  WHERE action='create' AND (scope='global' OR target_clinic_id IS NOT NULL)\n  RETURNING *\n),\nupdated AS (\n  UPDATE clinical_intake_question_templates t\n  SET symptom_category=ctx.symptom_category,\n      question_code=COALESCE(ctx.question_code,t.question_code),\n      question_text_fa=COALESCE(ctx.question_text_fa,t.question_text_fa),\n      question_text_en=ctx.question_text_en,\n      question_text_ar=ctx.question_text_ar,\n      answer_type=ctx.answer_type,options_json=ctx.options_json,\n      required=ctx.required,maps_to_case_field=ctx.maps_to_case_field,\n      risk_if_true=ctx.risk_if_true,sort_order=ctx.sort_order,\n      active=ctx.active,updated_at=NOW()\n  FROM ctx\n  WHERE ctx.action='update' AND t.id=ctx.template_id\n    AND ((ctx.scope='global' AND t.clinic_id IS NULL)\n      OR (ctx.scope='clinic' AND t.clinic_id=ctx.target_clinic_id))\n  RETURNING t.*\n),\nstatus_changed AS (\n  UPDATE clinical_intake_question_templates t\n  SET active=(ctx.action='activate'),updated_at=NOW()\n  FROM ctx\n  WHERE ctx.action IN ('activate','deactivate') AND t.id=ctx.template_id\n    AND ((ctx.scope='global' AND t.clinic_id IS NULL)\n      OR (ctx.scope='clinic' AND t.clinic_id=ctx.target_clinic_id))\n  RETURNING t.*\n),\nbulk_rows AS (\n  SELECT ctx.target_clinic_id,\n         COALESCE(NULLIF(i->>'symptom_category',''),'general') symptom_category,\n         i->>'question_code' question_code,\n         i->>'question_text_fa' question_text_fa,\n         NULLIF(i->>'question_text_en','') question_text_en,\n         NULLIF(i->>'question_text_ar','') question_text_ar,\n         COALESCE(NULLIF(i->>'answer_type',''),'boolean') answer_type,\n         COALESCE(i->'options_json','[]'::JSONB) options_json,\n         COALESCE((i->>'required')::BOOLEAN,TRUE) required,\n         NULLIF(i->>'maps_to_case_field','') maps_to_case_field,\n         COALESCE(NULLIF(i->>'risk_if_true',''),'none') risk_if_true,\n         COALESCE((i->>'active')::BOOLEAN,TRUE) active,\n         COALESCE((i->>'sort_order')::INTEGER,100) sort_order\n  FROM ctx CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(ctx.bulk_items) i\n  WHERE ctx.action='bulk_upsert' AND (ctx.scope='global' OR ctx.target_clinic_id IS NOT NULL)\n),\nbulk_updated AS (\n  UPDATE clinical_intake_question_templates t\n  SET question_text_fa=b.question_text_fa,question_text_en=b.question_text_en,\n      question_text_ar=b.question_text_ar,answer_type=b.answer_type,\n      options_json=b.options_json,required=b.required,\n      maps_to_case_field=b.maps_to_case_field,risk_if_true=b.risk_if_true,\n      active=b.active,sort_order=b.sort_order,updated_at=NOW()\n  FROM bulk_rows b\n  WHERE t.clinic_id IS NOT DISTINCT FROM b.target_clinic_id\n    AND LOWER(t.symptom_category)=LOWER(b.symptom_category)\n    AND t.question_code=b.question_code\n  RETURNING t.id\n),\nbulk_inserted AS (\n  INSERT INTO clinical_intake_question_templates (\n    clinic_id,symptom_category,question_code,question_text_fa,question_text_en,\n    question_text_ar,answer_type,options_json,required,maps_to_case_field,\n    risk_if_true,active,sort_order\n  )\n  SELECT b.target_clinic_id,b.symptom_category,b.question_code,b.question_text_fa,\n         b.question_text_en,b.question_text_ar,b.answer_type,b.options_json,\n         b.required,b.maps_to_case_field,b.risk_if_true,b.active,b.sort_order\n  FROM bulk_rows b\n  WHERE b.question_code IS NOT NULL AND b.question_text_fa IS NOT NULL\n    AND NOT EXISTS (\n      SELECT 1 FROM clinical_intake_question_templates t\n      WHERE t.clinic_id IS NOT DISTINCT FROM b.target_clinic_id\n        AND LOWER(t.symptom_category)=LOWER(b.symptom_category)\n        AND t.question_code=b.question_code\n    )\n  RETURNING id\n),\nlisted AS (\n  SELECT t.id,t.clinic_id,cl.name clinic_name,\n         CASE WHEN t.clinic_id IS NULL THEN 'global' ELSE 'clinic' END scope,\n         t.symptom_category,t.question_code,t.question_text_fa,t.question_text_en,\n         t.question_text_ar,t.answer_type,t.options_json,t.required,\n         t.maps_to_case_field,t.risk_if_true,t.active,t.sort_order,\n         t.created_at,t.updated_at\n  FROM clinical_intake_question_templates t\n  LEFT JOIN clinics cl ON cl.id=t.clinic_id\n  CROSS JOIN ctx\n  WHERE ctx.action='list'\n    AND ((ctx.scope='global' AND t.clinic_id IS NULL)\n      OR (ctx.scope='clinic' AND (t.clinic_id=ctx.target_clinic_id OR t.clinic_id IS NULL)))\n    AND (ctx.symptom_category='all' OR LOWER(t.symptom_category)=LOWER(ctx.symptom_category))\n  ORDER BY CASE WHEN t.clinic_id=ctx.target_clinic_id THEN 0 ELSE 1 END,\n           t.symptom_category,t.sort_order,t.id\n  LIMIT 500\n)\nSELECT\n  CASE\n    WHEN r.scope='clinic' AND NOT EXISTS(SELECT 1 FROM c) THEN FALSE\n    WHEN r.action='create' AND NOT EXISTS(SELECT 1 FROM created) THEN FALSE\n    WHEN r.action='update' AND NOT EXISTS(SELECT 1 FROM updated) THEN FALSE\n    WHEN r.action IN ('activate','deactivate') AND NOT EXISTS(SELECT 1 FROM status_changed) THEN FALSE\n    ELSE TRUE\n  END success,\n  CASE\n    WHEN r.scope='clinic' AND NOT EXISTS(SELECT 1 FROM c) THEN 'clinic_not_found'\n    WHEN r.action='create' THEN 'clinical_question_template_created'\n    WHEN r.action='update' THEN 'clinical_question_template_updated'\n    WHEN r.action='activate' THEN 'clinical_question_template_activated'\n    WHEN r.action='deactivate' THEN 'clinical_question_template_deactivated'\n    WHEN r.action='bulk_upsert' THEN 'clinical_question_templates_bulk_upserted'\n    ELSE 'clinical_question_templates_listed'\n  END result,\n  COALESCE((SELECT JSONB_AGG(TO_JSONB(listed)) FROM listed),'[]'::JSONB) templates,\n  COALESCE((SELECT COUNT(*) FROM bulk_updated),0)+COALESCE((SELECT COUNT(*) FROM bulk_inserted),0) bulk_affected_count,\n  COALESCE((SELECT id FROM created),(SELECT id FROM updated),(SELECT id FROM status_changed)) template_id\nFROM r;",
+        "options": {
+          "queryReplacement": "={{ [ $json.action,$json.clinic_name,$json.scope,$json.template_id,$json.symptom_category,$json.question_code,$json.question_text_fa,$json.question_text_en,$json.question_text_ar,$json.answer_type,$json.options_json_text,$json.required,$json.maps_to_case_field,$json.risk_if_true,$json.sort_order,$json.active,$json.bulk_items_json ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "3b8dd9e3-fddd-4aee-9115-09a33a979ce8",
+      "name": "Manage Clinical Question Templates"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات مدیریت سؤال‌ها نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "1da98ce3-1e47-43d9-9f43-86758b306cd2",
+      "name": "Return Question Management Error"
+    },
+    {
+      "parameters": {
+        "content": "## مدیریت سؤالات تخصصی\n\nاقدام‌ها: create, update, activate, deactivate, list, bulk_upsert\n\nscope=clinic برای سؤال اختصاصی و scope=global برای الگوی عمومی است.",
+        "height": 360,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -280
+      ],
+      "id": "e7b1ec8a-6577-4fc7-86e2-1453b7aa218f",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Clinical Question Management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Clinical Question Management": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Question Management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Manage Clinical Questions": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Question Management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Question Management": {
+      "main": [
+        [
+          {
+            "node": "Is Question Management Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Question Management Valid?": {
+      "main": [
+        [
+          {
+            "node": "Manage Clinical Question Templates",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Question Management Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

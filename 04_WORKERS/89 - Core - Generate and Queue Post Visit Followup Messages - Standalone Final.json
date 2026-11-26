@@ -1,0 +1,452 @@
+{
+  "name": "89 - Core - Generate and Queue Post Visit Followup Messages - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1300,
+        220
+      ],
+      "id": "a71b2135-17be-478a-86b7-18c4471333f2",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b2523c76-51db-4f09-8d40-f0e783f8ea04",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "00b5fcd1-4ae0-4fbe-a18c-b722b6db4d3d",
+              "name": "followup_stage",
+              "value": "first_day",
+              "type": "string"
+            },
+            {
+              "id": "532e8b44-aa1b-4a66-b241-f8089ec79d6c",
+              "name": "visit_end_min_hours_ago",
+              "value": 18,
+              "type": "number"
+            },
+            {
+              "id": "402c8a81-f1cb-4578-bc6d-6410e9214a1a",
+              "name": "visit_end_max_hours_ago",
+              "value": 30,
+              "type": "number"
+            },
+            {
+              "id": "79b201a1-83f7-4385-9af9-ced697db328a",
+              "name": "response_deadline_hours",
+              "value": 24,
+              "type": "number"
+            },
+            {
+              "id": "892ff476-e4df-4728-8be6-99dddc0c2443",
+              "name": "channel",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "bc94e86c-c09c-402f-9d65-6dc64b4be4f1",
+              "name": "limit",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "ff7b346c-96e0-4807-92d7-19db56d60f67",
+              "name": "webhook_base_url",
+              "value": "http://localhost:5678/webhook",
+              "type": "string"
+            },
+            {
+              "id": "8907a05c-d5a1-4c04-a2a3-4ff4cf8f6bbb",
+              "name": "confirm_run",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1060,
+        220
+      ],
+      "id": "68b4ee93-c9f7-4c0c-ad3c-94bb8f3625ff",
+      "name": "Manual Post Visit Messaging"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/communications/post-visit/generate-and-queue",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1060,
+        -80
+      ],
+      "id": "22d455c9-4c4e-41ff-96bc-6fd679df9c23",
+      "name": "Webhook - Generate and Queue Post Visit"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input=$json.body??$json;\nconst text=v=>v===null||v===undefined?'':String(v).trim();\nconst bool=v=>typeof v==='boolean'?v:['true','1','yes','on'].includes(text(v).toLowerCase());\n\nconst clinic_name=text(input.clinic_name);\nconst followup_stage=text(input.followup_stage||'first_day').toLowerCase();\nconst visit_end_min_hours_ago=Number(input.visit_end_min_hours_ago??18);\nconst visit_end_max_hours_ago=Number(input.visit_end_max_hours_ago??30);\nconst response_deadline_hours=Number(input.response_deadline_hours??24);\nconst channel=text(input.channel||'whatsapp').toLowerCase();\nconst limit=Number(input.limit??100);\nconst webhook_base_url=text(input.webhook_base_url||'http://localhost:5678/webhook').replace(/\\/+$/,'');\nconst confirm_run=bool(input.confirm_run);\n\nconst errors=[];\nif(!clinic_name)errors.push({field:'clinic_name',message:'نام کلینیک الزامی است.'});\nif(!['first_day','third_day','seventh_day','custom'].includes(followup_stage))errors.push({field:'followup_stage',message:'مرحله پیگیری معتبر نیست.'});\nif(!Number.isInteger(visit_end_min_hours_ago)||visit_end_min_hours_ago<0||visit_end_min_hours_ago>2160)errors.push({field:'visit_end_min_hours_ago',message:'حداقل فاصله معتبر نیست.'});\nif(!Number.isInteger(visit_end_max_hours_ago)||visit_end_max_hours_ago<1||visit_end_max_hours_ago>2160||visit_end_max_hours_ago<=visit_end_min_hours_ago)errors.push({field:'visit_end_max_hours_ago',message:'حداکثر فاصله باید از حداقل بزرگ‌تر باشد.'});\nif(!Number.isInteger(response_deadline_hours)||response_deadline_hours<1||response_deadline_hours>168)errors.push({field:'response_deadline_hours',message:'مهلت پاسخ معتبر نیست.'});\nif(!['whatsapp','sms','email','phone','web_push','in_app'].includes(channel))errors.push({field:'channel',message:'کانال معتبر نیست.'});\nif(!Number.isInteger(limit)||limit<1||limit>500)errors.push({field:'limit',message:'Limit معتبر نیست.'});\nif(!/^https?:\\/\\/.+/i.test(webhook_base_url))errors.push({field:'webhook_base_url',message:'آدرس Webhook معتبر نیست.'});\nif(confirm_run!==true)errors.push({field:'confirm_run',message:'اجرای فرایند باید تأیید شود.'});\n\nreturn [{json:{\n clinic_name,followup_stage,visit_end_min_hours_ago,visit_end_max_hours_ago,\n response_deadline_hours,channel,limit,webhook_base_url,\n generate_url:`${webhook_base_url}/clinic/appointments/generate-post-visit-followups`,\n queue_url:`${webhook_base_url}/clinic/communications/messages/queue`,\n confirm_run,validation_status:errors.length?'invalid':'valid',errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -788,
+        64
+      ],
+      "id": "08b3fcf4-e1f8-40a2-8ab7-706ac52aefd0",
+      "name": "Normalize and Validate Post Visit Messaging"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9784d37d-e955-4429-9479-bf43e52cd877",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -548,
+        64
+      ],
+      "id": "81d14643-e7c3-47fb-a6e8-b5928c55c74b",
+      "name": "Is Post Visit Messaging Valid?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.generate_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { clinic_name:$json.clinic_name,followup_stage:$json.followup_stage,visit_end_min_hours_ago:$json.visit_end_min_hours_ago,visit_end_max_hours_ago:$json.visit_end_max_hours_ago,response_deadline_hours:$json.response_deadline_hours,channel:$json.channel,limit:$json.limit,confirm_generation:true } }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -292,
+        -48
+      ],
+      "id": "ec3175fe-1195-4c06-a336-dba1078b4bf9",
+      "name": "Generate Post Visit Followups",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response=$json??{};\nconst rows=Array.isArray(response.followups)?response.followups:[];\nconst config=$('Normalize and Validate Post Visit Messaging').first().json;\n\nif(!rows.length){\n  return [{json:{\n    success:true,has_followup:false,\n    result:response.result||'no_post_visit_followups',\n    clinic_name:config.clinic_name,\n    generated_count:Number(response.followup_count||0),\n    queued_count:0\n  }}];\n}\n\nreturn rows.map(item=>({json:{\n  ...item,has_followup:true,\n  clinic_name:config.clinic_name,\n  webhook_base_url:config.webhook_base_url,\n  queue_url:config.queue_url\n}}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -36,
+        -48
+      ],
+      "id": "9a5910a8-9153-4fd3-8001-0a266a7a9b39",
+      "name": "Expand Post Visit Followups"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a17c2e39-2143-492b-a283-081eed22364c",
+              "leftValue": "={{ $json.has_followup === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        220,
+        -48
+      ],
+      "id": "a74814f7-f643-493e-a64e-57b198d24b29",
+      "name": "Is There a Post Visit Followup?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item=$json;\nconst message=[\n  `${item.patient_name} عزیز،`,\n  `این پیام برای پیگیری وضعیت شما پس از مراجعه به ${item.clinic_name} ارسال شده است.`,\n  `پزشک: ${item.doctor_name}`,\n  `خدمت: ${item.service_name}`,\n  `تاریخ مراجعه: ${item.appointment_date}`,\n  '',\n  'لطفاً وضعیت فعلی خود را اعلام کنید. در صورت وجود علائم نگران‌کننده، پاسخ شما برای بررسی انسانی ارجاع می‌شود.',\n  `کد پیگیری: ${item.followup_token}`\n].join('\\n');\n\nreturn [{json:{\n  queue_url:item.queue_url,\n  followup_id:Number(item.followup_id),\n  appointment_id:Number(item.appointment_id),\n  queue_payload:{\n    clinic_name:item.clinic_name,\n    mobile:item.mobile,\n    channel:item.channel||'whatsapp',\n    purpose:'post_visit_followup',\n    message_type:'template',\n    template_code:`post_visit_followup_${item.followup_stage}`,\n    language:'fa',\n    subject:'',\n    message_text:message,\n    payload:{\n      followup_id:Number(item.followup_id),\n      followup_stage:item.followup_stage,\n      followup_token:item.followup_token,\n      appointment_id:Number(item.appointment_id),\n      doctor_name:item.doctor_name,\n      service_name:item.service_name,\n      expires_at:item.expires_at,\n      response_endpoint:'clinic/appointments/process-post-visit-followup-response'\n    },\n    related_entity_type:'appointment',\n    related_entity_id:Number(item.appointment_id),\n    request_reference:`post-visit-followup:${item.followup_id}`,\n    idempotency_key:`post-visit-followup:${item.followup_id}`,\n    priority:5,\n    scheduled_at:new Date().toISOString(),\n    max_attempts:5,\n    webhook_base_url:item.webhook_base_url,\n    confirm_queue:true\n  }\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        476,
+        -144
+      ],
+      "id": "8f09b39e-e3f4-4df6-a580-818766af3fca",
+      "name": "Build Post Visit Followup Message"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.queue_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.queue_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        732,
+        -144
+      ],
+      "id": "2dc12818-f6f0-4e01-9561-ae73da18204c",
+      "name": "Queue Post Visit Followup Message",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const original=$('Build Post Visit Followup Message').item.json;\nreturn [{json:{\n  success:$json.success===true,\n  result:$json.result||'queue_result_unknown',\n  followup_id:original.followup_id,\n  appointment_id:original.appointment_id,\n  outbound_message_id:$json.outbound_message_id??null,\n  message_status:$json.message_status??null,\n  permission_decision:$json.permission_decision??null,\n  next_action:$json.next_action??null\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        988,
+        -144
+      ],
+      "id": "0b01b847-f59c-4edc-a009-d93eeec5ed4d",
+      "name": "Return Post Visit Queue Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'تنظیمات تولید و صف پیگیری پس از مراجعه نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -292,
+        176
+      ],
+      "id": "1166e4a0-9800-417b-8345-d989bfa0353d",
+      "name": "Return Post Visit Messaging Error"
+    },
+    {
+      "parameters": {
+        "content": "## Bridge پیگیری پس از مراجعه\n\nWorkflow 35 رکورد پیگیری را می‌سازد.\n\nاین Workflow برای هر رکورد، پیام Idempotent در Workflow 83 صف می‌کند.",
+        "height": 350,
+        "width": 510
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1540,
+        -280
+      ],
+      "id": "17b8226b-3492-4580-b326-614a19938824",
+      "name": "How to Use"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:true,result:$json.result||'no_post_visit_followups',clinic_name:$json.clinic_name,generated_count:$json.generated_count||0,queued_count:0,message:'پیگیری پس از مراجعه جدیدی برای صف‌کردن وجود ندارد.'}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        476,
+        48
+      ],
+      "id": "11d7916c-42a1-495a-9c84-085a7169e83c",
+      "name": "Return No Post Visit Followups"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Post Visit Messaging",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Post Visit Messaging": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Post Visit Messaging",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Generate and Queue Post Visit": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Post Visit Messaging",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Post Visit Messaging": {
+      "main": [
+        [
+          {
+            "node": "Is Post Visit Messaging Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Post Visit Messaging Valid?": {
+      "main": [
+        [
+          {
+            "node": "Generate Post Visit Followups",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Post Visit Messaging Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Post Visit Followups": {
+      "main": [
+        [
+          {
+            "node": "Expand Post Visit Followups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand Post Visit Followups": {
+      "main": [
+        [
+          {
+            "node": "Is There a Post Visit Followup?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is There a Post Visit Followup?": {
+      "main": [
+        [
+          {
+            "node": "Build Post Visit Followup Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return No Post Visit Followups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Post Visit Followup Message": {
+      "main": [
+        [
+          {
+            "node": "Queue Post Visit Followup Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queue Post Visit Followup Message": {
+      "main": [
+        [
+          {
+            "node": "Return Post Visit Queue Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

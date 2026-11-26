@@ -1,0 +1,131 @@
+{
+  "name": "01 - Initialize Clinic Database",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        -416
+      ],
+      "id": "207c6ce7-a090-458f-a3cd-520cbc5c2fc8",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS clinics (\n    id BIGSERIAL PRIMARY KEY,\n    name VARCHAR(150) NOT NULL,\n    phone VARCHAR(30),\n    address TEXT,\n    timezone VARCHAR(50) NOT NULL DEFAULT 'Asia/Tehran',\n    is_active BOOLEAN NOT NULL DEFAULT TRUE,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE TABLE IF NOT EXISTS doctors (\n    id BIGSERIAL PRIMARY KEY,\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    full_name VARCHAR(150) NOT NULL,\n    specialty VARCHAR(150),\n    google_calendar_id TEXT,\n\n    default_appointment_minutes SMALLINT NOT NULL DEFAULT 20\n        CHECK (default_appointment_minutes > 0),\n\n    buffer_minutes SMALLINT NOT NULL DEFAULT 0\n        CHECK (buffer_minutes >= 0),\n\n    is_active BOOLEAN NOT NULL DEFAULT TRUE,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE TABLE IF NOT EXISTS services (\n    id BIGSERIAL PRIMARY KEY,\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    name VARCHAR(150) NOT NULL,\n    description TEXT,\n\n    duration_minutes SMALLINT NOT NULL DEFAULT 20\n        CHECK (duration_minutes > 0),\n\n    price NUMERIC(14, 2)\n        CHECK (price IS NULL OR price >= 0),\n\n    currency VARCHAR(10),\n    is_active BOOLEAN NOT NULL DEFAULT TRUE,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE TABLE IF NOT EXISTS doctor_schedules (\n    id BIGSERIAL PRIMARY KEY,\n    doctor_id BIGINT NOT NULL\n        REFERENCES doctors(id)\n        ON DELETE CASCADE,\n\n    weekday SMALLINT NOT NULL\n        CHECK (weekday BETWEEN 1 AND 7),\n\n    start_time TIME NOT NULL,\n    end_time TIME NOT NULL,\n\n    slot_duration_minutes SMALLINT NOT NULL DEFAULT 20\n        CHECK (slot_duration_minutes > 0),\n\n    valid_from DATE,\n    valid_to DATE,\n\n    is_active BOOLEAN NOT NULL DEFAULT TRUE,\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    CHECK (end_time > start_time),\n\n    CHECK (\n        valid_to IS NULL\n        OR valid_from IS NULL\n        OR valid_to >= valid_from\n    )\n);\n\nCREATE INDEX IF NOT EXISTS idx_doctors_clinic\n    ON doctors(clinic_id);\n\nCREATE INDEX IF NOT EXISTS idx_services_clinic\n    ON services(clinic_id);\n\nCREATE INDEX IF NOT EXISTS idx_schedules_doctor_weekday\n    ON doctor_schedules(doctor_id, weekday)\n    WHERE is_active = TRUE;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -384,
+        -416
+      ],
+      "id": "09e01470-6cca-4521-8ae0-1f39d229b1c7",
+      "name": "Create Core Tables"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    table_name\nFROM information_schema.tables\nWHERE table_schema = 'public'\n  AND table_name IN (\n      'clinics',\n      'doctors',\n      'services',\n      'doctor_schedules'\n  )\nORDER BY table_name;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -176,
+        -416
+      ],
+      "id": "9410fdc6-f4aa-41f5-bef9-cd76e098b682",
+      "name": "Verify Core Tables"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    table_name\nFROM information_schema.tables\nWHERE table_schema = 'public'\n  AND table_name IN (\n      'patients',\n      'appointments'\n  )\nORDER BY table_name;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        256,
+        -416
+      ],
+      "id": "24604e9c-01c3-4f29-b4e8-653916d17fb5",
+      "name": "Verify Patient and Appointment Tables"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE EXTENSION IF NOT EXISTS btree_gist;\n\nCREATE TABLE IF NOT EXISTS patients (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    full_name VARCHAR(150) NOT NULL,\n    mobile VARCHAR(30) NOT NULL,\n    national_id VARCHAR(30),\n    birth_date DATE,\n    notes TEXT,\n\n    is_active BOOLEAN NOT NULL DEFAULT TRUE,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE TABLE IF NOT EXISTS appointments (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    doctor_id BIGINT NOT NULL\n        REFERENCES doctors(id)\n        ON DELETE RESTRICT,\n\n    patient_id BIGINT NOT NULL\n        REFERENCES patients(id)\n        ON DELETE RESTRICT,\n\n    service_id BIGINT\n        REFERENCES services(id)\n        ON DELETE SET NULL,\n\n    starts_at TIMESTAMPTZ NOT NULL,\n    ends_at TIMESTAMPTZ NOT NULL,\n\n    status VARCHAR(30) NOT NULL DEFAULT 'pending'\n        CHECK (\n            status IN (\n                'pending',\n                'confirmed',\n                'cancelled',\n                'completed',\n                'no_show',\n                'rescheduled'\n            )\n        ),\n\n    booking_source VARCHAR(30) NOT NULL DEFAULT 'assistant'\n        CHECK (\n            booking_source IN (\n                'assistant',\n                'receptionist',\n                'doctor',\n                'patient',\n                'system'\n            )\n        ),\n\n    visit_reason TEXT,\n    internal_notes TEXT,\n\n    google_calendar_event_id TEXT,\n\n    previous_appointment_id BIGINT\n        REFERENCES appointments(id)\n        ON DELETE SET NULL,\n\n    cancelled_at TIMESTAMPTZ,\n    cancellation_reason TEXT,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    CHECK (ends_at > starts_at)\n);\n\nCREATE INDEX IF NOT EXISTS idx_patients_clinic_mobile\n    ON patients(clinic_id, mobile);\n\nCREATE UNIQUE INDEX IF NOT EXISTS idx_patients_clinic_national_id\n    ON patients(clinic_id, national_id)\n    WHERE national_id IS NOT NULL;\n\nCREATE INDEX IF NOT EXISTS idx_appointments_doctor_start\n    ON appointments(doctor_id, starts_at);\n\nCREATE INDEX IF NOT EXISTS idx_appointments_patient\n    ON appointments(patient_id);\n\nCREATE INDEX IF NOT EXISTS idx_appointments_status\n    ON appointments(status);\n\nDO $$\nBEGIN\n    IF NOT EXISTS (\n        SELECT 1\n        FROM pg_constraint\n        WHERE conname = 'appointments_no_doctor_overlap'\n    ) THEN\n        ALTER TABLE appointments\n        ADD CONSTRAINT appointments_no_doctor_overlap\n        EXCLUDE USING gist (\n            doctor_id WITH =,\n            tstzrange(starts_at, ends_at, '[)') WITH &&\n        )\n        WHERE (\n            status IN ('pending', 'confirmed')\n        );\n    END IF;\nEND\n$$;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        32,
+        -416
+      ],
+      "id": "6afdb1aa-febd-40f1-b019-dcb0e173ba1e",
+      "name": "Create Patient and Appointment Tables"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Create Core Tables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Core Tables": {
+      "main": [
+        [
+          {
+            "node": "Verify Core Tables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Core Tables": {
+      "main": [
+        [
+          {
+            "node": "Create Patient and Appointment Tables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Patient and Appointment Tables": {
+      "main": [
+        [
+          {
+            "node": "Verify Patient and Appointment Tables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": [],
+  "id": "BhXKgNj9iEoKTmDl"
+}

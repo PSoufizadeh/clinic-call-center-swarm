@@ -1,0 +1,67 @@
+{
+  "name": "24 - DB - Add Waitlist Booking Links",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "53cf0830-8c47-473c-8085-cf26e7db760b",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "ALTER TABLE appointment_waitlist\n    ADD COLUMN IF NOT EXISTS booked_appointment_id BIGINT\n        REFERENCES appointments(id)\n        ON DELETE SET NULL;\n\nALTER TABLE appointment_waitlist_offers\n    ADD COLUMN IF NOT EXISTS booked_appointment_id BIGINT\n        REFERENCES appointments(id)\n        ON DELETE SET NULL;\n\nCREATE INDEX IF NOT EXISTS idx_waitlist_booked_appointment\n    ON appointment_waitlist(booked_appointment_id)\n    WHERE booked_appointment_id IS NOT NULL;\n\nCREATE INDEX IF NOT EXISTS idx_waitlist_offer_booked_appointment\n    ON appointment_waitlist_offers(booked_appointment_id)\n    WHERE booked_appointment_id IS NOT NULL;\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ارتباط پیشنهاد پذیرفته‌شده با نوبت جدید ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "1d29af36-f0f5-473b-8c2a-c5616ae04c62",
+      "name": "Add Waitlist Booking Links"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nاین Workflow فیلد `booked_appointment_id` را به جدول لیست انتظار و جدول پیشنهادها اضافه می‌کند تا نوبت ساخته‌شده پس از پذیرش پیشنهاد قابل ردیابی باشد.\n\nبعد از اجرای موفق، Workflow را غیرفعال نگه دار.",
+        "height": 270,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        -240
+      ],
+      "id": "1d3dd003-7628-40ee-89a9-6ac0ad9e53d5",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Add Waitlist Booking Links",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

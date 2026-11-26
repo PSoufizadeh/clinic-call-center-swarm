@@ -1,0 +1,53 @@
+{
+  "name": "02 - Seed Clinic Demo Data",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        -208
+      ],
+      "id": "9227221e-4e7a-4cb1-832d-35bf146aa403",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "BEGIN;\n\n-- ایجاد کلینیک آزمایشی\nINSERT INTO clinics (\n    name,\n    phone,\n    address,\n    timezone\n)\nSELECT\n    'کلینیک آزمایشی',\n    '02100000000',\n    'آدرس آزمایشی کلینیک',\n    'Asia/Tehran'\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM clinics\n    WHERE name = 'کلینیک آزمایشی'\n);\n\n-- ایجاد پزشک آزمایشی\nWITH selected_clinic AS (\n    SELECT id\n    FROM clinics\n    WHERE name = 'کلینیک آزمایشی'\n    ORDER BY id\n    LIMIT 1\n)\nINSERT INTO doctors (\n    clinic_id,\n    full_name,\n    specialty,\n    default_appointment_minutes,\n    buffer_minutes\n)\nSELECT\n    id,\n    'دکتر آزمایشی',\n    'پزشک عمومی',\n    20,\n    5\nFROM selected_clinic\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM doctors\n    WHERE clinic_id = selected_clinic.id\n      AND full_name = 'دکتر آزمایشی'\n);\n\n-- ایجاد خدمت آزمایشی\nWITH selected_clinic AS (\n    SELECT id\n    FROM clinics\n    WHERE name = 'کلینیک آزمایشی'\n    ORDER BY id\n    LIMIT 1\n)\nINSERT INTO services (\n    clinic_id,\n    name,\n    description,\n    duration_minutes,\n    price,\n    currency\n)\nSELECT\n    id,\n    'ویزیت عمومی',\n    'ویزیت اولیه پزشک عمومی',\n    20,\n    500000,\n    'IRR'\nFROM selected_clinic\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM services\n    WHERE clinic_id = selected_clinic.id\n      AND name = 'ویزیت عمومی'\n);\n\n-- تعریف برنامه حضور پزشک از شنبه تا چهارشنبه\nWITH selected_doctor AS (\n    SELECT d.id\n    FROM doctors d\n    INNER JOIN clinics c ON c.id = d.clinic_id\n    WHERE c.name = 'کلینیک آزمایشی'\n      AND d.full_name = 'دکتر آزمایشی'\n    ORDER BY d.id\n    LIMIT 1\n)\nINSERT INTO doctor_schedules (\n    doctor_id,\n    weekday,\n    start_time,\n    end_time,\n    slot_duration_minutes\n)\nSELECT\n    selected_doctor.id,\n    schedule.weekday,\n    schedule.start_time::TIME,\n    schedule.end_time::TIME,\n    20\nFROM selected_doctor\nCROSS JOIN (\n    VALUES\n        (6, '09:00', '13:00'),\n        (7, '09:00', '13:00'),\n        (1, '09:00', '13:00'),\n        (2, '09:00', '13:00'),\n        (3, '09:00', '13:00')\n) AS schedule(weekday, start_time, end_time)\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM doctor_schedules existing_schedule\n    WHERE existing_schedule.doctor_id = selected_doctor.id\n      AND existing_schedule.weekday = schedule.weekday\n      AND existing_schedule.start_time = schedule.start_time::TIME\n      AND existing_schedule.end_time = schedule.end_time::TIME\n);\n\nCOMMIT;\n\n-- نمایش نتیجه\nSELECT\n    c.name AS clinic_name,\n    d.full_name AS doctor_name,\n    d.specialty,\n    s.name AS service_name,\n    CASE ds.weekday\n        WHEN 1 THEN 'دوشنبه'\n        WHEN 2 THEN 'سه‌شنبه'\n        WHEN 3 THEN 'چهارشنبه'\n        WHEN 4 THEN 'پنج‌شنبه'\n        WHEN 5 THEN 'جمعه'\n        WHEN 6 THEN 'شنبه'\n        WHEN 7 THEN 'یکشنبه'\n    END AS working_day,\n    TO_CHAR(ds.start_time, 'HH24:MI') AS start_time,\n    TO_CHAR(ds.end_time, 'HH24:MI') AS end_time,\n    ds.slot_duration_minutes\nFROM clinics c\nINNER JOIN doctors d\n    ON d.clinic_id = c.id\nINNER JOIN services s\n    ON s.clinic_id = c.id\nINNER JOIN doctor_schedules ds\n    ON ds.doctor_id = d.id\nWHERE c.name = 'کلینیک آزمایشی'\n  AND d.full_name = 'دکتر آزمایشی'\nORDER BY\n    CASE ds.weekday\n        WHEN 6 THEN 1\n        WHEN 7 THEN 2\n        WHEN 1 THEN 3\n        WHEN 2 THEN 4\n        WHEN 3 THEN 5\n        WHEN 4 THEN 6\n        WHEN 5 THEN 7\n    END;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -176,
+        -208
+      ],
+      "id": "9dc14356-45da-49a7-81d6-589bcfe5aa2c",
+      "name": "Insert Demo Clinic Data"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Insert Demo Clinic Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": [],
+  "id": "FfKvw7W6lXEBbzm0"
+}

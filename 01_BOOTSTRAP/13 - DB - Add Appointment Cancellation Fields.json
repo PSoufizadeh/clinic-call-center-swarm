@@ -1,0 +1,53 @@
+{
+  "name": "13 - DB - Add Appointment Cancellation Fields",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        96
+      ],
+      "id": "370f1ea0-0cd7-460a-8824-38c51a692752",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "ALTER TABLE appointments\n    ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;\n\nALTER TABLE appointments\n    ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ;\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'فیلدهای لغو نوبت با موفقیت بررسی و ایجاد شدند.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        32,
+        96
+      ],
+      "id": "5c14e843-4aad-48a7-a84a-8faafe861d37",
+      "name": "Add Cancellation Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Add Cancellation Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": [],
+  "id": "eEXvJl87K8wea11i"
+}

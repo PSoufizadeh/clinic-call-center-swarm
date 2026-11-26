@@ -1,0 +1,332 @@
+{
+  "name": "30 - API - Escalate Unanswered Appointment Confirmations - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1120,
+        208
+      ],
+      "id": "9bf4c9ef-0bf3-49d5-a0d6-a6a6201625ae",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f7b07868-e940-4b2a-8338-f8eb0115a800",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "609e2910-379f-4e56-84dc-d540bc71cd69",
+              "name": "lookback_hours",
+              "value": 72,
+              "type": "number"
+            },
+            {
+              "id": "36820300-fbe5-4cff-bd49-2ba78ba3860b",
+              "name": "future_window_hours",
+              "value": 48,
+              "type": "number"
+            },
+            {
+              "id": "ca7a86f7-4a99-4b40-bff0-a182d8057687",
+              "name": "limit",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "418caf3c-72a5-4caa-9fcf-6473c5748597",
+              "name": "confirm_escalation",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -880,
+        208
+      ],
+      "id": "73fc0b93-05cf-4c2b-923c-987d819fb0dc",
+      "name": "Manual No Response Scan Request"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1120,
+        -32
+      ],
+      "id": "ba2be227-a0b8-4df5-9e9e-844abcd062f8",
+      "name": "Hourly No Response Scan"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "72586be2-37d8-448f-b1a8-f3aded779faf",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "3f5b00d0-8d8f-40d9-8afb-365cd9b27b10",
+              "name": "lookback_hours",
+              "value": 72,
+              "type": "number"
+            },
+            {
+              "id": "f048fa13-e720-493f-b405-18adbc752fe7",
+              "name": "future_window_hours",
+              "value": 48,
+              "type": "number"
+            },
+            {
+              "id": "69b491fb-a5af-47e4-af7d-27a4e4b0f9e5",
+              "name": "limit",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "c47c1f40-4fc4-4808-8d19-0dae1f919349",
+              "name": "confirm_escalation",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -880,
+        -32
+      ],
+      "id": "a32fb8da-1058-431c-ba78-4e9bb2a1d414",
+      "name": "Scheduled Scan Defaults"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/appointments/escalate-unanswered-confirmations",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -880,
+        -240
+      ],
+      "id": "0d55cb40-4069-46c3-b253-b0880f715c80",
+      "name": "Webhook - Escalate Unanswered Confirmations"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst clinic_name = text(input.clinic_name);\nconst lookback_hours = Number(input.lookback_hours ?? 72);\nconst future_window_hours = Number(input.future_window_hours ?? 48);\nconst limit = Number(input.limit ?? 100);\nconst confirm_escalation = toBoolean(input.confirm_escalation);\n\nconst errors = [];\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (\n  !Number.isInteger(lookback_hours) ||\n  lookback_hours < 1 ||\n  lookback_hours > 720\n) {\n  errors.push({\n    field: 'lookback_hours',\n    message: 'lookback_hours باید یک عدد صحیح بین 1 و 720 باشد.',\n  });\n}\n\nif (\n  !Number.isInteger(future_window_hours) ||\n  future_window_hours < 1 ||\n  future_window_hours > 720\n) {\n  errors.push({\n    field: 'future_window_hours',\n    message: 'future_window_hours باید یک عدد صحیح بین 1 و 720 باشد.',\n  });\n}\n\nif (!Number.isInteger(limit) || limit < 1 || limit > 500) {\n  errors.push({\n    field: 'limit',\n    message: 'limit باید یک عدد صحیح بین 1 و 500 باشد.',\n  });\n}\n\nif (confirm_escalation !== true) {\n  errors.push({\n    field: 'confirm_escalation',\n    message: 'ایجاد ارجاع انسانی باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [\n  {\n    json: {\n      clinic_name,\n      lookback_hours,\n      future_window_hours,\n      limit,\n      confirm_escalation,\n      validation_status: errors.length === 0 ? 'valid' : 'invalid',\n      errors,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        -32
+      ],
+      "id": "1357956c-0f4d-47e1-ba45-d3abc0c44cbf",
+      "name": "Normalize and Validate No Response Scan"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "aa97b304-9019-43b8-8d06-837aeef99ded",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -368,
+        -32
+      ],
+      "id": "2a20e7e1-3653-4154-bbb2-08d1a6fb7664",
+      "name": "Is No Response Scan Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n\n        LEAST(\n            GREATEST($2::INTEGER, 1),\n            720\n        ) AS lookback_hours,\n\n        LEAST(\n            GREATEST($3::INTEGER, 1),\n            720\n        ) AS future_window_hours,\n\n        LEAST(\n            GREATEST($4::INTEGER, 1),\n            500\n        ) AS result_limit\n),\n\nclinic_context AS (\n    SELECT\n        clinic.id AS clinic_id,\n        clinic.name AS clinic_name,\n        clinic.timezone,\n\n        request.lookback_hours,\n        request.future_window_hours,\n        request.result_limit\n\n    FROM request_data request\n\n    INNER JOIN clinics clinic\n        ON clinic.name = request.clinic_name\n       AND clinic.is_active = TRUE\n\n    ORDER BY clinic.id\n    LIMIT 1\n),\n\nexpired_now AS (\n    UPDATE appointment_confirmation_requests confirmation\n\n    SET\n        status = 'expired',\n        updated_at = NOW()\n\n    FROM appointments appointment,\n         clinic_context clinic\n\n    WHERE confirmation.appointment_id =\n          appointment.id\n\n      AND appointment.clinic_id =\n          clinic.clinic_id\n\n      AND confirmation.status = 'pending'\n      AND confirmation.expires_at <= NOW()\n\n    RETURNING\n        confirmation.id AS confirmation_request_id\n),\n\nexpiry_barrier AS (\n    SELECT COUNT(*)::INTEGER AS expired_count\n    FROM expired_now\n),\n\ncandidate_requests AS (\n    SELECT\n        confirmation.id AS confirmation_request_id,\n        confirmation.appointment_id,\n        confirmation.confirmation_token,\n        confirmation.channel,\n        confirmation.expires_at,\n\n        appointment.patient_id,\n        appointment.starts_at,\n        appointment.ends_at,\n        appointment.status AS appointment_status,\n\n        clinic.clinic_id,\n        clinic.clinic_name,\n        clinic.timezone,\n\n        patient.full_name AS patient_name,\n        patient.mobile,\n\n        doctor.full_name AS doctor_name,\n        service.name AS service_name,\n\n        EXTRACT(\n            EPOCH FROM (\n                appointment.starts_at - NOW()\n            )\n        ) / 3600.0 AS hours_until_appointment\n\n    FROM appointment_confirmation_requests confirmation\n\n    CROSS JOIN expiry_barrier barrier\n\n    INNER JOIN appointments appointment\n        ON appointment.id =\n           confirmation.appointment_id\n\n    INNER JOIN clinic_context clinic\n        ON clinic.clinic_id =\n           appointment.clinic_id\n\n    INNER JOIN patients patient\n        ON patient.id =\n           appointment.patient_id\n\n    INNER JOIN doctors doctor\n        ON doctor.id =\n           appointment.doctor_id\n\n    LEFT JOIN services service\n        ON service.id =\n           appointment.service_id\n\n    WHERE confirmation.status = 'expired'\n\n      AND confirmation.expires_at >=\n            NOW()\n            - MAKE_INTERVAL(\n                hours => clinic.lookback_hours\n            )\n\n      AND appointment.status IN (\n          'pending',\n          'confirmed'\n      )\n\n      AND appointment.starts_at > NOW()\n\n      AND appointment.starts_at <=\n            NOW()\n            + MAKE_INTERVAL(\n                hours => clinic.future_window_hours\n            )\n\n      AND NOT EXISTS (\n          SELECT 1\n          FROM human_handoff_tasks existing_task\n\n          WHERE existing_task.source_type =\n                'appointment_confirmation'\n\n            AND existing_task.source_record_id =\n                confirmation.id\n\n            AND existing_task.task_type =\n                'confirmation_no_response'\n      )\n\n    ORDER BY\n        appointment.starts_at ASC,\n        confirmation.id ASC\n\n    LIMIT (\n        SELECT result_limit\n        FROM clinic_context\n    )\n),\n\ninserted_tasks AS (\n    INSERT INTO human_handoff_tasks (\n        clinic_id,\n        patient_id,\n        appointment_id,\n\n        task_type,\n        source_type,\n        source_record_id,\n\n        priority,\n        status,\n\n        reason,\n        due_at\n    )\n\n    SELECT\n        candidate.clinic_id,\n        candidate.patient_id,\n        candidate.appointment_id,\n\n        'confirmation_no_response',\n        'appointment_confirmation',\n        candidate.confirmation_request_id,\n\n        CASE\n            WHEN candidate.hours_until_appointment <= 3\n                THEN 'urgent'\n\n            WHEN candidate.hours_until_appointment <= 12\n                THEN 'high'\n\n            WHEN candidate.hours_until_appointment <= 24\n                THEN 'normal'\n\n            ELSE 'low'\n        END,\n\n        'open',\n\n        'بیمار تا پایان مهلت تعیین‌شده به درخواست تأیید نوبت پاسخ نداده است.',\n\n        GREATEST(\n            NOW(),\n\n            LEAST(\n                candidate.starts_at - INTERVAL '2 hours',\n                NOW() + INTERVAL '1 hour'\n            )\n        )\n\n    FROM candidate_requests candidate\n\n    ON CONFLICT DO NOTHING\n\n    RETURNING\n        id AS handoff_task_id,\n        clinic_id,\n        patient_id,\n        appointment_id,\n        source_record_id,\n        priority,\n        status,\n        reason,\n        due_at,\n        created_at\n),\n\ntask_details AS (\n    SELECT\n        task.handoff_task_id,\n        task.priority,\n        task.status AS task_status,\n        task.reason,\n        task.due_at,\n        task.created_at,\n\n        candidate.confirmation_request_id,\n        candidate.appointment_id,\n        candidate.patient_name,\n        candidate.mobile,\n        candidate.doctor_name,\n        candidate.service_name,\n        candidate.timezone,\n        candidate.starts_at,\n        candidate.ends_at,\n        candidate.appointment_status,\n        candidate.channel,\n        candidate.expires_at\n\n    FROM inserted_tasks task\n\n    INNER JOIN candidate_requests candidate\n        ON candidate.confirmation_request_id =\n           task.source_record_id\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN FALSE\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN 'clinic_not_found'\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM task_details\n        )\n            THEN 'no_handoffs_needed'\n\n        ELSE 'confirmation_handoffs_created'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN 'کلینیک مطابق ورودی پیدا نشد.'\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM task_details\n        )\n            THEN 'در حال حاضر درخواست تأیید منقضی‌شده‌ای برای ارجاع به منشی وجود ندارد.'\n\n        ELSE 'موارد بدون پاسخ در صف پیگیری منشی انسانی ثبت شدند.'\n    END AS message,\n\n    request.clinic_name,\n\n    (\n        SELECT COUNT(*)::INTEGER\n        FROM task_details\n    ) AS handoff_task_count,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'handoff_task_id',\n                        handoff_task_id,\n\n                    'confirmation_request_id',\n                        confirmation_request_id,\n\n                    'appointment_id',\n                        appointment_id,\n\n                    'patient_name',\n                        patient_name,\n\n                    'mobile',\n                        mobile,\n\n                    'doctor_name',\n                        doctor_name,\n\n                    'service_name',\n                        service_name,\n\n                    'appointment_date',\n                        TO_CHAR(\n                            starts_at\n                            AT TIME ZONE timezone,\n                            'YYYY-MM-DD'\n                        ),\n\n                    'start_time',\n                        TO_CHAR(\n                            starts_at\n                            AT TIME ZONE timezone,\n                            'HH24:MI'\n                        ),\n\n                    'end_time',\n                        TO_CHAR(\n                            ends_at\n                            AT TIME ZONE timezone,\n                            'HH24:MI'\n                        ),\n\n                    'appointment_status',\n                        appointment_status,\n\n                    'confirmation_channel',\n                        channel,\n\n                    'confirmation_expired_at',\n                        expires_at,\n\n                    'priority',\n                        priority,\n\n                    'task_status',\n                        task_status,\n\n                    'due_at',\n                        due_at,\n\n                    'reason',\n                        reason,\n\n                    'next_action',\n                        'contact_patient_manually'\n                )\n                ORDER BY starts_at\n            )\n            FROM task_details\n        ),\n        '[]'::JSONB\n    ) AS handoff_tasks\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.lookback_hours,\n  $json.future_window_hours,\n  $json.limit\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -112,
+        -128
+      ],
+      "id": "aee9414c-7447-4d5e-96cd-1676181711db",
+      "name": "Create No Response Handoffs"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      result: 'invalid_request',\n      message: 'اطلاعات بررسی عدم پاسخ ناقص یا نامعتبر است.',\n      handoff_task_count: 0,\n      handoff_tasks: [],\n      errors: $json.errors ?? [],\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        80
+      ],
+      "id": "ced6359a-38a5-461f-830f-64fdbc086be7",
+      "name": "Return No Response Scan Error"
+    },
+    {
+      "parameters": {
+        "content": "## ارجاع عدم پاسخ به منشی انسانی\n\n1. ابتدا Workflow شماره 29 را یک‌بار اجرا کن.\n\n2. Workflow دارای سه ورودی است: تست دستی، Webhook و اجرای ساعتی.\n\n3. فقط درخواست‌های تأیید منقضی‌شده برای نوبت‌های فعال آینده وارد صف انسانی می‌شوند.\n\n4. اولویت براساس فاصله تا زمان نوبت تعیین می‌شود.\n\n5. برای یک درخواست تأیید، تسک تکراری ساخته نمی‌شود.",
+        "height": 360,
+        "width": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1360,
+        -380
+      ],
+      "id": "2e903323-b723-4443-8828-1e9d494813eb",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual No Response Scan Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual No Response Scan Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate No Response Scan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hourly No Response Scan": {
+      "main": [
+        [
+          {
+            "node": "Scheduled Scan Defaults",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scheduled Scan Defaults": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate No Response Scan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Escalate Unanswered Confirmations": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate No Response Scan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate No Response Scan": {
+      "main": [
+        [
+          {
+            "node": "Is No Response Scan Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is No Response Scan Valid?": {
+      "main": [
+        [
+          {
+            "node": "Create No Response Handoffs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return No Response Scan Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

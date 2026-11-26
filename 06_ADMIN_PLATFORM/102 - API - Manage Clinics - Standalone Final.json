@@ -1,0 +1,291 @@
+{
+  "name": "102 - API - Manage Clinics - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "07ca4ad5-b8c7-45d2-8a20-ee12fe9b3962",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f80a0a95-455d-4c68-be59-ab1d73f76901",
+              "name": "action",
+              "value": "get",
+              "type": "string"
+            },
+            {
+              "id": "b56a99be-dc28-4d31-a1f9-5f92f72545c9",
+              "name": "clinic_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "b1392b66-4d6b-46a0-9ff0-d222d3e6cd0a",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "f1f07c60-1d06-4a17-a4a8-4485f415bb47",
+              "name": "timezone",
+              "value": "Asia/Baghdad",
+              "type": "string"
+            },
+            {
+              "id": "73ea8746-b72f-43c1-989a-5952d5ef9753",
+              "name": "address_text",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "416354a3-0cee-4456-aa8f-8c0fb23c53fa",
+              "name": "phone",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "3b4a0217-51b3-43b4-82fb-638d6e1ec783",
+              "name": "email",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "324a28f5-762d-4801-8404-71c2512673d3",
+              "name": "description",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "1262f49b-8557-4f28-8fc6-7e90010b219a",
+              "name": "metadata",
+              "value": "{}",
+              "type": "string"
+            },
+            {
+              "id": "61de938f-b0cb-4ff5-a6a1-0a0654c018ee",
+              "name": "actor_name",
+              "value": "مدیر سیستم",
+              "type": "string"
+            },
+            {
+              "id": "51e4dd92-b0a7-4ed9-a1fe-e2784084ebfc",
+              "name": "source_channel",
+              "value": "api",
+              "type": "string"
+            },
+            {
+              "id": "baa817e7-7fcc-4141-975f-5e5c1a7c55e3",
+              "name": "limit",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "20a7e516-424a-4581-954b-37600947b1a5",
+              "name": "confirm_action",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "d7a673de-13a7-408c-8339-cfb10eecff36",
+      "name": "Manual Manage Clinic"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/admin/clinics/manage",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "daaf173f-521b-4cfa-8a83-138ec3239a53",
+      "name": "Webhook - Manage Clinic"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input=$json.body??$json;\nconst text=v=>v===null||v===undefined?'':String(v).trim();\nconst bool=v=>typeof v==='boolean'?v:['true','1','yes','on'].includes(text(v).toLowerCase());\n\nconst action=text(input.action||'get').toLowerCase();\nconst clinic_id=Number(input.clinic_id??0);\nconst clinic_name=text(input.clinic_name);\nconst timezone=text(input.timezone||'Asia/Baghdad');\nconst address_text=text(input.address_text);\nconst phone=text(input.phone);\nconst email=text(input.email);\nconst description=text(input.description);\nconst actor_name=text(input.actor_name);\nconst source_channel=text(input.source_channel||'api').toLowerCase();\nconst limit=Number(input.limit??100);\nconst confirm_action=bool(input.confirm_action);\n\nlet metadata=input.metadata??{};\ntry{if(typeof metadata==='string')metadata=JSON.parse(metadata||'{}');}catch{metadata=null;}\n\nconst actions=['create','update','activate','deactivate','get','list'];\nconst errors=[];\n\nif(!actions.includes(action))errors.push({field:'action',message:'اقدام معتبر نیست.'});\nif(!Number.isInteger(clinic_id)||clinic_id<0)errors.push({field:'clinic_id',message:'شناسه کلینیک معتبر نیست.'});\nif(['create','update','activate','deactivate','get'].includes(action)&&clinic_id<1&&!clinic_name){\n  errors.push({field:'clinic_reference',message:'شناسه یا نام کلینیک الزامی است.'});\n}\nif(action==='create'&&!clinic_name)errors.push({field:'clinic_name',message:'نام کلینیک الزامی است.'});\ntry{new Intl.DateTimeFormat('en-US',{timeZone:timezone}).format(new Date());}\ncatch{errors.push({field:'timezone',message:'منطقه زمانی معتبر نیست.'});}\nif(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))errors.push({field:'email',message:'ایمیل معتبر نیست.'});\nif(!metadata||Array.isArray(metadata)||typeof metadata!=='object'){\n  errors.push({field:'metadata',message:'metadata باید شیء JSON باشد.'});metadata={};\n}\nif(!['api','manual','import','system'].includes(source_channel))errors.push({field:'source_channel',message:'کانال منبع معتبر نیست.'});\nif(!Number.isInteger(limit)||limit<1||limit>500)errors.push({field:'limit',message:'Limit معتبر نیست.'});\nif(!['get','list'].includes(action)&&!actor_name)errors.push({field:'actor_name',message:'نام انجام‌دهنده الزامی است.'});\nif(!['get','list'].includes(action)&&confirm_action!==true)errors.push({field:'confirm_action',message:'اقدام باید تأیید شود.'});\n\nreturn [{json:{\n action,clinic_id,clinic_name,timezone,address_text,phone,email,description,\n metadata_text:JSON.stringify(metadata),actor_name,source_channel,limit,\n confirm_action,validation_status:errors.length?'invalid':'valid',errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "a175c274-3c90-41ae-9fe6-0ea72c4af12c",
+      "name": "Normalize and Validate Manage Clinic"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "93e80e95-92c9-418f-9bd2-ca04eab85ccb",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "da6f3f8e-d3de-4b7d-8d54-776d40b18c83",
+      "name": "Is Manage Clinic Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH r AS (\n  SELECT $1::TEXT action,NULLIF($2::BIGINT,0) clinic_id,NULLIF($3::TEXT,'') clinic_name,\n         $4::TEXT timezone,NULLIF($5::TEXT,'') address_text,NULLIF($6::TEXT,'') phone,\n         NULLIF($7::TEXT,'') email,NULLIF($8::TEXT,'') description,$9::JSONB metadata,\n         NULLIF($10::TEXT,'') actor_name,$11::TEXT source_channel,$12::INTEGER result_limit\n),\ntarget AS (\n  SELECT c.*\n  FROM clinics c,r\n  WHERE (r.clinic_id IS NOT NULL AND c.id=r.clinic_id)\n     OR (r.clinic_id IS NULL AND r.clinic_name IS NOT NULL AND c.name=r.clinic_name)\n  ORDER BY c.id\n  LIMIT 1\n),\ninserted AS (\n  INSERT INTO clinics(name,timezone,is_active,address_text,phone,email,description,metadata,updated_at)\n  SELECT r.clinic_name,r.timezone,TRUE,r.address_text,r.phone,r.email,r.description,r.metadata,NOW()\n  FROM r\n  WHERE r.action='create'\n    AND NOT EXISTS(SELECT 1 FROM target)\n  RETURNING *\n),\nupdated AS (\n  UPDATE clinics c\n  SET name=CASE WHEN r.action='update' AND r.clinic_name IS NOT NULL THEN r.clinic_name ELSE c.name END,\n      timezone=CASE WHEN r.action='update' THEN r.timezone ELSE c.timezone END,\n      address_text=CASE WHEN r.action='update' THEN COALESCE(r.address_text,c.address_text) ELSE c.address_text END,\n      phone=CASE WHEN r.action='update' THEN COALESCE(r.phone,c.phone) ELSE c.phone END,\n      email=CASE WHEN r.action='update' THEN COALESCE(r.email,c.email) ELSE c.email END,\n      description=CASE WHEN r.action='update' THEN COALESCE(r.description,c.description) ELSE c.description END,\n      metadata=CASE WHEN r.action='update' THEN c.metadata||r.metadata ELSE c.metadata END,\n      is_active=CASE WHEN r.action='activate' THEN TRUE WHEN r.action='deactivate' THEN FALSE ELSE c.is_active END,\n      updated_at=NOW()\n  FROM r\n  WHERE c.id=(SELECT id FROM target)\n    AND r.action IN ('update','activate','deactivate')\n  RETURNING c.*\n),\neffective AS (\n  SELECT inserted.* FROM inserted\n  UNION ALL\n  SELECT updated.* FROM updated\n  UNION ALL\n  SELECT target.* FROM target,r\n  WHERE r.action='get'\n  LIMIT 1\n),\nadmin_event AS (\n  INSERT INTO clinic_admin_events(\n    clinic_id,entity_type,entity_id,action,actor_name,source_channel,before_data,after_data\n  )\n  SELECT\n    COALESCE((SELECT id FROM effective),(SELECT id FROM target)),\n    'clinic',\n    COALESCE((SELECT id FROM effective),(SELECT id FROM target)),\n    r.action,\n    r.actor_name,\n    r.source_channel,\n    COALESCE((SELECT TO_JSONB(target) FROM target),'{}'::JSONB),\n    COALESCE((SELECT TO_JSONB(effective) FROM effective),'{}'::JSONB)\n  FROM r\n  WHERE r.action IN ('create','update','activate','deactivate')\n    AND EXISTS(SELECT 1 FROM effective)\n  RETURNING id\n),\nlisted AS (\n  SELECT c.id,c.name,c.timezone,c.is_active,c.address_text,c.phone,c.email,\n         c.description,c.metadata,c.created_at,c.updated_at\n  FROM clinics c,r\n  WHERE r.action='list'\n  ORDER BY c.id\n  LIMIT (SELECT result_limit FROM r)\n)\nSELECT\n  CASE WHEN r.action='create' AND EXISTS(SELECT 1 FROM target) THEN FALSE\n       WHEN r.action IN ('update','activate','deactivate','get') AND NOT EXISTS(SELECT 1 FROM target) THEN FALSE\n       ELSE TRUE END success,\n  CASE WHEN r.action='create' AND EXISTS(SELECT 1 FROM target) THEN 'clinic_already_exists'\n       WHEN r.action IN ('update','activate','deactivate','get') AND NOT EXISTS(SELECT 1 FROM target) THEN 'clinic_not_found'\n       WHEN r.action='create' THEN 'clinic_created'\n       WHEN r.action='update' THEN 'clinic_updated'\n       WHEN r.action='activate' THEN 'clinic_activated'\n       WHEN r.action='deactivate' THEN 'clinic_deactivated'\n       WHEN r.action='get' THEN 'clinic_loaded'\n       ELSE 'clinics_listed' END result,\n  (SELECT TO_JSONB(effective) FROM effective) clinic,\n  COALESCE((SELECT JSONB_AGG(TO_JSONB(listed)) FROM listed),'[]'::JSONB) clinics,\n  (SELECT id FROM admin_event) admin_event_id\nFROM r;",
+        "options": {
+          "queryReplacement": "={{ [ $json.action,$json.clinic_id,$json.clinic_name,$json.timezone,$json.address_text,$json.phone,$json.email,$json.description,$json.metadata_text,$json.actor_name,$json.source_channel,$json.limit ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "7fa98013-a4e7-43ff-97f7-e58cf9c8279e",
+      "name": "Manage Clinic"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات Manage Clinic نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "77b80b8c-10cb-4a68-a0fa-667227fdd4e0",
+      "name": "Return Manage Clinic Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## مدیریت کلینیک\n\nاقدام‌ها: create, update, activate, deactivate, get, list\n\nتمام تغییرات در clinic_admin_events ثبت می‌شوند.",
+        "height": 350,
+        "width": 510
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -280
+      ],
+      "id": "9af00c6d-c208-4b6d-aaa5-3f0bc471f0b2",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Manage Clinic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Manage Clinic": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Manage Clinic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Manage Clinic": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Manage Clinic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Manage Clinic": {
+      "main": [
+        [
+          {
+            "node": "Is Manage Clinic Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Manage Clinic Valid?": {
+      "main": [
+        [
+          {
+            "node": "Manage Clinic",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Manage Clinic Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

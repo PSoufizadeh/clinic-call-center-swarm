@@ -1,0 +1,348 @@
+{
+  "name": "106B - Core - Tool Router - Final Patient Operations V5",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1080,
+        192
+      ],
+      "id": "b32551a0-d012-4f89-903a-ca35b6f425ae",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "47deceb7-a549-41dd-8eb4-e9fac5b9e9e4",
+              "name": "session_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "11c98fe3-3f14-4d2c-8cf5-edb2d0ef87dc",
+              "name": "message_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "008e7bed-5add-41bd-9efd-607bd037fc27",
+              "name": "confirm_routing",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -840,
+        192
+      ],
+      "id": "f9e6185d-5935-443c-8476-630e0defc863",
+      "name": "Manual Tool Routing Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/ai/tool-router",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -840,
+        -64
+      ],
+      "id": "0eaaa7d0-12de-4546-9169-92ddc216c8f5",
+      "name": "Webhook - Build Tool Route"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst session_id = Number(input.session_id);\nconst message_id = Number(input.message_id);\nconst confirm_routing = toBoolean(input.confirm_routing);\n\nconst errors = [];\n\nif (!Number.isInteger(session_id) || session_id < 1) {\n  errors.push({\n    field: 'session_id',\n    message: 'session_id باید یک عدد صحیح بزرگ‌تر از صفر باشد.',\n  });\n}\n\nif (!Number.isInteger(message_id) || message_id < 1) {\n  errors.push({\n    field: 'message_id',\n    message: 'message_id باید یک عدد صحیح بزرگ‌تر از صفر باشد.',\n  });\n}\n\nif (confirm_routing !== true) {\n  errors.push({\n    field: 'confirm_routing',\n    message: 'ساخت مسیر ابزار باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    session_id,\n    message_id,\n    confirm_routing,\n    validation_status: errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -576,
+        64
+      ],
+      "id": "0d1d8a8d-d593-41d0-9b4e-b34484192525",
+      "name": "Normalize and Validate Routing Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6ec60bf5-c787-4127-8636-e59039d99c49",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -336,
+        64
+      ],
+      "id": "b470fb76-6fd4-4d9d-a38e-4377ce61336b",
+      "name": "Is Routing Request Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS session_id,\n        $2::BIGINT AS message_id\n),\n\nrouting_context AS (\n    SELECT\n        session.id AS session_id,\n        session.clinic_id,\n        session.patient_id,\n        session.channel,\n        session.external_conversation_id,\n        session.language,\n        session.status AS session_status,\n        session.last_intent,\n        session.pending_action,\n        session.collected_entities,\n        session.risk_flags AS session_risk_flags,\n\n        clinic.name AS clinic_name,\n\n        patient.full_name AS patient_name,\n        patient.mobile,\n\n        message.id AS message_id,\n        message.content_text,\n        message.content_json,\n        message.intent,\n        message.intent_confidence,\n        message.extracted_entities,\n        message.risk_flags AS message_risk_flags,\n        message.tool_action,\n        message.tool_result,\n\n        message.tool_result -> 'safety'\n            AS safety_payload\n\n    FROM request_data request\n\n    INNER JOIN conversation_sessions session\n        ON session.id = request.session_id\n\n    INNER JOIN clinics clinic\n        ON clinic.id = session.clinic_id\n\n    LEFT JOIN patients patient\n        ON patient.id = session.patient_id\n\n    INNER JOIN conversation_messages message\n        ON message.id = request.message_id\n       AND message.session_id = session.id\n       AND message.direction = 'inbound'\n\n    LIMIT 1\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM routing_context\n        )\n            THEN FALSE\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM routing_context\n            WHERE safety_payload IS NULL\n        )\n            THEN FALSE\n\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM routing_context\n        )\n            THEN 'message_or_session_not_found'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM routing_context\n            WHERE safety_payload IS NULL\n        )\n            THEN 'safety_decision_not_found'\n\n        ELSE 'tool_routing_context_loaded'\n    END AS result,\n\n    (\n        SELECT ROW_TO_JSON(routing_context)\n        FROM routing_context\n    ) AS routing_context\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.session_id,\n  $json.message_id\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -80,
+        -48
+      ],
+      "id": "8870ab85-06ba-4d2b-8756-baab81228534",
+      "name": "Load Safety Approved Route Context"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0ae976c9-dbba-44c4-9ee1-15b33bd4ce87",
+              "leftValue": "={{ $json.success === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        176,
+        -48
+      ],
+      "id": "c49b2435-4482-46c4-99a2-938924ddf1da",
+      "name": "Is Routing Context Available?"
+    },
+    {
+      "parameters": {
+        "jsCode": "if ($json.success !== true) {\n  return [{ json: $json }];\n}\n\nconst ctx = $json.routing_context || {};\nconst safety = ctx.safety_payload || {};\nconst entities = (\n  ctx.collected_entities &&\n  typeof ctx.collected_entities === 'object'\n    ? ctx.collected_entities\n    : {}\n);\n\nconst currentEntities = (\n  ctx.extracted_entities &&\n  typeof ctx.extracted_entities === 'object'\n    ? ctx.extracted_entities\n    : {}\n);\n\nconst all = { ...entities, ...currentEntities };\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst numberOrZero = (value) => {\n  const number = Number(value);\n  return Number.isInteger(number) && number > 0\n    ? number\n    : 0;\n};\n\nconst isIsoDate = (value) => {\n  const str = text(value);\n  return /^\\d{4}-\\d{2}-\\d{2}$/.test(str);\n};\n\nconst isTime = (value) => {\n  const str = text(value);\n  return /^([01]\\d|2[0-3]):[0-5]\\d$/.test(str);\n};\n\nconst safetyDecision = text(safety.safety_decision);\nconst safeToolAction = text(\n  safety.safe_tool_action || ctx.tool_action || 'none'\n);\n\nconst common = {\n  clinic_name: ctx.clinic_name,\n  mobile: text(all.mobile || ctx.mobile),\n  source_channel: ctx.channel === 'webchat'\n    ? 'web'\n    : ctx.channel,\n};\n\nconst dateValue = text(\n  all.target_date ||\n  all.new_target_date ||\n  all.date ||\n  all.date_text\n);\n\nconst timeValue = text(\n  all.start_time ||\n  all.new_start_time ||\n  all.time ||\n  all.time_text\n);\n\nconst appointmentId = numberOrZero(all.appointment_id);\n\nconst routeMap = {\n  ask_clinic_information: {\n    workflow_number: 47,\n    workflow_name:\n      '47 - API - Ask Clinic Information - Standalone Final',\n    endpoint: 'clinic/information/ask',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      mobile: common.mobile,\n      question: ctx.content_text || '',\n      category_hint: text(\n        all.category_hint ||\n        all.information_category ||\n        'all'\n      ),\n      source_channel: common.source_channel,\n      wants_human_response: false,\n      consent_to_contact: false,\n      confirm_query: true,\n    },\n    required: ['clinic_name', 'question'],\n  },\n\n  find_available_slots: {\n    workflow_number: 11,\n    workflow_name:\n      '11 - API - Find Available Slots - Schedule Guarded V2',\n    endpoint: 'clinic/appointments/available-slots',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      doctor_name: text(all.doctor_name),\n      service_name: text(all.service_name),\n      target_date: isIsoDate(dateValue) ? dateValue : '',\n      limit: 10,\n    },\n    required: [\n      'clinic_name',\n      'doctor_name',\n      'service_name',\n      'target_date',\n    ],\n  },\n\n  find_patient_appointments: {\n    workflow_number: 12,\n    workflow_name:\n      '12 - API - Find Patient Appointments - Standalone Final',\n    endpoint: 'clinic/appointments/find-by-patient',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      mobile: common.mobile,\n      status_filter: 'active',\n      include_past: false,\n      limit: 20,\n    },\n    required: ['clinic_name', 'mobile'],\n  },\n\n  create_appointment: {\n    workflow_number: 9,\n    workflow_name:\n      '09 - API - Create Appointment - Final Self-Testable',\n    endpoint: 'clinic/appointments/create',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      doctor_name: text(all.doctor_name),\n      service_name: text(all.service_name),\n      patient_name: text(all.patient_name || ctx.patient_name),\n      mobile: common.mobile,\n      target_date: isIsoDate(dateValue) ? dateValue : '',\n      start_time: isTime(timeValue) ? timeValue : '',\n      visit_reason: text(\n        all.visit_reason ||\n        all.reason ||\n        ctx.content_text\n      ),\n    },\n    required: [\n      'clinic_name',\n      'doctor_name',\n      'service_name',\n      'patient_name',\n      'mobile',\n      'target_date',\n      'start_time',\n    ],\n  },\n\n  cancel_appointment: {\n    workflow_number: 14,\n    workflow_name:\n      '14 - API - Cancel Appointment - Standalone Final',\n    endpoint: 'clinic/appointments/cancel',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      mobile: common.mobile,\n      appointment_id: appointmentId,\n      cancellation_reason: text(\n        all.cancellation_reason ||\n        all.reason ||\n        ctx.content_text\n      ),\n      confirm_cancel: true,\n    },\n    required: [\n      'clinic_name',\n      'mobile',\n      'appointment_id',\n      'cancellation_reason',\n    ],\n  },\n\n  reschedule_appointment: {\n    workflow_number: 16,\n    workflow_name:\n      '16 - API - Reschedule Appointment - Schedule Guarded V3',\n    endpoint: 'clinic/appointments/reschedule',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      mobile: common.mobile,\n      appointment_id: appointmentId,\n      new_target_date: isIsoDate(dateValue) ? dateValue : '',\n      new_start_time: isTime(timeValue) ? timeValue : '',\n      reschedule_reason: text(\n        all.reschedule_reason ||\n        all.reason ||\n        ctx.content_text\n      ),\n      confirm_reschedule: true,\n    },\n    required: [\n      'clinic_name',\n      'mobile',\n      'appointment_id',\n      'new_target_date',\n      'new_start_time',\n      'reschedule_reason',\n    ],\n  },\n\n  intake_medication_issue: {\n    workflow_number: 38,\n    workflow_name:\n      '38 - API - Intake Medication Issue - Standalone Final',\n    endpoint: 'clinic/medication-support/intake',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      appointment_id: appointmentId,\n      mobile: common.mobile,\n      medication_name: text(all.medication_name),\n      issue_type: text(\n        all.medication_issue_type ||\n        all.issue_type ||\n        'other'\n      ),\n      patient_message: ctx.content_text || '',\n      symptom_severity: Number(\n        all.symptom_severity ?? 0\n      ),\n      has_breathing_difficulty:\n        (ctx.message_risk_flags || []).includes(\n          'breathing_difficulty'\n        ),\n      has_face_lip_tongue_swelling:\n        (ctx.message_risk_flags || []).includes(\n          'face_lip_tongue_swelling'\n        ),\n      has_fainting_or_seizure:\n        (ctx.message_risk_flags || []).some(\n          (flag) => [\n            'loss_of_consciousness',\n            'seizure',\n          ].includes(flag)\n        ),\n      has_chest_pain:\n        (ctx.message_risk_flags || []).includes(\n          'chest_pain'\n        ),\n      overdose_possible:\n        (ctx.message_risk_flags || []).includes(\n          'possible_overdose'\n        ),\n      has_severe_bleeding:\n        (ctx.message_risk_flags || []).includes(\n          'severe_bleeding'\n        ),\n      source_channel: common.source_channel,\n      consent_to_contact: true,\n      confirm_submission: true,\n    },\n    required: [\n      'clinic_name',\n      'mobile',\n      'issue_type',\n      'patient_message',\n    ],\n  },\n\n  intake_prescription_insurance: {\n    workflow_number: 41,\n    workflow_name:\n      '41 - API - Intake Prescription Insurance Request - Standalone Final',\n    endpoint: 'clinic/prescription-insurance/intake',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      appointment_id: appointmentId,\n      mobile: common.mobile,\n      request_type: text(\n        all.request_type ||\n        all.prescription_request_type ||\n        'other_administrative_issue'\n      ),\n      insurance_provider: text(all.insurance_provider),\n      prescription_identifier: text(\n        all.prescription_identifier\n      ),\n      prescription_date: isIsoDate(\n        all.prescription_date\n      )\n        ? text(all.prescription_date)\n        : '',\n      medication_name: text(all.medication_name),\n      patient_message: ctx.content_text || '',\n      is_time_sensitive: Boolean(all.is_time_sensitive),\n      source_channel: common.source_channel,\n      consent_to_contact: true,\n      confirm_submission: true,\n    },\n    required: [\n      'clinic_name',\n      'mobile',\n      'request_type',\n      'patient_message',\n    ],\n  },\n\n  intake_patient_feedback: {\n    workflow_number: 44,\n    workflow_name:\n      '44 - API - Intake Patient Feedback - Standalone Final',\n    endpoint: 'clinic/feedback/intake',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      appointment_id: appointmentId,\n      mobile: common.mobile,\n      feedback_type: text(\n        all.feedback_type || 'complaint'\n      ),\n      category: text(\n        all.feedback_category ||\n        all.category ||\n        'other'\n      ),\n      rating_overall: Number(\n        all.rating_overall ?? 0\n      ),\n      feedback_message: ctx.content_text || '',\n      has_safety_concern: Boolean(\n        all.has_safety_concern\n      ),\n      has_privacy_concern:\n        (ctx.message_risk_flags || []).includes(\n          'privacy_concern'\n        ),\n      has_financial_dispute: Boolean(\n        all.has_financial_dispute\n      ),\n      staff_misconduct_reported: Boolean(\n        all.staff_misconduct_reported\n      ),\n      wants_response: true,\n      consent_to_contact: true,\n      source_channel: common.source_channel,\n      confirm_submission: true,\n    },\n    required: [\n      'clinic_name',\n      'mobile',\n      'feedback_type',\n      'category',\n      'feedback_message',\n    ],\n  },\n\n  process_confirmation_response: {\n    workflow_number: 28,\n    workflow_name:\n      '28 - API - Process Appointment Confirmation Response - Standalone Final',\n    endpoint:\n      'clinic/appointments/process-confirmation-response',\n    method: 'POST',\n    payload: {\n      confirmation_token: text(all.confirmation_token),\n      mobile: common.mobile,\n      response: text(\n        all.patient_decision ||\n        all.response\n      ),\n      response_note: text(all.response_note),\n      confirm_response: true,\n    },\n    required: [\n      'confirmation_token',\n      'mobile',\n      'response',\n    ],\n  },\n\n  process_waitlist_response: {\n    workflow_number: 25,\n    workflow_name:\n      '25 - API - Process Waitlist Offer Response - Standalone Final',\n    endpoint: 'clinic/waitlist/process-offer-response',\n    method: 'POST',\n    payload: {\n      offer_token: text(all.offer_token),\n      mobile: common.mobile,\n      response: text(\n        all.patient_decision ||\n        all.response\n      ),\n      response_note: text(all.response_note),\n      confirm_response: true,\n    },\n    required: [\n      'offer_token',\n      'mobile',\n      'response',\n    ],\n  },\n\n\n  answer_clinical_question: {\n    workflow_number: 68,\n    workflow_name:\n      '68 - AI - Clinical Grounded Answer and Safety - Standalone Final',\n    endpoint: 'clinic/clinical-knowledge/answer',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      question: ctx.content_text || '',\n      mobile: common.mobile,\n      specialty_hint: text(\n        all.symptom_category ||\n        all.specialty ||\n        'general'\n      ),\n      service_name: text(all.service_name),\n      session_id: ctx.session_id,\n      message_id: ctx.message_id,\n      clinical_intake_case_id:\n        numberOrZero(all.clinical_intake_case_id),\n      webhook_base_url:\n        'http://localhost:5678/webhook',\n      model_provider: 'openai',\n      model_name: 'gpt-5-mini',\n      confirm_answer: true,\n    },\n    required: [\n      'clinic_name',\n      'question',\n    ],\n  },\n\n  start_clinical_intake: {\n    workflow_number: 60,\n    workflow_name:\n      '60 - API - Start Clinical Intake - Per Clinic Override V2',\n    endpoint: 'clinic/clinical-intake/start',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      mobile: common.mobile,\n      appointment_id:\n        numberOrZero(all.appointment_id),\n      request_goal: text(\n        all.request_goal ||\n        'doctor_question'\n      ),\n      symptom_category: text(\n        all.symptom_category ||\n        'general'\n      ),\n      chief_complaint: text(\n        all.chief_complaint ||\n        ctx.content_text\n      ),\n      duration_text: text(all.duration_text),\n      severity:\n        Number.isInteger(Number(all.severity))\n          ? Number(all.severity)\n          : -1,\n      age_group: text(\n        all.age_group ||\n        'unknown'\n      ),\n      pregnancy_possible:\n        all.pregnancy_possible ?? '',\n      is_worsening:\n        all.is_worsening ?? '',\n      difficulty_breathing:\n        all.difficulty_breathing ?? '',\n      chest_pain:\n        all.chest_pain ?? '',\n      loss_of_consciousness:\n        all.loss_of_consciousness ?? '',\n      seizure:\n        all.seizure ?? '',\n      severe_bleeding:\n        all.severe_bleeding ?? '',\n      possible_overdose:\n        all.possible_overdose ?? '',\n      pregnancy_emergency_concern:\n        all.pregnancy_emergency_concern ?? '',\n      self_harm_or_violence:\n        all.self_harm_or_violence ?? '',\n      chronic_conditions: text(\n        all.chronic_conditions\n      ),\n      current_medications: text(\n        all.current_medications\n      ),\n      source_channel: common.source_channel,\n      consent_to_contact: true,\n      consent_to_store_health_information:\n        Boolean(\n          all.consent_to_store_health_information\n        ),\n      disclaimer_acknowledged:\n        Boolean(all.disclaimer_acknowledged),\n      confirm_submission: true,\n    },\n    required: [\n      'clinic_name',\n      'mobile',\n      'symptom_category',\n      'chief_complaint',\n    ],\n    required_true: [\n      'consent_to_store_health_information',\n      'disclaimer_acknowledged',\n    ],\n  },\n\n  submit_clinical_intake_answers: {\n    workflow_number: 61,\n    workflow_name:\n      '61 - API - Submit Clinical Intake Answers - Standalone Final',\n    endpoint:\n      'clinic/clinical-intake/submit-answers',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      clinical_intake_case_id:\n        numberOrZero(all.clinical_intake_case_id),\n      mobile: common.mobile,\n      answers:\n        Array.isArray(all.clinical_answers)\n          ? all.clinical_answers\n          : [],\n      confirm_submission: true,\n    },\n    required: [\n      'clinic_name',\n      'clinical_intake_case_id',\n      'mobile',\n      'answers',\n    ],\n  },\n\n\n  register_patient: {\n    workflow_number: 71,\n    workflow_name:\n      '71 - API - Register or Match Patient - Corrected V2',\n    endpoint: 'clinic/patients/register-or-match',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      full_name: text(all.full_name),\n      mobile: common.mobile,\n      email: text(all.email),\n      date_of_birth: text(all.date_of_birth),\n      preferred_language: text(\n        all.preferred_language ||\n        common.language ||\n        'fa'\n      ),\n      emergency_contact_name: text(\n        all.emergency_contact_name\n      ),\n      emergency_contact_mobile: text(\n        all.emergency_contact_mobile\n      ),\n      address_text: text(all.address_text),\n      consent_to_contact:\n        Boolean(all.consent_to_contact),\n      consent_to_store_profile:\n        Boolean(all.consent_to_store_profile),\n      privacy_notice_version: '1.0',\n      confirm_registration: true,\n    },\n    required: [\n      'clinic_name',\n      'full_name',\n      'mobile',\n    ],\n    required_true: [\n      'consent_to_store_profile',\n    ],\n  },\n\n  update_patient_profile: {\n    workflow_number: 72,\n    workflow_name:\n      '72 - API - Update Patient Profile - Standalone Final',\n    endpoint: 'clinic/patients/update-profile',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      mobile: common.mobile,\n      updates:\n        all.patient_profile_updates &&\n        typeof all.patient_profile_updates === 'object'\n          ? all.patient_profile_updates\n          : {},\n      changed_by: text(\n        all.full_name ||\n        'patient'\n      ),\n      change_source: 'patient',\n      confirm_update: true,\n    },\n    required: [\n      'clinic_name',\n      'mobile',\n      'updates',\n    ],\n  },\n\n  register_patient_document: {\n    workflow_number: 73,\n    workflow_name:\n      '73 - API - Register Patient Document - Standalone Final',\n    endpoint: 'clinic/patients/documents/register',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      mobile: common.mobile,\n      appointment_id:\n        numberOrZero(all.appointment_id),\n      document_type: text(all.document_type),\n      source_channel: common.source_channel,\n      original_filename:\n        text(all.original_filename),\n      mime_type: text(all.mime_type),\n      file_size_bytes:\n        numberOrZero(all.file_size_bytes),\n      storage_provider: text(\n        all.storage_provider ||\n        'external'\n      ),\n      storage_key: text(all.storage_key),\n      file_url: text(all.file_url),\n      checksum_sha256:\n        text(all.checksum_sha256),\n      metadata:\n        all.file_metadata &&\n        typeof all.file_metadata === 'object'\n          ? all.file_metadata\n          : {},\n      consent_to_store:\n        Boolean(all.consent_to_store_documents),\n      confirm_upload: true,\n    },\n    required: [\n      'clinic_name',\n      'mobile',\n      'document_type',\n      'original_filename',\n      'mime_type',\n      'file_size_bytes',\n    ],\n    required_any: [\n      [\n        'storage_key',\n        'file_url',\n      ],\n    ],\n    required_true: [\n      'consent_to_store',\n    ],\n  },\n\n  generate_pre_visit_guidance: {\n    workflow_number: 75,\n    workflow_name:\n      '75 - AI - Generate Previsit Guidance - Standalone Final',\n    endpoint:\n      'clinic/appointments/previsit-guidance/generate',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      appointment_id:\n        numberOrZero(all.appointment_id),\n      mobile: common.mobile,\n      language: text(\n        all.preferred_language ||\n        common.language ||\n        'fa'\n      ),\n      model_provider: 'openai',\n      model_name: 'gpt-5-mini',\n      confirm_generation: true,\n    },\n    required: [\n      'clinic_name',\n      'appointment_id',\n      'mobile',\n    ],\n  },\n\n\n  manage_patient_consents: {\n    workflow_number: 78,\n    workflow_name:\n      '78 - API - Manage Patient Consents and Preferences - Standalone Final',\n    endpoint: 'clinic/patients/consents/manage',\n    method: 'POST',\n    payload: {\n      action: text(\n        all.communication_action ||\n        'get'\n      ),\n      clinic_name: ctx.clinic_name,\n      mobile: common.mobile,\n      consent_type: text(all.consent_type),\n      policy_version: text(\n        all.policy_version ||\n        '1.0'\n      ),\n      scope_json:\n        all.consent_scope &&\n        typeof all.consent_scope === 'object'\n          ? all.consent_scope\n          : {},\n      expires_at: text(all.expires_at),\n      channel: text(\n        all.communication_channel\n      ),\n      enabled:\n        all.preference_enabled === null ||\n        all.preference_enabled === undefined\n          ? true\n          : Boolean(all.preference_enabled),\n      preferred_language: text(\n        all.preferred_language ||\n        common.language ||\n        'fa'\n      ),\n      timezone: text(\n        all.timezone ||\n        'Asia/Baghdad'\n      ),\n      quiet_hours_enabled:\n        Boolean(all.quiet_hours_enabled),\n      quiet_hours_start:\n        text(all.quiet_hours_start),\n      quiet_hours_end:\n        text(all.quiet_hours_end),\n      max_messages_per_week:\n        numberOrZero(\n          all.max_messages_per_week\n        ),\n      preferences: [],\n      actor_name: text(\n        all.full_name ||\n        all.patient_name ||\n        ctx.patient_name ||\n        'patient'\n      ),\n      source_channel:\n        common.source_channel,\n      reason: text(\n        all.consent_reason ||\n        ctx.content_text\n      ),\n      confirm_action: true,\n    },\n    required: [\n      'action',\n      'clinic_name',\n      'mobile',\n    ],\n  },\n\n  process_communication_consent_response: {\n    workflow_number: 80,\n    workflow_name:\n      '80 - API - Process Communication Opt In and Opt Out - Standalone Final',\n    endpoint:\n      'clinic/communications/consent-response',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      mobile: common.mobile,\n      action: text(\n        all.communication_action ||\n        'auto'\n      ),\n      raw_message:\n        ctx.content_text || '',\n      channel: text(\n        all.communication_channel\n      ),\n      actor_name: text(\n        all.full_name ||\n        all.patient_name ||\n        ctx.patient_name ||\n        'patient'\n      ),\n      source_channel:\n        common.source_channel,\n      policy_version: text(\n        all.policy_version ||\n        '1.0'\n      ),\n      reason: text(\n        all.consent_reason ||\n        ctx.content_text\n      ),\n      confirm_action: true,\n    },\n    required: [\n      'clinic_name',\n      'mobile',\n      'action',\n    ],\n  },\n\n\n  process_post_visit_followup_response: {\n    workflow_number: 36,\n    workflow_name:\n      '36 - API - Process Post Visit Followup Response - Standalone Final',\n    endpoint:\n      'clinic/appointments/process-post-visit-followup-response',\n    method: 'POST',\n    payload: {\n      followup_token: text(all.followup_token),\n      mobile: common.mobile,\n      recovery_status: text(all.recovery_status),\n      pain_level:\n        Number.isInteger(Number(all.pain_level))\n          ? Number(all.pain_level)\n          : -1,\n      has_red_flag:\n        Boolean(all.has_red_flag),\n      red_flag_details:\n        text(all.red_flag_details),\n      has_medication_issue:\n        Boolean(all.has_medication_issue),\n      medication_issue_details:\n        text(all.medication_issue_details),\n      has_complaint:\n        Boolean(all.has_complaint),\n      complaint_details:\n        text(all.complaint_details),\n      satisfaction_score:\n        Number.isInteger(Number(all.satisfaction_score))\n          ? Number(all.satisfaction_score)\n          : 0,\n      patient_comment:\n        text(\n          all.patient_comment ||\n          ctx.content_text\n        ),\n      confirm_response: true,\n    },\n    required: [\n      'followup_token',\n      'mobile',\n      'recovery_status',\n      'pain_level',\n      'satisfaction_score',\n      ...(Boolean(all.has_red_flag)\n        ? ['red_flag_details']\n        : []),\n      ...(Boolean(all.has_medication_issue)\n        ? ['medication_issue_details']\n        : []),\n      ...(Boolean(all.has_complaint)\n        ? ['complaint_details']\n        : []),\n    ],\n    allow_zero_fields: [\n      'pain_level',\n    ],\n  },\n\n  process_disruption_patient_decision: {\n    workflow_number: 21,\n    workflow_name:\n      '21 - API - Process Disruption Patient Decision - Standalone Final',\n    endpoint:\n      'clinic/disruptions/process-patient-decision',\n    method: 'POST',\n    payload: {\n      disruption_case_id:\n        numberOrZero(all.disruption_case_id),\n      mobile: common.mobile,\n      decision: text(\n        all.disruption_decision ||\n        all.patient_decision\n      ),\n      option_number:\n        numberOrZero(all.option_number),\n      decision_note: text(\n        all.decision_note ||\n        ctx.content_text\n      ),\n      options_per_patient:\n        Number.isInteger(\n          Number(all.options_per_patient)\n        )\n          ? Number(all.options_per_patient)\n          : 3,\n      additional_search_days:\n        Number.isInteger(\n          Number(all.additional_search_days)\n        )\n          ? Number(all.additional_search_days)\n          : 14,\n      confirm_decision: true,\n    },\n    required: [\n      'disruption_case_id',\n      'mobile',\n      'decision',\n      ...(\n        text(\n          all.disruption_decision ||\n          all.patient_decision\n        ) === 'reschedule'\n          ? ['option_number']\n          : []\n      ),\n    ],\n  },\n\n  urgent_human_handoff: {\n    workflow_number: 57,\n    workflow_name:\n      '57 - Core - Human Handoff Orchestrator',\n    endpoint: 'clinic/handoff/create',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      session_id: ctx.session_id,\n      message_id: ctx.message_id,\n      mobile: common.mobile,\n      urgency: 'urgent',\n      reason:\n        safety.block_reason ||\n        'urgent_risk_detected',\n      patient_message: ctx.content_text || '',\n      risk_flags: ctx.message_risk_flags || [],\n      confirm_handoff: true,\n    },\n    required: [\n      'clinic_name',\n      'session_id',\n      'message_id',\n      'reason',\n    ],\n  },\n\n  human_handoff: {\n    workflow_number: 57,\n    workflow_name:\n      '57 - Core - Human Handoff Orchestrator',\n    endpoint: 'clinic/handoff/create',\n    method: 'POST',\n    payload: {\n      clinic_name: ctx.clinic_name,\n      session_id: ctx.session_id,\n      message_id: ctx.message_id,\n      mobile: common.mobile,\n      urgency: 'normal',\n      reason:\n        safety.block_reason ||\n        'human_review_requested',\n      patient_message: ctx.content_text || '',\n      risk_flags: ctx.message_risk_flags || [],\n      confirm_handoff: true,\n    },\n    required: [\n      'clinic_name',\n      'session_id',\n      'message_id',\n      'reason',\n    ],\n  },\n};\n\nlet routeStatus = 'no_tool';\nlet route = null;\nlet missingForTool = [];\nlet payloadReady = false;\nlet nextAction = 'compose_response';\n\nif (\n  [\n    'ask_clarification',\n    'ask_missing_information',\n    'request_confirmation',\n  ].includes(safetyDecision)\n) {\n  routeStatus = 'patient_input_required';\n  nextAction = 'compose_response';\n\n} else if (\n  safetyDecision === 'response_only' ||\n  safeToolAction === 'none'\n) {\n  routeStatus = 'response_only';\n  nextAction = 'compose_response';\n\n} else if (!routeMap[safeToolAction]) {\n  routeStatus = 'unsupported_tool';\n  nextAction = 'human_handoff';\n\n} else {\n  route = routeMap[safeToolAction];\n\n  missingForTool = route.required.filter((field) => {\n    const value = route.payload[field];\n\n    if (Array.isArray(value)) {\n      return value.length === 0;\n    }\n\n    if (typeof value === 'number') {\n      const allowZero = (\n        route.allow_zero_fields || []\n      ).includes(field);\n\n      return allowZero\n        ? (\n            !Number.isFinite(value) ||\n            value < 0\n          )\n        : (\n            !Number.isFinite(value) ||\n            value <= 0\n          );\n    }\n\n    if (typeof value === 'boolean') {\n      return false;\n    }\n\n    if (\n      value &&\n      typeof value === 'object'\n    ) {\n      return Object.keys(value).length === 0;\n    }\n\n    return !text(value);\n  });\n\n  const requiredTrueMissing = (\n    route.required_true || []\n  ).filter((field) => route.payload[field] !== true);\n\n  const requiredAnyMissing = (\n    route.required_any || []\n  )\n    .filter((group) => {\n      if (!Array.isArray(group)) return false;\n\n      return !group.some((field) => {\n        const value = route.payload[field];\n\n        if (Array.isArray(value)) {\n          return value.length > 0;\n        }\n\n        if (typeof value === 'number') {\n          return Number.isFinite(value) && value > 0;\n        }\n\n        if (typeof value === 'boolean') {\n          return value === true;\n        }\n\n        if (\n          value &&\n          typeof value === 'object'\n        ) {\n          return Object.keys(value).length > 0;\n        }\n\n        return Boolean(text(value));\n      });\n    })\n    .flat();\n\n  missingForTool = [\n    ...new Set([\n      ...missingForTool,\n      ...requiredTrueMissing,\n      ...requiredAnyMissing,\n    ]),\n  ];\n\n  payloadReady = missingForTool.length === 0;\n  routeStatus = payloadReady\n    ? 'ready'\n    : 'needs_input';\n\n  nextAction = payloadReady\n    ? 'execute_routed_workflow'\n    : 'compose_missing_tool_information_question';\n}\n\nconst routingPayload = {\n  stage: 'tool_router',\n  version: 'tool-router-final-v5',\n  routed_at: new Date().toISOString(),\n  route_status: routeStatus,\n  safety_decision: safetyDecision,\n  safe_tool_action: safeToolAction,\n  target_workflow_number:\n    route?.workflow_number ?? null,\n  target_workflow_name:\n    route?.workflow_name ?? null,\n  endpoint: route?.endpoint ?? null,\n  method: route?.method ?? null,\n  payload: route?.payload ?? {},\n  required_fields: route?.required ?? [],\n  missing_for_tool: missingForTool,\n  payload_ready: payloadReady,\n  execution_mode:\n    'deferred_until_conversation_orchestrator',\n  next_action: nextAction,\n};\n\nreturn [{\n  json: {\n    success: routeStatus !== 'unsupported_tool',\n    result:\n      routeStatus === 'ready'\n        ? 'tool_route_ready'\n        : routeStatus === 'needs_input'\n          ? 'tool_route_needs_input'\n          : routeStatus === 'unsupported_tool'\n            ? 'unsupported_tool_action'\n            : 'response_route_ready',\n\n    session_id: Number(ctx.session_id),\n    message_id: Number(ctx.message_id),\n    clinic_name: ctx.clinic_name,\n    patient_name: ctx.patient_name,\n    mobile: common.mobile,\n    language: ctx.language,\n    intent: ctx.intent,\n    safety_decision: safetyDecision,\n    safe_tool_action: safeToolAction,\n    route_status: routeStatus,\n    target_workflow_number:\n      route?.workflow_number ?? null,\n    target_workflow_name:\n      route?.workflow_name ?? null,\n    endpoint: route?.endpoint ?? null,\n    method: route?.method ?? null,\n    tool_payload: route?.payload ?? {},\n    tool_payload_json: JSON.stringify(\n      route?.payload ?? {}\n    ),\n    required_fields: route?.required ?? [],\n    missing_for_tool: missingForTool,\n    payload_ready: payloadReady,\n    next_action: nextAction,\n    routing_payload: routingPayload,\n    routing_payload_json: JSON.stringify(\n      routingPayload\n    ),\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        -144
+      ],
+      "id": "1e0a2b55-3eb1-4aa5-9bd2-b7260ee09cc1",
+      "name": "Build Safe Tool Route"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS session_id,\n        $2::BIGINT AS message_id,\n        $3::TEXT AS route_status,\n        $4::TEXT AS safe_tool_action,\n        $5::JSONB AS routing_payload,\n        NULLIF($6::TEXT, '') AS pending_action\n),\n\nupdated_message AS (\n    UPDATE conversation_messages message\n\n    SET\n        tool_action =\n            request.safe_tool_action,\n\n        tool_result =\n            COALESCE(\n                message.tool_result,\n                '{}'::JSONB\n            )\n            || JSONB_BUILD_OBJECT(\n                'routing',\n                request.routing_payload\n            )\n\n    FROM request_data request\n\n    WHERE message.id = request.message_id\n      AND message.session_id = request.session_id\n\n    RETURNING message.id\n),\n\nupdated_session AS (\n    UPDATE conversation_sessions session\n\n    SET\n        pending_action =\n            request.pending_action,\n\n        status = CASE\n            WHEN request.route_status = 'needs_input'\n                THEN 'waiting_patient'\n\n            WHEN request.route_status = 'unsupported_tool'\n                THEN 'waiting_human'\n\n            ELSE session.status\n        END,\n\n        updated_at = NOW()\n\n    FROM request_data request\n\n    WHERE session.id = request.session_id\n\n      AND EXISTS (\n          SELECT 1\n          FROM updated_message\n      )\n\n    RETURNING\n        session.status,\n        session.pending_action\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM updated_message\n        )\n            THEN FALSE\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM updated_message\n        )\n            THEN 'message_or_session_not_found'\n\n        WHEN request.route_status = 'ready'\n            THEN 'tool_route_saved'\n\n        WHEN request.route_status = 'needs_input'\n            THEN 'tool_route_waiting_for_input'\n\n        WHEN request.route_status = 'unsupported_tool'\n            THEN 'tool_route_requires_human'\n\n        ELSE 'response_route_saved'\n    END AS result,\n\n    request.session_id,\n    request.message_id,\n    request.route_status,\n    request.safe_tool_action,\n\n    (\n        SELECT status\n        FROM updated_session\n    ) AS session_status,\n\n    (\n        SELECT pending_action\n        FROM updated_session\n    ) AS pending_action\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.session_id,\n  $json.message_id,\n  $json.route_status,\n  $json.safe_tool_action,\n  $json.routing_payload_json,\n  $json.payload_ready ? '' : $json.safe_tool_action\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        688,
+        -144
+      ],
+      "id": "dc1f0949-a301-42cc-b44a-fee1638436ac",
+      "name": "Save Tool Route"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: 'invalid_request',\n    message: 'اطلاعات لازم برای Tool Router ناقص یا نامعتبر است.',\n    errors: $json.errors ?? [],\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        176
+      ],
+      "id": "0b53126a-d4eb-4ff7-8b3a-e45f2d02e7c2",
+      "name": "Return Routing Validation Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: $json.result || 'routing_context_not_available',\n    message:\n      $json.result === 'safety_decision_not_found'\n        ? 'ابتدا Workflow شماره 52 را برای این پیام اجرا کنید.'\n        : 'پیام یا جلسه مکالمه پیدا نشد.',\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        48
+      ],
+      "id": "2a4b8f60-86e6-46b0-940a-4a592625295f",
+      "name": "Return Routing Context Error"
+    },
+    {
+      "parameters": {
+        "content": "## Tool Router نهایی بیمارمحور\n\nاین نسخه جایگزین 81B است.\n\nعلاوه بر مسیرهای قبلی، موارد زیر اضافه شده‌اند:\n- Workflow 36: پاسخ پیگیری پس از مراجعه\n- Workflow 21: تصمیم بیمار در تغییر فوری برنامه پزشک\n\nکنترل جدید:\n- pain_level=0 به‌عنوان مقدار معتبر پذیرفته می‌شود.\n- برای Reschedule ناشی از Disruption، option_number اجباری است.\n- جزئیات Red Flag، مشکل دارویی و شکایت به‌صورت شرطی اجباری می‌شوند.",
+        "height": 470,
+        "width": 540
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1320,
+        -350
+      ],
+      "id": "1cefe17d-d962-4293-983e-abf3c0ba0568",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Tool Routing Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Tool Routing Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Routing Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Build Tool Route": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Routing Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Routing Request": {
+      "main": [
+        [
+          {
+            "node": "Is Routing Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Routing Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Load Safety Approved Route Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Routing Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Safety Approved Route Context": {
+      "main": [
+        [
+          {
+            "node": "Is Routing Context Available?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Routing Context Available?": {
+      "main": [
+        [
+          {
+            "node": "Build Safe Tool Route",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Routing Context Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Safe Tool Route": {
+      "main": [
+        [
+          {
+            "node": "Save Tool Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

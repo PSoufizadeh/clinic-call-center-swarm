@@ -1,0 +1,67 @@
+{
+  "name": "113 - DB - Add Integration Test Harness",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        0
+      ],
+      "id": "0cce80d7-cfcc-492b-93ee-aa10d5708f0d",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS integration_test_runs (\n    id BIGSERIAL PRIMARY KEY,\n\n    run_key UUID NOT NULL DEFAULT GEN_RANDOM_UUID(),\n\n    suite_code TEXT NOT NULL,\n    clinic_id BIGINT\n        REFERENCES clinics(id)\n        ON DELETE SET NULL,\n\n    status TEXT NOT NULL DEFAULT 'running'\n        CHECK (\n            status IN (\n                'running',\n                'passed',\n                'failed',\n                'partial',\n                'cancelled'\n            )\n        ),\n\n    requested_by TEXT NOT NULL DEFAULT 'system',\n    environment_name TEXT NOT NULL DEFAULT 'local',\n\n    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    completed_at TIMESTAMPTZ,\n\n    summary JSONB NOT NULL DEFAULT '{}'::JSONB,\n    metadata JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    UNIQUE (run_key)\n);\n\nCREATE TABLE IF NOT EXISTS integration_test_cases (\n    id BIGSERIAL PRIMARY KEY,\n\n    suite_code TEXT NOT NULL,\n    case_code TEXT NOT NULL,\n\n    title TEXT NOT NULL,\n    category TEXT NOT NULL\n        CHECK (\n            category IN (\n                'conversation',\n                'gateway_security',\n                'appointments',\n                'patient_consent',\n                'clinical_safety',\n                'messaging',\n                'observability'\n            )\n        ),\n\n    enabled BOOLEAN NOT NULL DEFAULT TRUE,\n    sort_order INTEGER NOT NULL DEFAULT 100,\n\n    request_template JSONB NOT NULL DEFAULT '{}'::JSONB,\n    expected_assertions JSONB NOT NULL DEFAULT '{}'::JSONB,\n    metadata JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    UNIQUE (\n        suite_code,\n        case_code\n    )\n);\n\nCREATE TABLE IF NOT EXISTS integration_test_results (\n    id BIGSERIAL PRIMARY KEY,\n\n    run_id BIGINT NOT NULL\n        REFERENCES integration_test_runs(id)\n        ON DELETE CASCADE,\n\n    case_id BIGINT\n        REFERENCES integration_test_cases(id)\n        ON DELETE SET NULL,\n\n    case_code TEXT NOT NULL,\n\n    status TEXT NOT NULL\n        CHECK (\n            status IN (\n                'passed',\n                'failed',\n                'skipped',\n                'error'\n            )\n        ),\n\n    duration_ms INTEGER NOT NULL DEFAULT 0\n        CHECK (duration_ms >= 0),\n\n    request_payload JSONB NOT NULL DEFAULT '{}'::JSONB,\n    response_payload JSONB NOT NULL DEFAULT '{}'::JSONB,\n    assertion_results JSONB NOT NULL DEFAULT '[]'::JSONB,\n\n    error_message TEXT,\n\n    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    UNIQUE (\n        run_id,\n        case_code\n    )\n);\n\nCREATE INDEX IF NOT EXISTS idx_integration_test_runs_recent\nON integration_test_runs(\n    started_at DESC\n);\n\nCREATE INDEX IF NOT EXISTS idx_integration_test_cases_suite\nON integration_test_cases(\n    suite_code,\n    enabled,\n    sort_order\n);\n\nCREATE INDEX IF NOT EXISTS idx_integration_test_results_run\nON integration_test_results(\n    run_id,\n    status,\n    completed_at DESC\n);\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار اجرای تست یکپارچه، سناریوها و نتایج ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -40,
+        0
+      ],
+      "id": "0b941399-d54d-47d6-b95c-3ab32be2aa96",
+      "name": "Create Integration Test Structures"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nجدول‌های زیر را ایجاد می‌کند:\n- integration_test_runs\n- integration_test_cases\n- integration_test_results\n\nاین Migration هیچ داده عملیاتی بیمار را حذف یا تغییر نمی‌دهد.",
+        "height": 320,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -260
+      ],
+      "id": "cd7d9504-6ac8-4819-896a-be7fd8a5e3f9",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Integration Test Structures",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

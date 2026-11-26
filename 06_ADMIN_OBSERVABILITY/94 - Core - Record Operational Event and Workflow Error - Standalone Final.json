@@ -1,0 +1,331 @@
+{
+  "name": "94 - Core - Record Operational Event and Workflow Error - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -940,
+        -160
+      ],
+      "id": "2f8b0031-163a-42dd-bc32-f6baede54132",
+      "name": "n8n Error Trigger"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -940,
+        128
+      ],
+      "id": "902e0955-0c9a-4ae2-8b77-39b51934ab19",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2af9a4e3-6d03-4a51-9c49-8b90b1dca751",
+              "name": "event_kind",
+              "value": "audit",
+              "type": "string"
+            },
+            {
+              "id": "9fe027fc-0da0-497f-90eb-f6d796622436",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "bc123d86-1a40-42f6-a819-b4aada63be30",
+              "name": "actor_type",
+              "value": "system",
+              "type": "string"
+            },
+            {
+              "id": "a3a1c4dd-dbf0-4516-a95a-89a9d22849d9",
+              "name": "actor_name",
+              "value": "n8n",
+              "type": "string"
+            },
+            {
+              "id": "c3b8d55c-aa1a-4510-a305-f41f417060dd",
+              "name": "event_category",
+              "value": "system",
+              "type": "string"
+            },
+            {
+              "id": "66cdb752-a28f-4883-b704-bb97038a3659",
+              "name": "event_action",
+              "value": "manual_test",
+              "type": "string"
+            },
+            {
+              "id": "e32ac128-f7e2-4bec-9cc2-f7a7579e1a41",
+              "name": "severity",
+              "value": "info",
+              "type": "string"
+            },
+            {
+              "id": "3ea880af-3281-4cbf-8f29-6b152b5dbe41",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "c82acce4-3412-46a7-adde-e7b3a35ded48",
+              "name": "workflow_name",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "16b52d74-ea94-4940-b6f8-d9648ded465c",
+              "name": "execution_id",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "c36f2614-2f03-4059-b578-76c33d55be43",
+              "name": "node_name",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "2870fc2a-a4f5-42c9-8945-3121cf411893",
+              "name": "error_type",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "2c036a53-7239-4779-b338-9f6cb000327c",
+              "name": "error_message",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "62da8904-9d9d-4585-8ee6-44e868128cec",
+              "name": "retryable",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "6d379bd8-d896-4c60-b83a-29902c035e8d",
+              "name": "event_data",
+              "value": "{}",
+              "type": "string"
+            },
+            {
+              "id": "c7effbdf-7159-406a-aaee-ce7d5296478c",
+              "name": "confirm_record",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -700,
+        128
+      ],
+      "id": "55689d20-3744-4ff6-81d0-863a33f35496",
+      "name": "Manual Operational Event"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/operations/events/record",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -700,
+        -32
+      ],
+      "id": "7d75ee8a-3612-4f31-b0e3-e564d9504442",
+      "name": "Webhook - Record Operational Event"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst hash = (value) => {\n  let current = 2166136261;\n\n  for (let index = 0; index < value.length; index++) {\n    current ^= value.charCodeAt(index);\n    current = Math.imul(current, 16777619);\n  }\n\n  return (current >>> 0)\n    .toString(16)\n    .padStart(8, '0');\n};\n\nconst execution =\n  input.execution &&\n  typeof input.execution === 'object'\n    ? input.execution\n    : {};\n\nconst workflow =\n  input.workflow &&\n  typeof input.workflow === 'object'\n    ? input.workflow\n    : {};\n\nconst triggerError =\n  execution.error &&\n  typeof execution.error === 'object'\n    ? execution.error\n    : (\n        input.error &&\n        typeof input.error === 'object'\n          ? input.error\n          : {}\n      );\n\nconst triggerMode =\n  Object.keys(execution).length > 0 ||\n  Object.keys(triggerError).length > 0;\n\nconst event_kind = text(\n  input.event_kind ||\n  (triggerMode ? 'error' : 'audit')\n).toLowerCase();\n\nconst clinic_id = Number(\n  input.clinic_id ?? 0\n);\nconst clinic_name = text(input.clinic_name);\n\nconst actor_type = text(\n  input.actor_type ||\n  (triggerMode ? 'workflow' : 'system')\n);\n\nconst actor_name = text(\n  input.actor_name ||\n  workflow.name ||\n  'n8n'\n);\n\nconst workflow_name = text(\n  input.workflow_name ||\n  workflow.name ||\n  execution.workflowName\n);\n\nconst workflow_id = text(\n  input.workflow_id ||\n  workflow.id ||\n  execution.workflowId\n);\n\nconst execution_id = text(\n  input.execution_id ||\n  execution.id\n);\n\nconst node_name = text(\n  input.node_name ||\n  execution.lastNodeExecuted ||\n  triggerError.node?.name ||\n  triggerError.node\n);\n\nconst error_type = text(\n  input.error_type ||\n  triggerError.name ||\n  triggerError.type ||\n  'workflow_error'\n);\n\nconst error_message = text(\n  input.error_message ||\n  triggerError.message ||\n  execution.errorMessage\n);\n\nconst stack_trace = text(\n  input.stack_trace ||\n  triggerError.stack\n);\n\nconst event_category = text(\n  input.event_category ||\n  (event_kind === 'error'\n    ? 'workflow_error'\n    : 'system')\n);\n\nconst event_action = text(\n  input.event_action ||\n  (event_kind === 'error'\n    ? 'execution_failed'\n    : 'event_recorded')\n);\n\nconst severity = text(\n  input.severity ||\n  (event_kind === 'error'\n    ? 'error'\n    : 'info')\n).toLowerCase();\n\nconst success =\n  event_kind === 'error'\n    ? false\n    : bool(\n        input.success === undefined\n          ? true\n          : input.success\n      );\n\nconst retryable = bool(input.retryable);\nconst entity_type = text(input.entity_type);\nconst entity_id = Number(input.entity_id ?? 0);\nconst source_channel = text(input.source_channel);\nconst request_reference =\n  text(input.request_reference);\n\nlet event_data =\n  input.event_data ??\n  input.data ??\n  {};\n\nlet input_snapshot =\n  input.input_snapshot ??\n  execution.inputData ??\n  {};\n\nlet error_payload =\n  input.error_payload ??\n  triggerError ??\n  {};\n\nfor (const pair of [\n  ['event_data', event_data],\n  ['input_snapshot', input_snapshot],\n  ['error_payload', error_payload],\n]) {\n  if (typeof pair[1] === 'string') {\n    try {\n      const parsed = JSON.parse(pair[1] || '{}');\n\n      if (pair[0] === 'event_data') {\n        event_data = parsed;\n      }\n\n      if (pair[0] === 'input_snapshot') {\n        input_snapshot = parsed;\n      }\n\n      if (pair[0] === 'error_payload') {\n        error_payload = parsed;\n      }\n    } catch {\n      if (pair[0] === 'event_data') {\n        event_data = { raw: pair[1] };\n      }\n\n      if (pair[0] === 'input_snapshot') {\n        input_snapshot = { raw: pair[1] };\n      }\n\n      if (pair[0] === 'error_payload') {\n        error_payload = { raw: pair[1] };\n      }\n    }\n  }\n}\n\nconst fingerprintSource = [\n  workflow_name,\n  node_name,\n  error_type,\n  error_message.slice(0, 700),\n].join('|');\n\nconst error_fingerprint =\n  text(input.error_fingerprint) ||\n  `wferr-${hash(fingerprintSource)}`;\n\nconst confirm_record =\n  triggerMode\n    ? true\n    : bool(input.confirm_record);\n\nconst errors = [];\n\nif (!['audit', 'error'].includes(event_kind)) {\n  errors.push({\n    field: 'event_kind',\n    message: 'نوع رویداد باید audit یا error باشد.',\n  });\n}\n\nif (\n  clinic_id < 0 ||\n  !Number.isInteger(clinic_id)\n) {\n  errors.push({\n    field: 'clinic_id',\n    message: 'شناسه کلینیک معتبر نیست.',\n  });\n}\n\nif (!event_category) {\n  errors.push({\n    field: 'event_category',\n    message: 'دسته رویداد الزامی است.',\n  });\n}\n\nif (!event_action) {\n  errors.push({\n    field: 'event_action',\n    message: 'عملیات رویداد الزامی است.',\n  });\n}\n\nif (\n  event_kind === 'audit' &&\n  !['info', 'warning', 'error', 'critical'].includes(\n    severity\n  )\n) {\n  errors.push({\n    field: 'severity',\n    message: 'شدت Audit معتبر نیست.',\n  });\n}\n\nif (\n  event_kind === 'error' &&\n  !['warning', 'error', 'critical'].includes(\n    severity\n  )\n) {\n  errors.push({\n    field: 'severity',\n    message: 'شدت خطا معتبر نیست.',\n  });\n}\n\nif (\n  event_kind === 'error' &&\n  !error_message\n) {\n  errors.push({\n    field: 'error_message',\n    message: 'متن خطا الزامی است.',\n  });\n}\n\nif (confirm_record !== true) {\n  errors.push({\n    field: 'confirm_record',\n    message: 'ثبت رویداد باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    event_kind,\n    clinic_id,\n    clinic_name,\n    actor_type,\n    actor_name,\n    event_category,\n    event_action,\n    entity_type,\n    entity_id,\n    workflow_name,\n    workflow_id,\n    execution_id,\n    node_name,\n    severity,\n    success,\n    source_channel,\n    request_reference,\n    event_data_text:\n      JSON.stringify(event_data || {}),\n    error_fingerprint,\n    error_type,\n    error_message,\n    stack_trace,\n    retryable,\n    input_snapshot_text:\n      JSON.stringify(input_snapshot || {}),\n    error_payload_text:\n      JSON.stringify(error_payload || {}),\n    confirm_record,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -428,
+        -32
+      ],
+      "id": "3110f4b4-e8d5-41ff-bed6-ff7886ef2051",
+      "name": "Normalize Operational Event"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "215fa566-6ea7-46a2-81ae-57db85ed03b6",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -188,
+        -32
+      ],
+      "id": "17111cae-0c2f-4011-ac37-720f51f07250",
+      "name": "Is Operational Event Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS event_kind,\n        NULLIF($2::BIGINT, 0) AS requested_clinic_id,\n        NULLIF($3::TEXT, '') AS clinic_name,\n        $4::TEXT AS actor_type,\n        NULLIF($5::TEXT, '') AS actor_name,\n        $6::TEXT AS event_category,\n        $7::TEXT AS event_action,\n        NULLIF($8::TEXT, '') AS entity_type,\n        NULLIF($9::BIGINT, 0) AS entity_id,\n        NULLIF($10::TEXT, '') AS workflow_name,\n        NULLIF($11::TEXT, '') AS workflow_id,\n        NULLIF($12::TEXT, '') AS execution_id,\n        NULLIF($13::TEXT, '') AS node_name,\n        $14::TEXT AS severity,\n        $15::BOOLEAN AS success,\n        NULLIF($16::TEXT, '') AS source_channel,\n        NULLIF($17::TEXT, '') AS request_reference,\n        $18::JSONB AS event_data,\n        $19::TEXT AS error_fingerprint,\n        NULLIF($20::TEXT, '') AS error_type,\n        NULLIF($21::TEXT, '') AS error_message,\n        NULLIF($22::TEXT, '') AS stack_trace,\n        $23::BOOLEAN AS retryable,\n        $24::JSONB AS input_snapshot,\n        $25::JSONB AS error_payload\n),\n\nresolved_context AS (\n    SELECT\n        request.*,\n        COALESCE(\n            request.requested_clinic_id,\n            clinic_by_name.id\n        ) AS clinic_id\n    FROM request_data request\n    LEFT JOIN clinics clinic_by_name\n        ON clinic_by_name.name =\n           request.clinic_name\n       AND clinic_by_name.is_active = TRUE\n),\n\ninserted_audit AS (\n    INSERT INTO system_audit_events (\n        clinic_id,\n        actor_type,\n        actor_name,\n        event_category,\n        event_action,\n        entity_type,\n        entity_id,\n        workflow_name,\n        workflow_id,\n        execution_id,\n        severity,\n        success,\n        source_channel,\n        request_reference,\n        event_data\n    )\n    SELECT\n        context.clinic_id,\n        context.actor_type,\n        context.actor_name,\n        context.event_category,\n        context.event_action,\n        context.entity_type,\n        context.entity_id,\n        context.workflow_name,\n        context.workflow_id,\n        context.execution_id,\n        context.severity,\n        context.success,\n        context.source_channel,\n        context.request_reference,\n        context.event_data\n    FROM resolved_context context\n    WHERE context.event_kind = 'audit'\n    RETURNING id\n),\n\nupserted_error AS (\n    INSERT INTO workflow_error_events (\n        clinic_id,\n        error_fingerprint,\n        workflow_name,\n        workflow_id,\n        execution_id,\n        node_name,\n        error_type,\n        error_message,\n        stack_trace,\n        severity,\n        retryable,\n        status,\n        input_snapshot,\n        error_payload,\n        first_occurred_at,\n        last_occurred_at,\n        updated_at\n    )\n    SELECT\n        context.clinic_id,\n        context.error_fingerprint,\n        context.workflow_name,\n        context.workflow_id,\n        context.execution_id,\n        context.node_name,\n        context.error_type,\n        context.error_message,\n        context.stack_trace,\n        context.severity,\n        context.retryable,\n        'open',\n        context.input_snapshot,\n        context.error_payload,\n        NOW(),\n        NOW(),\n        NOW()\n    FROM resolved_context context\n    WHERE context.event_kind = 'error'\n    ON CONFLICT (error_fingerprint)\n    DO UPDATE SET\n        clinic_id = COALESCE(\n            EXCLUDED.clinic_id,\n            workflow_error_events.clinic_id\n        ),\n        workflow_name = COALESCE(\n            EXCLUDED.workflow_name,\n            workflow_error_events.workflow_name\n        ),\n        workflow_id = COALESCE(\n            EXCLUDED.workflow_id,\n            workflow_error_events.workflow_id\n        ),\n        execution_id = COALESCE(\n            EXCLUDED.execution_id,\n            workflow_error_events.execution_id\n        ),\n        node_name = COALESCE(\n            EXCLUDED.node_name,\n            workflow_error_events.node_name\n        ),\n        error_type = COALESCE(\n            EXCLUDED.error_type,\n            workflow_error_events.error_type\n        ),\n        error_message = EXCLUDED.error_message,\n        stack_trace = COALESCE(\n            EXCLUDED.stack_trace,\n            workflow_error_events.stack_trace\n        ),\n        severity = EXCLUDED.severity,\n        retryable = EXCLUDED.retryable,\n        status = 'open',\n        occurrence_count =\n            workflow_error_events.occurrence_count + 1,\n        input_snapshot = EXCLUDED.input_snapshot,\n        error_payload = EXCLUDED.error_payload,\n        last_occurred_at = NOW(),\n        updated_at = NOW()\n    RETURNING\n        id,\n        occurrence_count\n)\n\nSELECT\n    TRUE AS success,\n\n    CASE\n        WHEN request.event_kind = 'error'\n            THEN 'workflow_error_recorded'\n        ELSE 'audit_event_recorded'\n    END AS result,\n\n    (\n        SELECT id\n        FROM inserted_audit\n    ) AS audit_event_id,\n\n    (\n        SELECT id\n        FROM upserted_error\n    ) AS workflow_error_event_id,\n\n    (\n        SELECT occurrence_count\n        FROM upserted_error\n    ) AS occurrence_count,\n\n    request.error_fingerprint\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.event_kind,\n  $json.clinic_id,\n  $json.clinic_name,\n  $json.actor_type,\n  $json.actor_name,\n  $json.event_category,\n  $json.event_action,\n  $json.entity_type,\n  $json.entity_id,\n  $json.workflow_name,\n  $json.workflow_id,\n  $json.execution_id,\n  $json.node_name,\n  $json.severity,\n  $json.success,\n  $json.source_channel,\n  $json.request_reference,\n  $json.event_data_text,\n  $json.error_fingerprint,\n  $json.error_type,\n  $json.error_message,\n  $json.stack_trace,\n  $json.retryable,\n  $json.input_snapshot_text,\n  $json.error_payload_text\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        68,
+        -128
+      ],
+      "id": "6a05e245-95b4-43fb-b2bf-a526d2be2687",
+      "name": "Record Audit or Error Event"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات Audit یا Error Event نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        68,
+        64
+      ],
+      "id": "40d0d810-ceaf-4295-bcce-3291d2dbb54e",
+      "name": "Return Operational Event Error"
+    },
+    {
+      "parameters": {
+        "content": "## Error Workflow مرکزی\n\nاین Workflow را می‌توان در تنظیمات n8n به‌عنوان Error Workflow انتخاب کرد.\n\nخطاهای تکراری با fingerprint تجمیع می‌شوند و occurrence_count افزایش پیدا می‌کند.\n\nWebhook برای ثبت Auditهای عمومی نیز قابل استفاده است.",
+        "height": 390,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1180,
+        -350
+      ],
+      "id": "e75c3bdc-5361-47ce-b299-7a502c9c90e0",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "n8n Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Operational Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Operational Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Operational Event": {
+      "main": [
+        [
+          {
+            "node": "Normalize Operational Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Record Operational Event": {
+      "main": [
+        [
+          {
+            "node": "Normalize Operational Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Operational Event": {
+      "main": [
+        [
+          {
+            "node": "Is Operational Event Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Operational Event Valid?": {
+      "main": [
+        [
+          {
+            "node": "Record Audit or Error Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Operational Event Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

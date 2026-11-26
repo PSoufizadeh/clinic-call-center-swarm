@@ -1,0 +1,291 @@
+{
+  "name": "105 - API - Manage Doctor Schedules - Corrected V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "aefa9e00-1625-49ea-8b0e-993efdb97755",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d74a6b43-876b-49c3-a075-477547b1632c",
+              "name": "action",
+              "value": "list",
+              "type": "string"
+            },
+            {
+              "id": "73aeaa77-e3a8-4244-a24a-dc38381fa3e9",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "63eb48da-0130-450f-a215-318108d8348c",
+              "name": "doctor_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "94f9ac6a-82a9-4c90-8b63-a863e1dbb54c",
+              "name": "doctor_name",
+              "value": "دکتر آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "2f3e1412-ab31-4e1b-a8b5-f05ab6cfd171",
+              "name": "schedule_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "38635ec1-9582-45fe-a1ee-9afc63de395d",
+              "name": "weekday",
+              "value": 6,
+              "type": "number"
+            },
+            {
+              "id": "75465867-87f0-4f18-8d87-b350dda68d4d",
+              "name": "start_time",
+              "value": "09:00",
+              "type": "string"
+            },
+            {
+              "id": "bd249d77-2ecc-4956-b0d2-d5bb7569ece4",
+              "name": "end_time",
+              "value": "13:00",
+              "type": "string"
+            },
+            {
+              "id": "7e065ec6-a4cd-461e-a619-5207c6a39115",
+              "name": "valid_from",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "a3ca403d-159d-4f4a-975b-84ce24756da9",
+              "name": "valid_to",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "a98b3e21-42de-46f0-921d-8f837dd89078",
+              "name": "actor_name",
+              "value": "مدیر سیستم",
+              "type": "string"
+            },
+            {
+              "id": "c98d25a4-3b94-4e5c-aa1c-85a427f0cd23",
+              "name": "source_channel",
+              "value": "api",
+              "type": "string"
+            },
+            {
+              "id": "19a198d9-f569-4b6a-95f5-8be0199b6e4d",
+              "name": "confirm_action",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "698b28a0-49de-4994-9547-b4cf50c02970",
+      "name": "Manual Manage Doctor Schedule"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/admin/doctor-schedules/manage",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "8630f20a-36e5-442d-8fcc-e28b7660017e",
+      "name": "Webhook - Manage Doctor Schedule"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input=$json.body??$json;\nconst text=v=>v===null||v===undefined?'':String(v).trim();\nconst bool=v=>typeof v==='boolean'?v:['true','1','yes','on'].includes(text(v).toLowerCase());\n\nconst action=text(input.action||'list').toLowerCase();\nconst clinic_name=text(input.clinic_name);\nconst doctor_id=Number(input.doctor_id??0);\nconst doctor_name=text(input.doctor_name);\nconst schedule_id=Number(input.schedule_id??0);\nconst weekday=Number(input.weekday??0);\nconst start_time=text(input.start_time);\nconst end_time=text(input.end_time);\nconst valid_from=text(input.valid_from);\nconst valid_to=text(input.valid_to);\nconst actor_name=text(input.actor_name);\nconst source_channel=text(input.source_channel||'api').toLowerCase();\nconst confirm_action=bool(input.confirm_action);\n\nconst actions=['create','update','activate','deactivate','get','list'];\nconst errors=[];\n\nif(!actions.includes(action))errors.push({field:'action',message:'اقدام معتبر نیست.'});\nif(!clinic_name)errors.push({field:'clinic_name',message:'نام کلینیک الزامی است.'});\nif(!Number.isInteger(doctor_id)||doctor_id<0)errors.push({field:'doctor_id',message:'شناسه پزشک معتبر نیست.'});\nif(doctor_id<1&&!doctor_name)errors.push({field:'doctor_reference',message:'شناسه یا نام پزشک الزامی است.'});\nif(!Number.isInteger(schedule_id)||schedule_id<0)errors.push({field:'schedule_id',message:'شناسه برنامه معتبر نیست.'});\nif(['update','activate','deactivate','get'].includes(action)&&schedule_id<1){\n errors.push({field:'schedule_id',message:'برای این اقدام شناسه برنامه الزامی است.'});\n}\nif(['create','update'].includes(action)){\n if(!Number.isInteger(weekday)||weekday<1||weekday>7)errors.push({field:'weekday',message:'روز هفته باید بین 1 و 7 باشد.'});\n if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(start_time))errors.push({field:'start_time',message:'ساعت شروع معتبر نیست.'});\n if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(end_time))errors.push({field:'end_time',message:'ساعت پایان معتبر نیست.'});\n if(start_time&&end_time&&end_time<=start_time)errors.push({field:'time_range',message:'ساعت پایان باید بعد از ساعت شروع باشد.'});\n}\nif(valid_from&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(valid_from))errors.push({field:'valid_from',message:'تاریخ شروع باید YYYY-MM-DD باشد.'});\nif(valid_to&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(valid_to))errors.push({field:'valid_to',message:'تاریخ پایان باید YYYY-MM-DD باشد.'});\nif(valid_from&&valid_to&&valid_to<valid_from)errors.push({field:'validity_range',message:'تاریخ پایان اعتبار باید بعد از شروع باشد.'});\nif(!['api','manual','import','system'].includes(source_channel))errors.push({field:'source_channel',message:'کانال منبع معتبر نیست.'});\nif(!['get','list'].includes(action)&&!actor_name)errors.push({field:'actor_name',message:'نام انجام‌دهنده الزامی است.'});\nif(!['get','list'].includes(action)&&confirm_action!==true)errors.push({field:'confirm_action',message:'اقدام باید تأیید شود.'});\n\nreturn [{json:{\n action,clinic_name,doctor_id,doctor_name,schedule_id,weekday,start_time,end_time,\n valid_from,valid_to,actor_name,source_channel,confirm_action,\n validation_status:errors.length?'invalid':'valid',errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "8b2d3940-a595-4840-957f-90361b9e8dc9",
+      "name": "Normalize and Validate Manage Doctor Schedule"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "25ff0819-6ca7-4b06-a826-5eef2afb987e",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "9ea2a962-4e4a-4423-9e18-57e9ac87496e",
+      "name": "Is Manage Doctor Schedule Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH r AS (\n SELECT $1::TEXT action,$2::TEXT clinic_name,NULLIF($3::BIGINT,0) doctor_id,\n        NULLIF($4::TEXT,'') doctor_name,NULLIF($5::BIGINT,0) schedule_id,\n        NULLIF($6::INTEGER,0) weekday,NULLIF($7::TEXT,'')::TIME start_time,\n        NULLIF($8::TEXT,'')::TIME end_time,NULLIF($9::TEXT,'')::DATE valid_from,\n        NULLIF($10::TEXT,'')::DATE valid_to,NULLIF($11::TEXT,'') actor_name,\n        $12::TEXT source_channel\n),\ncontext AS (\n SELECT\n   c.id AS clinic_id,\n   r.clinic_name,\n   d.id AS doctor_id,\n   d.full_name AS doctor_name,\n   r.action,\n   r.schedule_id,\n   r.weekday,\n   r.start_time,\n   r.end_time,\n   r.valid_from,\n   r.valid_to,\n   r.actor_name,\n   r.source_channel\n FROM r\n JOIN clinics c\n   ON c.name=r.clinic_name\n JOIN doctors d\n   ON d.clinic_id=c.id\n  AND (\n        (r.doctor_id IS NOT NULL AND d.id=r.doctor_id)\n        OR\n        (\n          r.doctor_id IS NULL\n          AND r.doctor_name IS NOT NULL\n          AND d.full_name=r.doctor_name\n        )\n      )\n LIMIT 1\n),\ntarget AS (\n SELECT ds.*\n FROM doctor_schedules ds,context c\n WHERE ds.doctor_id=c.doctor_id\n   AND c.schedule_id IS NOT NULL\n   AND ds.id=c.schedule_id\n LIMIT 1\n),\noverlap AS (\n SELECT ds.id\n FROM doctor_schedules ds,context c\n WHERE ds.doctor_id=c.doctor_id\n   AND ds.is_active=TRUE\n   AND ds.weekday=c.weekday\n   AND ds.start_time<c.end_time\n   AND ds.end_time>c.start_time\n   AND (c.schedule_id IS NULL OR ds.id<>c.schedule_id)\n   AND (ds.valid_to IS NULL OR c.valid_from IS NULL OR ds.valid_to>=c.valid_from)\n   AND (c.valid_to IS NULL OR ds.valid_from IS NULL OR ds.valid_from<=c.valid_to)\n LIMIT 1\n),\ninserted AS (\n INSERT INTO doctor_schedules(\n   doctor_id,weekday,start_time,end_time,is_active,valid_from,valid_to\n )\n SELECT c.doctor_id,c.weekday,c.start_time,c.end_time,TRUE,c.valid_from,c.valid_to\n FROM context c\n WHERE c.action='create' AND NOT EXISTS(SELECT 1 FROM overlap)\n RETURNING *\n),\nupdated AS (\n UPDATE doctor_schedules ds\n SET weekday=CASE WHEN c.action='update' THEN c.weekday ELSE ds.weekday END,\n     start_time=CASE WHEN c.action='update' THEN c.start_time ELSE ds.start_time END,\n     end_time=CASE WHEN c.action='update' THEN c.end_time ELSE ds.end_time END,\n     valid_from=CASE WHEN c.action='update' THEN c.valid_from ELSE ds.valid_from END,\n     valid_to=CASE WHEN c.action='update' THEN c.valid_to ELSE ds.valid_to END,\n     is_active=CASE WHEN c.action='activate' THEN TRUE WHEN c.action='deactivate' THEN FALSE ELSE ds.is_active END\n FROM context c\n WHERE ds.id=(SELECT id FROM target)\n   AND c.action IN ('update','activate','deactivate')\n   AND (c.action<>'update' OR NOT EXISTS(SELECT 1 FROM overlap))\n RETURNING ds.*\n),\neffective AS (\n SELECT inserted.* FROM inserted\n UNION ALL SELECT updated.* FROM updated\n UNION ALL SELECT target.* FROM target,context c WHERE c.action='get'\n LIMIT 1\n),\nadmin_event AS (\n INSERT INTO clinic_admin_events(\n   clinic_id,entity_type,entity_id,action,actor_name,source_channel,before_data,after_data\n )\n SELECT\n   c.clinic_id,'doctor_schedule',\n   COALESCE((SELECT id FROM effective),(SELECT id FROM target)),\n   c.action,c.actor_name,c.source_channel,\n   COALESCE((SELECT TO_JSONB(target) FROM target),'{}'::JSONB),\n   COALESCE((SELECT TO_JSONB(effective) FROM effective),'{}'::JSONB)\n FROM context c\n WHERE c.action IN ('create','update','activate','deactivate')\n   AND EXISTS(SELECT 1 FROM effective)\n RETURNING id\n),\nlisted AS (\n SELECT ds.id,ds.weekday,ds.start_time,ds.end_time,ds.is_active,ds.valid_from,ds.valid_to\n FROM doctor_schedules ds,context c\n WHERE c.action='list' AND ds.doctor_id=c.doctor_id\n ORDER BY ds.weekday,ds.start_time,ds.id\n)\nSELECT\n CASE WHEN NOT EXISTS(SELECT 1 FROM context) THEN FALSE\n      WHEN c.action IN ('update','activate','deactivate','get') AND NOT EXISTS(SELECT 1 FROM target) THEN FALSE\n      WHEN c.action IN ('create','update') AND EXISTS(SELECT 1 FROM overlap) THEN FALSE\n      ELSE TRUE END success,\n CASE WHEN NOT EXISTS(SELECT 1 FROM context) THEN 'doctor_not_found'\n      WHEN c.action IN ('update','activate','deactivate','get') AND NOT EXISTS(SELECT 1 FROM target) THEN 'doctor_schedule_not_found'\n      WHEN c.action IN ('create','update') AND EXISTS(SELECT 1 FROM overlap) THEN 'doctor_schedule_overlap'\n      WHEN c.action='create' THEN 'doctor_schedule_created'\n      WHEN c.action='update' THEN 'doctor_schedule_updated'\n      WHEN c.action='activate' THEN 'doctor_schedule_activated'\n      WHEN c.action='deactivate' THEN 'doctor_schedule_deactivated'\n      WHEN c.action='get' THEN 'doctor_schedule_loaded'\n      ELSE 'doctor_schedules_listed' END result,\n c.doctor_id,c.doctor_name,\n (SELECT TO_JSONB(effective) FROM effective) doctor_schedule,\n COALESCE((SELECT JSONB_AGG(TO_JSONB(listed)) FROM listed),'[]'::JSONB) doctor_schedules,\n (SELECT id FROM admin_event) admin_event_id\nFROM context c\nUNION ALL\nSELECT FALSE,'doctor_not_found',NULL::BIGINT,NULL::TEXT,NULL::JSONB,'[]'::JSONB,NULL::BIGINT\nFROM r WHERE NOT EXISTS(SELECT 1 FROM context);",
+        "options": {
+          "queryReplacement": "={{ [ $json.action,$json.clinic_name,$json.doctor_id,$json.doctor_name,$json.schedule_id,$json.weekday,$json.start_time,$json.end_time,$json.valid_from,$json.valid_to,$json.actor_name,$json.source_channel ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "5837d713-b958-4e97-b396-6b44dc641515",
+      "name": "Manage Doctor Schedule"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات Manage Doctor Schedule نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "867045da-ef8c-47ce-a4b0-5602be163a71",
+      "name": "Return Manage Doctor Schedule Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## مدیریت برنامه کاری پزشک\n\nاقدام‌ها: create, update, activate, deactivate, get, list\n\nتداخل برنامه‌های فعال پیش از ثبت یا تغییر بررسی می‌شود.",
+        "height": 360,
+        "width": 510
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -280
+      ],
+      "id": "7db62abd-84ee-4345-a1c2-9ceb06f1d9a3",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Manage Doctor Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Manage Doctor Schedule": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Manage Doctor Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Manage Doctor Schedule": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Manage Doctor Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Manage Doctor Schedule": {
+      "main": [
+        [
+          {
+            "node": "Is Manage Doctor Schedule Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Manage Doctor Schedule Valid?": {
+      "main": [
+        [
+          {
+            "node": "Manage Doctor Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Manage Doctor Schedule Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

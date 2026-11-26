@@ -1,0 +1,67 @@
+{
+  "name": "40 - DB - Add Prescription Insurance Support Cases",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "77b10c1c-7dae-4b37-a920-758205b5a9ea",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DO $$\nDECLARE\n    constraint_record RECORD;\nBEGIN\n    FOR constraint_record IN\n        SELECT constraint_name\n        FROM information_schema.table_constraints\n        WHERE table_schema = 'public'\n          AND table_name = 'human_handoff_tasks'\n          AND constraint_type = 'CHECK'\n    LOOP\n        IF EXISTS (\n            SELECT 1\n            FROM pg_constraint constraint_item\n            INNER JOIN pg_class relation\n                ON relation.oid = constraint_item.conrelid\n            WHERE relation.relname = 'human_handoff_tasks'\n              AND constraint_item.conname =\n                  constraint_record.constraint_name\n              AND (\n                    pg_get_constraintdef(\n                        constraint_item.oid\n                    ) ILIKE '%source_type%'\n\n                    OR pg_get_constraintdef(\n                        constraint_item.oid\n                    ) ILIKE '%task_type%'\n                  )\n        ) THEN\n            EXECUTE FORMAT(\n                'ALTER TABLE human_handoff_tasks DROP CONSTRAINT %I',\n                constraint_record.constraint_name\n            );\n        END IF;\n    END LOOP;\nEND\n$$;\n\nALTER TABLE human_handoff_tasks\n    ADD CONSTRAINT human_handoff_tasks_source_type_check\n    CHECK (\n        source_type IN (\n            'appointment_confirmation',\n            'disruption_case',\n            'waitlist_offer',\n            'appointment',\n            'medication_case',\n            'insurance_case',\n            'feedback_case',\n            'manual'\n        )\n    );\n\nALTER TABLE human_handoff_tasks\n    ADD CONSTRAINT human_handoff_tasks_task_type_check\n    CHECK (\n        task_type IN (\n            'confirmation_no_response',\n            'reschedule_request',\n            'calendar_sync_issue',\n            'medical_review',\n            'complaint',\n            'insurance_support',\n            'manual_followup'\n        )\n    );\n\nCREATE TABLE IF NOT EXISTS prescription_insurance_support_cases (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    patient_id BIGINT NOT NULL\n        REFERENCES patients(id)\n        ON DELETE CASCADE,\n\n    appointment_id BIGINT\n        REFERENCES appointments(id)\n        ON DELETE SET NULL,\n\n    request_type TEXT NOT NULL\n        CHECK (\n            request_type IN (\n                'prescription_registration_status',\n                'insurance_submission_status',\n                'tracking_code_lookup',\n                'prescription_code_not_received',\n                'insurance_rejection',\n                'prescription_correction_request',\n                'coverage_question',\n                'pharmacy_dispensing_issue',\n                'duplicate_or_invalid_prescription',\n                'other_administrative_issue'\n            )\n        ),\n\n    insurance_provider TEXT,\n    prescription_identifier TEXT,\n    prescription_date DATE,\n    medication_name TEXT,\n\n    patient_message TEXT NOT NULL,\n\n    is_time_sensitive BOOLEAN NOT NULL DEFAULT FALSE,\n\n    source_channel TEXT NOT NULL DEFAULT 'whatsapp'\n        CHECK (\n            source_channel IN (\n                'whatsapp',\n                'sms',\n                'phone',\n                'telegram',\n                'web',\n                'manual'\n            )\n        ),\n\n    consent_to_contact BOOLEAN NOT NULL DEFAULT FALSE,\n\n    priority TEXT NOT NULL DEFAULT 'normal'\n        CHECK (\n            priority IN (\n                'low',\n                'normal',\n                'high',\n                'urgent'\n            )\n        ),\n\n    status TEXT NOT NULL DEFAULT 'new'\n        CHECK (\n            status IN (\n                'new',\n                'in_review',\n                'awaiting_patient',\n                'awaiting_external',\n                'resolved',\n                'closed'\n            )\n        ),\n\n    registration_status TEXT,\n    insurance_submission_status TEXT,\n    found_tracking_code TEXT,\n    rejection_reason TEXT,\n\n    handoff_task_id BIGINT\n        REFERENCES human_handoff_tasks(id)\n        ON DELETE SET NULL,\n\n    assigned_to TEXT,\n    response_to_patient TEXT,\n    resolution_note TEXT,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    resolved_at TIMESTAMPTZ\n);\n\nCREATE INDEX IF NOT EXISTS idx_insurance_cases_active\n    ON prescription_insurance_support_cases(\n        status,\n        priority,\n        created_at\n    )\n    WHERE status IN (\n        'new',\n        'in_review',\n        'awaiting_patient',\n        'awaiting_external'\n    );\n\nCREATE INDEX IF NOT EXISTS idx_insurance_cases_patient\n    ON prescription_insurance_support_cases(\n        patient_id,\n        created_at DESC\n    );\n\nCREATE INDEX IF NOT EXISTS idx_insurance_cases_appointment\n    ON prescription_insurance_support_cases(\n        appointment_id,\n        created_at DESC\n    )\n    WHERE appointment_id IS NOT NULL;\n\nCREATE INDEX IF NOT EXISTS idx_insurance_cases_prescription\n    ON prescription_insurance_support_cases(\n        prescription_identifier\n    )\n    WHERE prescription_identifier IS NOT NULL;\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار پشتیبانی نسخه، بیمه و کد رهگیری ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "8b1f0e0a-0f36-4c4f-8388-97bcc05e8905",
+      "name": "Create Prescription Insurance Support Structure"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nاین Workflow جدول `prescription_insurance_support_cases` را ایجاد می‌کند.\n\nهمچنین `insurance_support` و `insurance_case` را به صف ارجاع انسانی اضافه می‌کند.\n\nساختار برای وضعیت ثبت نسخه، ارسال بیمه، کد رهگیری، رد بیمه، اصلاح نسخه و مشکلات داروخانه است.",
+        "height": 330,
+        "width": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -270
+      ],
+      "id": "2b7c53e2-153c-445c-aae4-d55c29f5296f",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Prescription Insurance Support Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

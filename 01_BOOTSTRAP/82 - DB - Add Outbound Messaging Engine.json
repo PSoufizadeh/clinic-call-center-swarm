@@ -1,0 +1,67 @@
+{
+  "name": "82 - DB - Add Outbound Messaging Engine",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "d02e9a30-db7e-4921-abc3-c43118dc14ea",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS communication_channel_adapters (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    channel TEXT NOT NULL\n        CHECK (\n            channel IN (\n                'whatsapp',\n                'sms',\n                'email',\n                'phone',\n                'web_push',\n                'in_app'\n            )\n        ),\n\n    adapter_name TEXT NOT NULL,\n    adapter_url TEXT NOT NULL,\n    credential_reference TEXT,\n\n    enabled BOOLEAN NOT NULL DEFAULT FALSE,\n\n    request_timeout_seconds INTEGER NOT NULL DEFAULT 30\n        CHECK (\n            request_timeout_seconds BETWEEN 1 AND 300\n        ),\n\n    metadata JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    UNIQUE (\n        clinic_id,\n        channel\n    )\n);\n\nCREATE TABLE IF NOT EXISTS outbound_messages (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    patient_id BIGINT\n        REFERENCES patients(id)\n        ON DELETE SET NULL,\n\n    permission_check_id BIGINT\n        REFERENCES communication_permission_checks(id)\n        ON DELETE SET NULL,\n\n    channel TEXT NOT NULL\n        CHECK (\n            channel IN (\n                'whatsapp',\n                'sms',\n                'email',\n                'phone',\n                'web_push',\n                'in_app'\n            )\n        ),\n\n    purpose TEXT NOT NULL\n        CHECK (\n            purpose IN (\n                'appointment_reminder',\n                'appointment_update',\n                'waitlist_offer',\n                'post_visit_followup',\n                'clinical_followup',\n                'marketing',\n                'satisfaction_survey',\n                'general_information',\n                'human_handoff'\n            )\n        ),\n\n    message_type TEXT NOT NULL DEFAULT 'text'\n        CHECK (\n            message_type IN (\n                'text',\n                'template',\n                'media',\n                'interactive',\n                'email'\n            )\n        ),\n\n    template_code TEXT,\n    language TEXT NOT NULL DEFAULT 'fa'\n        CHECK (\n            language IN (\n                'fa',\n                'en',\n                'ar',\n                'unknown'\n            )\n        ),\n\n    recipient TEXT NOT NULL,\n    subject TEXT,\n    message_text TEXT NOT NULL,\n\n    payload JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    related_entity_type TEXT,\n    related_entity_id BIGINT,\n    request_reference TEXT,\n\n    idempotency_key TEXT NOT NULL,\n\n    priority INTEGER NOT NULL DEFAULT 5\n        CHECK (\n            priority BETWEEN 1 AND 9\n        ),\n\n    status TEXT NOT NULL DEFAULT 'queued'\n        CHECK (\n            status IN (\n                'queued',\n                'scheduled',\n                'processing',\n                'accepted',\n                'sent',\n                'delivered',\n                'read',\n                'failed',\n                'blocked',\n                'cancelled',\n                'dead_letter'\n            )\n        ),\n\n    scheduled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    attempt_count INTEGER NOT NULL DEFAULT 0\n        CHECK (\n            attempt_count >= 0\n        ),\n\n    max_attempts INTEGER NOT NULL DEFAULT 5\n        CHECK (\n            max_attempts BETWEEN 1 AND 20\n        ),\n\n    provider_message_id TEXT,\n\n    last_error_code TEXT,\n    last_error_message TEXT,\n\n    accepted_at TIMESTAMPTZ,\n    sent_at TIMESTAMPTZ,\n    delivered_at TIMESTAMPTZ,\n    read_at TIMESTAMPTZ,\n    failed_at TIMESTAMPTZ,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    UNIQUE (\n        clinic_id,\n        idempotency_key\n    )\n);\n\nCREATE TABLE IF NOT EXISTS outbound_message_attempts (\n    id BIGSERIAL PRIMARY KEY,\n\n    outbound_message_id BIGINT NOT NULL\n        REFERENCES outbound_messages(id)\n        ON DELETE CASCADE,\n\n    attempt_number INTEGER NOT NULL\n        CHECK (\n            attempt_number >= 1\n        ),\n\n    adapter_id BIGINT\n        REFERENCES communication_channel_adapters(id)\n        ON DELETE SET NULL,\n\n    request_payload JSONB NOT NULL DEFAULT '{}'::JSONB,\n    response_payload JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    result TEXT NOT NULL\n        CHECK (\n            result IN (\n                'accepted',\n                'failed',\n                'blocked',\n                'deferred',\n                'adapter_missing',\n                'timeout'\n            )\n        ),\n\n    provider_message_id TEXT,\n    error_code TEXT,\n    error_message TEXT,\n\n    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    completed_at TIMESTAMPTZ,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    UNIQUE (\n        outbound_message_id,\n        attempt_number\n    )\n);\n\nCREATE TABLE IF NOT EXISTS communication_delivery_events (\n    id BIGSERIAL PRIMARY KEY,\n\n    outbound_message_id BIGINT NOT NULL\n        REFERENCES outbound_messages(id)\n        ON DELETE CASCADE,\n\n    provider_message_id TEXT,\n\n    channel TEXT NOT NULL,\n\n    event_type TEXT NOT NULL\n        CHECK (\n            event_type IN (\n                'accepted',\n                'sent',\n                'delivered',\n                'read',\n                'failed',\n                'undeliverable',\n                'rejected',\n                'unknown'\n            )\n        ),\n\n    event_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    error_code TEXT,\n    error_message TEXT,\n\n    raw_event JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE TABLE IF NOT EXISTS outbound_message_dead_letters (\n    id BIGSERIAL PRIMARY KEY,\n\n    outbound_message_id BIGINT NOT NULL\n        REFERENCES outbound_messages(id)\n        ON DELETE CASCADE,\n\n    final_error_code TEXT,\n    final_error_message TEXT,\n\n    attempts_snapshot JSONB NOT NULL DEFAULT '[]'::JSONB,\n    message_snapshot JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    resolved BOOLEAN NOT NULL DEFAULT FALSE,\n    resolved_by TEXT,\n    resolution_note TEXT,\n    resolved_at TIMESTAMPTZ,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    UNIQUE (\n        outbound_message_id\n    )\n);\n\nCREATE INDEX IF NOT EXISTS idx_outbound_messages_dispatch\nON outbound_messages(\n    status,\n    next_attempt_at,\n    priority DESC,\n    created_at\n)\nWHERE status IN (\n    'queued',\n    'scheduled',\n    'failed'\n);\n\nCREATE INDEX IF NOT EXISTS idx_outbound_messages_patient\nON outbound_messages(\n    clinic_id,\n    patient_id,\n    created_at DESC\n);\n\nCREATE INDEX IF NOT EXISTS idx_outbound_messages_provider\nON outbound_messages(\n    provider_message_id\n)\nWHERE provider_message_id IS NOT NULL;\n\nCREATE INDEX IF NOT EXISTS idx_outbound_attempts_message\nON outbound_message_attempts(\n    outbound_message_id,\n    attempt_number DESC\n);\n\nCREATE INDEX IF NOT EXISTS idx_delivery_events_message\nON communication_delivery_events(\n    outbound_message_id,\n    event_at DESC\n);\n\nCREATE INDEX IF NOT EXISTS idx_dead_letters_unresolved\nON outbound_message_dead_letters(\n    created_at DESC\n)\nWHERE resolved = FALSE;\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار صف پیام، Adapter، Delivery Event، Retry و Dead Letter ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "823bdc05-06b7-4974-8475-99a58d89e3ff",
+      "name": "Create Outbound Messaging Structures"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nساختارهای ایجادشده:\n- Channel Adapter\n- صف پیام خروجی\n- تلاش‌های ارسال\n- رویدادهای Delivery\n- Dead Letter Queue\n\nاطلاعات محرمانه Provider داخل دیتابیس ذخیره نمی‌شود؛ فقط credential_reference ثبت می‌شود.",
+        "height": 390,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -590,
+        -300
+      ],
+      "id": "a997d087-40f3-42ca-8d96-4b99190e91d6",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Outbound Messaging Structures",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

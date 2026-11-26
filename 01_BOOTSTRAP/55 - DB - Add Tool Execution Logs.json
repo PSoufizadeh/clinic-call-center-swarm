@@ -1,0 +1,67 @@
+{
+  "name": "55 - DB - Add Tool Execution Logs",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "c969ec36-3ed6-44e0-bf7f-156d7dfa9078",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DO $$\nDECLARE\n    constraint_record RECORD;\nBEGIN\n    FOR constraint_record IN\n        SELECT constraint_name\n        FROM information_schema.table_constraints\n        WHERE table_schema = 'public'\n          AND table_name = 'human_handoff_tasks'\n          AND constraint_type = 'CHECK'\n    LOOP\n        IF EXISTS (\n            SELECT 1\n            FROM pg_constraint constraint_item\n            INNER JOIN pg_class relation\n                ON relation.oid = constraint_item.conrelid\n            WHERE relation.relname = 'human_handoff_tasks'\n              AND constraint_item.conname =\n                  constraint_record.constraint_name\n              AND (\n                    pg_get_constraintdef(\n                        constraint_item.oid\n                    ) ILIKE '%source_type%'\n\n                    OR pg_get_constraintdef(\n                        constraint_item.oid\n                    ) ILIKE '%task_type%'\n                  )\n        ) THEN\n            EXECUTE FORMAT(\n                'ALTER TABLE human_handoff_tasks DROP CONSTRAINT %I',\n                constraint_record.constraint_name\n            );\n        END IF;\n    END LOOP;\nEND\n$$;\n\nALTER TABLE human_handoff_tasks\n    ADD CONSTRAINT human_handoff_tasks_source_type_check\n    CHECK (\n        source_type IN (\n            'appointment_confirmation',\n            'disruption_case',\n            'waitlist_offer',\n            'appointment',\n            'medication_case',\n            'insurance_case',\n            'feedback_case',\n            'knowledge_query',\n            'conversation_message',\n            'manual'\n        )\n    );\n\nALTER TABLE human_handoff_tasks\n    ADD CONSTRAINT human_handoff_tasks_task_type_check\n    CHECK (\n        task_type IN (\n            'confirmation_no_response',\n            'reschedule_request',\n            'calendar_sync_issue',\n            'medical_review',\n            'complaint',\n            'insurance_support',\n            'information_request',\n            'conversation_handoff',\n            'manual_followup'\n        )\n    );\n\nCREATE TABLE IF NOT EXISTS tool_execution_logs (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    session_id BIGINT NOT NULL\n        REFERENCES conversation_sessions(id)\n        ON DELETE CASCADE,\n\n    input_message_id BIGINT NOT NULL\n        REFERENCES conversation_messages(id)\n        ON DELETE CASCADE,\n\n    tool_action TEXT NOT NULL,\n\n    target_workflow_number INTEGER,\n    target_workflow_name TEXT,\n\n    endpoint TEXT NOT NULL,\n    http_method TEXT NOT NULL DEFAULT 'POST'\n        CHECK (\n            http_method IN (\n                'GET',\n                'POST',\n                'PUT',\n                'PATCH',\n                'DELETE'\n            )\n        ),\n\n    request_payload JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    status TEXT NOT NULL DEFAULT 'pending'\n        CHECK (\n            status IN (\n                'pending',\n                'running',\n                'succeeded',\n                'failed',\n                'skipped',\n                'blocked'\n            )\n        ),\n\n    idempotency_key TEXT NOT NULL UNIQUE,\n\n    attempt_count INTEGER NOT NULL DEFAULT 0\n        CHECK (attempt_count >= 0),\n\n    started_at TIMESTAMPTZ,\n    completed_at TIMESTAMPTZ,\n\n    duration_ms INTEGER\n        CHECK (\n            duration_ms IS NULL\n            OR duration_ms >= 0\n        ),\n\n    http_status INTEGER,\n\n    response_payload JSONB,\n\n    error_type TEXT,\n    error_message TEXT,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE INDEX IF NOT EXISTS idx_tool_execution_message\n    ON tool_execution_logs(\n        input_message_id,\n        created_at DESC\n    );\n\nCREATE INDEX IF NOT EXISTS idx_tool_execution_session\n    ON tool_execution_logs(\n        session_id,\n        created_at DESC\n    );\n\nCREATE INDEX IF NOT EXISTS idx_tool_execution_active\n    ON tool_execution_logs(\n        status,\n        created_at\n    )\n    WHERE status IN (\n        'pending',\n        'running',\n        'failed'\n    );\n\nCREATE INDEX IF NOT EXISTS idx_tool_execution_action\n    ON tool_execution_logs(\n        tool_action,\n        created_at DESC\n    );\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار ثبت اجرای ابزارها و ارجاع مکالمه به انسان ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "a14064e3-6880-444b-ada7-6d1c403bcbdd",
+      "name": "Create Tool Execution Log Structure"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nاین Workflow جدول `tool_execution_logs` را ایجاد می‌کند.\n\nهر فراخوانی ابزار با Payload، وضعیت، تعداد تلاش، نتیجه و خطا ثبت می‌شود.\n\nهمچنین `conversation_message` و `conversation_handoff` به ساختار ارجاع انسانی افزوده می‌شوند.",
+        "height": 330,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -570,
+        -270
+      ],
+      "id": "2443e501-7fe2-4154-8bd7-9c2760c9ccfc",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Tool Execution Log Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

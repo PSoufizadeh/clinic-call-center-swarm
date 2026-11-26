@@ -1,0 +1,514 @@
+{
+  "name": "33 - API - Process Human Handoff Task - Corrected V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1120,
+        176
+      ],
+      "id": "501f85e3-be24-4456-abf8-33606957c7fc",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "03b6f8ef-7aff-4582-8f15-9df3e437f205",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "e541cb91-8dc9-41ca-8a44-7800c7fcfdf2",
+              "name": "handoff_task_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "848f1185-d091-482e-86fc-69cd715dbf29",
+              "name": "action",
+              "value": "claim",
+              "type": "string"
+            },
+            {
+              "id": "924897f3-0cb4-4dcc-9404-d6d7019f887f",
+              "name": "actor_name",
+              "value": "منشی آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "76252c44-9ba0-4e4b-998b-c70ef0c3fd5d",
+              "name": "contact_channel",
+              "value": "phone",
+              "type": "string"
+            },
+            {
+              "id": "511b8e20-570b-40c5-a5c2-83a74909c734",
+              "name": "note",
+              "value": "پیگیری توسط منشی",
+              "type": "string"
+            },
+            {
+              "id": "617f2e58-a2ef-497b-9c93-9db7e6b1eb1f",
+              "name": "next_followup_minutes",
+              "value": 60,
+              "type": "number"
+            },
+            {
+              "id": "b200cb56-2142-4645-ade3-03b1fab85198",
+              "name": "confirm_action",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -880,
+        176
+      ],
+      "id": "5eefe6f6-ab8d-4ba5-aabc-4d68d3803d54",
+      "name": "Manual Handoff Action"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/handoffs/process",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -880,
+        -96
+      ],
+      "id": "0bd419e0-b831-4708-853e-c49e869aa0ac",
+      "name": "Webhook - Process Handoff Task"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst clinic_name = text(input.clinic_name);\nconst handoff_task_id = Number(input.handoff_task_id);\nconst action = text(input.action).toLowerCase();\nconst actor_name = text(input.actor_name);\nconst contact_channel = text(input.contact_channel || 'phone').toLowerCase();\nconst note = text(input.note);\nconst next_followup_minutes = Number(input.next_followup_minutes ?? 60);\nconst confirm_action = toBoolean(input.confirm_action);\n\nconst allowedActions = [\n  'claim',\n  'release',\n  'mark_no_answer',\n  'resolve_confirmed',\n  'resolve_cancelled',\n  'resolve_reschedule',\n  'close_no_action',\n];\n\nconst allowedChannels = [\n  'phone',\n  'whatsapp',\n  'sms',\n  'telegram',\n  'email',\n  'in_person',\n  'other',\n];\n\nconst errors = [];\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (!Number.isInteger(handoff_task_id) || handoff_task_id < 1) {\n  errors.push({\n    field: 'handoff_task_id',\n    message: 'handoff_task_id باید یک عدد صحیح بزرگ‌تر از صفر باشد.',\n  });\n}\n\nif (!allowedActions.includes(action)) {\n  errors.push({\n    field: 'action',\n    message: 'action انتخاب‌شده معتبر نیست.',\n  });\n}\n\nif (!actor_name) {\n  errors.push({\n    field: 'actor_name',\n    message: 'نام کاربر یا منشی انجام‌دهنده الزامی است.',\n  });\n}\n\nif (!allowedChannels.includes(contact_channel)) {\n  errors.push({\n    field: 'contact_channel',\n    message: 'کانال تماس معتبر نیست.',\n  });\n}\n\nif (note.length > 1000) {\n  errors.push({\n    field: 'note',\n    message: 'یادداشت نباید بیشتر از 1000 کاراکتر باشد.',\n  });\n}\n\nif (\n  !Number.isInteger(next_followup_minutes) ||\n  next_followup_minutes < 5 ||\n  next_followup_minutes > 10080\n) {\n  errors.push({\n    field: 'next_followup_minutes',\n    message: 'زمان پیگیری بعدی باید بین 5 دقیقه و 7 روز باشد.',\n  });\n}\n\nif (confirm_action !== true) {\n  errors.push({\n    field: 'confirm_action',\n    message: 'اقدام منشی باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    clinic_name,\n    handoff_task_id,\n    action,\n    actor_name,\n    contact_channel,\n    note,\n    next_followup_minutes,\n    confirm_action,\n    validation_status: errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        48
+      ],
+      "id": "9f7f9362-f26e-4975-ae8f-5d2be7b7b4ac",
+      "name": "Normalize and Validate Handoff Action"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ecec0dcf-4d2d-42be-a0b2-faac1b3ae9a8",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -368,
+        48
+      ],
+      "id": "0f87c43f-33c4-45ca-a4fb-6ce6dc3ae92e",
+      "name": "Is Handoff Action Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        $2::BIGINT AS handoff_task_id,\n        $3::TEXT AS action,\n        $4::TEXT AS actor_name,\n        $5::TEXT AS contact_channel,\n        $6::TEXT AS note,\n        LEAST(\n            GREATEST($7::INTEGER, 5),\n            10080\n        ) AS next_followup_minutes\n),\n\ntask_context AS (\n    SELECT\n        task.id AS handoff_task_id,\n        task.clinic_id,\n        task.patient_id,\n        task.appointment_id,\n        task.task_type,\n        task.source_type,\n        task.source_record_id,\n        task.priority,\n        task.status AS task_status,\n        task.reason,\n        task.due_at,\n        task.assigned_to,\n        task.attempt_count,\n\n        clinic.name AS clinic_name,\n        clinic.timezone,\n\n        patient.full_name AS patient_name,\n        patient.mobile,\n\n        appointment.starts_at,\n        appointment.ends_at,\n        appointment.status AS appointment_status,\n        appointment.google_calendar_event_id,\n\n        doctor.full_name AS doctor_name,\n        service.name AS service_name,\n\n        request.action,\n        request.actor_name,\n        request.contact_channel,\n        request.note,\n        request.next_followup_minutes\n\n    FROM human_handoff_tasks task\n\n    INNER JOIN request_data request\n        ON request.handoff_task_id = task.id\n\n    INNER JOIN clinics clinic\n        ON clinic.id = task.clinic_id\n       AND clinic.name = request.clinic_name\n\n    LEFT JOIN patients patient\n        ON patient.id = task.patient_id\n\n    LEFT JOIN appointments appointment\n        ON appointment.id = task.appointment_id\n\n    LEFT JOIN doctors doctor\n        ON doctor.id = appointment.doctor_id\n\n    LEFT JOIN services service\n        ON service.id = appointment.service_id\n\n    LIMIT 1\n),\n\nclaimed_task AS (\n    UPDATE human_handoff_tasks task\n\n    SET\n        status = 'in_progress',\n        assigned_to = context.actor_name,\n        updated_at = NOW()\n\n    FROM task_context context\n\n    WHERE context.action = 'claim'\n      AND context.task_status = 'open'\n      AND task.id = context.handoff_task_id\n\n    RETURNING task.id\n),\n\nreleased_task AS (\n    UPDATE human_handoff_tasks task\n\n    SET\n        status = 'open',\n        assigned_to = NULL,\n        updated_at = NOW()\n\n    FROM task_context context\n\n    WHERE context.action = 'release'\n      AND context.task_status = 'in_progress'\n      AND task.id = context.handoff_task_id\n\n    RETURNING task.id\n),\n\nno_answer_task AS (\n    UPDATE human_handoff_tasks task\n\n    SET\n        status = 'open',\n        assigned_to = context.actor_name,\n\n        attempt_count =\n            COALESCE(task.attempt_count, 0) + 1,\n\n        last_attempt_at = NOW(),\n        last_contact_channel = context.contact_channel,\n        last_contact_outcome = 'no_answer',\n\n        due_at = NOW()\n            + MAKE_INTERVAL(\n                mins => context.next_followup_minutes\n            ),\n\n        resolution_note = NULLIF(context.note, ''),\n        updated_at = NOW()\n\n    FROM task_context context\n\n    WHERE context.action = 'mark_no_answer'\n      AND context.task_status IN ('open', 'in_progress')\n      AND task.id = context.handoff_task_id\n\n    RETURNING\n        task.id,\n        task.attempt_count,\n        task.due_at\n),\n\nconfirmed_appointment AS (\n    UPDATE appointments appointment\n\n    SET\n        status = 'confirmed',\n        updated_at = NOW()\n\n    FROM task_context context\n\n    WHERE context.action = 'resolve_confirmed'\n      AND context.task_status IN ('open', 'in_progress')\n      AND appointment.id = context.appointment_id\n      AND appointment.status IN ('pending', 'confirmed')\n      AND appointment.starts_at > NOW()\n\n    RETURNING appointment.id\n),\n\nconfirmed_source AS (\n    UPDATE appointment_confirmation_requests confirmation\n\n    SET\n        status = 'confirmed',\n        responded_at = COALESCE(\n            confirmation.responded_at,\n            NOW()\n        ),\n        response_note = (\n            SELECT NULLIF(note, '')\n            FROM request_data\n        ),\n        updated_at = NOW()\n\n    FROM task_context context\n\n    INNER JOIN confirmed_appointment appointment\n        ON appointment.id = context.appointment_id\n\n    WHERE context.source_type = 'appointment_confirmation'\n      AND confirmation.id = context.source_record_id\n      AND confirmation.status IN ('pending', 'expired')\n\n    RETURNING confirmation.id\n),\n\nresolved_confirmed_task AS (\n    UPDATE human_handoff_tasks task\n\n    SET\n        status = 'resolved',\n        assigned_to = context.actor_name,\n\n        attempt_count =\n            COALESCE(task.attempt_count, 0) + 1,\n\n        last_attempt_at = NOW(),\n        last_contact_channel = context.contact_channel,\n        last_contact_outcome = 'resolved',\n\n        resolution_code = 'patient_confirmed',\n        resolution_note = NULLIF(context.note, ''),\n\n        resolved_at = NOW(),\n        updated_at = NOW()\n\n    FROM task_context context\n\n    INNER JOIN confirmed_appointment appointment\n        ON appointment.id = context.appointment_id\n\n    WHERE task.id = context.handoff_task_id\n\n    RETURNING task.id\n),\n\ncancelled_appointment AS (\n    UPDATE appointments appointment\n\n    SET\n        status = 'cancelled',\n\n        cancellation_reason =\n            COALESCE(\n                NULLIF(context.note, ''),\n                'لغو نوبت پس از پیگیری منشی انسانی'\n            ),\n\n        cancelled_at = NOW(),\n        updated_at = NOW()\n\n    FROM task_context context\n\n    WHERE context.action = 'resolve_cancelled'\n      AND context.task_status IN ('open', 'in_progress')\n      AND appointment.id = context.appointment_id\n      AND appointment.status IN ('pending', 'confirmed')\n      AND appointment.starts_at > NOW()\n\n    RETURNING appointment.id\n),\n\ncancelled_source AS (\n    UPDATE appointment_confirmation_requests confirmation\n\n    SET\n        status = 'cancelled',\n        responded_at = COALESCE(\n            confirmation.responded_at,\n            NOW()\n        ),\n        response_note = (\n            SELECT NULLIF(note, '')\n            FROM request_data\n        ),\n        updated_at = NOW()\n\n    FROM task_context context\n\n    INNER JOIN cancelled_appointment appointment\n        ON appointment.id = context.appointment_id\n\n    WHERE context.source_type = 'appointment_confirmation'\n      AND confirmation.id = context.source_record_id\n      AND confirmation.status IN ('pending', 'expired')\n\n    RETURNING confirmation.id\n),\n\nresolved_cancelled_task AS (\n    UPDATE human_handoff_tasks task\n\n    SET\n        status = 'resolved',\n        assigned_to = context.actor_name,\n\n        attempt_count =\n            COALESCE(task.attempt_count, 0) + 1,\n\n        last_attempt_at = NOW(),\n        last_contact_channel = context.contact_channel,\n        last_contact_outcome = 'resolved',\n\n        resolution_code = 'appointment_cancelled',\n        resolution_note = NULLIF(context.note, ''),\n\n        resolved_at = NOW(),\n        updated_at = NOW()\n\n    FROM task_context context\n\n    INNER JOIN cancelled_appointment appointment\n        ON appointment.id = context.appointment_id\n\n    WHERE task.id = context.handoff_task_id\n\n    RETURNING task.id\n),\n\nreschedule_source AS (\n    UPDATE appointment_confirmation_requests confirmation\n\n    SET\n        status = 'reschedule_requested',\n        responded_at = COALESCE(\n            confirmation.responded_at,\n            NOW()\n        ),\n        response_note = context.note,\n        updated_at = NOW()\n\n    FROM task_context context\n\n    WHERE context.action = 'resolve_reschedule'\n      AND context.task_status IN ('open', 'in_progress')\n      AND context.source_type = 'appointment_confirmation'\n      AND confirmation.id = context.source_record_id\n      AND confirmation.status IN ('pending', 'expired')\n      AND context.appointment_status IN ('pending', 'confirmed')\n      AND context.starts_at > NOW()\n\n    RETURNING confirmation.id\n),\n\nresolved_reschedule_task AS (\n    UPDATE human_handoff_tasks task\n\n    SET\n        status = 'resolved',\n        assigned_to = context.actor_name,\n\n        attempt_count =\n            COALESCE(task.attempt_count, 0) + 1,\n\n        last_attempt_at = NOW(),\n        last_contact_channel = context.contact_channel,\n        last_contact_outcome = 'resolved',\n\n        resolution_code = 'reschedule_requested',\n        resolution_note = NULLIF(context.note, ''),\n\n        resolved_at = NOW(),\n        updated_at = NOW()\n\n    FROM task_context context\n\n    INNER JOIN reschedule_source source\n        ON TRUE\n\n    WHERE task.id = context.handoff_task_id\n\n    RETURNING task.id\n),\n\nclosed_no_action_task AS (\n    UPDATE human_handoff_tasks task\n\n    SET\n        status = 'resolved',\n        assigned_to = context.actor_name,\n\n        resolution_code = 'no_action_needed',\n        resolution_note = NULLIF(context.note, ''),\n\n        resolved_at = NOW(),\n        updated_at = NOW()\n\n    FROM task_context context\n\n    WHERE context.action = 'close_no_action'\n      AND context.task_status IN ('open', 'in_progress')\n      AND task.id = context.handoff_task_id\n\n    RETURNING task.id\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM task_context\n        )\n            THEN FALSE\n\n        WHEN (\n            SELECT task_status\n            FROM task_context\n        ) IN ('resolved', 'cancelled')\n            THEN FALSE\n\n        WHEN request.action = 'claim'\n             AND EXISTS (\n                SELECT 1 FROM claimed_task\n             )\n            THEN TRUE\n\n        WHEN request.action = 'release'\n             AND EXISTS (\n                SELECT 1 FROM released_task\n             )\n            THEN TRUE\n\n        WHEN request.action = 'mark_no_answer'\n             AND EXISTS (\n                SELECT 1 FROM no_answer_task\n             )\n            THEN TRUE\n\n        WHEN request.action = 'resolve_confirmed'\n             AND EXISTS (\n                SELECT 1 FROM resolved_confirmed_task\n             )\n            THEN TRUE\n\n        WHEN request.action = 'resolve_cancelled'\n             AND EXISTS (\n                SELECT 1 FROM resolved_cancelled_task\n             )\n            THEN TRUE\n\n        WHEN request.action = 'resolve_reschedule'\n             AND EXISTS (\n                SELECT 1 FROM resolved_reschedule_task\n             )\n            THEN TRUE\n\n        WHEN request.action = 'close_no_action'\n             AND EXISTS (\n                SELECT 1 FROM closed_no_action_task\n             )\n            THEN TRUE\n\n        ELSE FALSE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM task_context\n        )\n            THEN 'handoff_task_not_found'\n\n        WHEN (\n            SELECT task_status\n            FROM task_context\n        ) IN ('resolved', 'cancelled')\n            THEN 'handoff_task_closed'\n\n        WHEN request.action = 'claim'\n             AND EXISTS (\n                SELECT 1 FROM claimed_task\n             )\n            THEN 'handoff_task_claimed'\n\n        WHEN request.action = 'release'\n             AND EXISTS (\n                SELECT 1 FROM released_task\n             )\n            THEN 'handoff_task_released'\n\n        WHEN request.action = 'mark_no_answer'\n             AND EXISTS (\n                SELECT 1 FROM no_answer_task\n             )\n            THEN 'no_answer_recorded'\n\n        WHEN request.action = 'resolve_confirmed'\n             AND EXISTS (\n                SELECT 1 FROM resolved_confirmed_task\n             )\n            THEN 'patient_confirmed'\n\n        WHEN request.action = 'resolve_cancelled'\n             AND EXISTS (\n                SELECT 1 FROM resolved_cancelled_task\n             )\n            THEN 'appointment_cancelled'\n\n        WHEN request.action = 'resolve_reschedule'\n             AND EXISTS (\n                SELECT 1 FROM resolved_reschedule_task\n             )\n            THEN 'reschedule_requested'\n\n        WHEN request.action = 'close_no_action'\n             AND EXISTS (\n                SELECT 1 FROM closed_no_action_task\n             )\n            THEN 'handoff_closed_no_action'\n\n        ELSE 'handoff_action_conflict'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM task_context\n        )\n            THEN 'تسک مطابق شناسه و کلینیک واردشده پیدا نشد.'\n\n        WHEN (\n            SELECT task_status\n            FROM task_context\n        ) IN ('resolved', 'cancelled')\n            THEN 'این تسک قبلاً بسته شده است.'\n\n        WHEN request.action = 'claim'\n             AND EXISTS (\n                SELECT 1 FROM claimed_task\n             )\n            THEN 'تسک به منشی انتخاب‌شده تخصیص یافت.'\n\n        WHEN request.action = 'release'\n             AND EXISTS (\n                SELECT 1 FROM released_task\n             )\n            THEN 'تسک آزاد شد و به صف عمومی بازگشت.'\n\n        WHEN request.action = 'mark_no_answer'\n             AND EXISTS (\n                SELECT 1 FROM no_answer_task\n             )\n            THEN 'عدم پاسخ بیمار ثبت و زمان پیگیری بعدی تعیین شد.'\n\n        WHEN request.action = 'resolve_confirmed'\n             AND EXISTS (\n                SELECT 1 FROM resolved_confirmed_task\n             )\n            THEN 'حضور بیمار توسط منشی تأیید و تسک بسته شد.'\n\n        WHEN request.action = 'resolve_cancelled'\n             AND EXISTS (\n                SELECT 1 FROM resolved_cancelled_task\n             )\n            THEN 'نوبت بیمار لغو و تسک بسته شد.'\n\n        WHEN request.action = 'resolve_reschedule'\n             AND EXISTS (\n                SELECT 1 FROM resolved_reschedule_task\n             )\n            THEN 'درخواست جابه‌جایی بیمار ثبت و تسک بسته شد.'\n\n        WHEN request.action = 'close_no_action'\n             AND EXISTS (\n                SELECT 1 FROM closed_no_action_task\n             )\n            THEN 'تسک بدون نیاز به اقدام بیشتر بسته شد.'\n\n        ELSE 'وضعیت تسک یا نوبت در فاصله بررسی تا ثبت اقدام تغییر کرده است.'\n    END AS message,\n\n    request.action,\n\n    (\n        SELECT handoff_task_id\n        FROM task_context\n    ) AS handoff_task_id,\n\n    (\n        SELECT appointment_id\n        FROM task_context\n    ) AS appointment_id,\n\n    (\n        SELECT patient_name\n        FROM task_context\n    ) AS patient_name,\n\n    (\n        SELECT mobile\n        FROM task_context\n    ) AS mobile,\n\n    (\n        SELECT doctor_name\n        FROM task_context\n    ) AS doctor_name,\n\n    (\n        SELECT service_name\n        FROM task_context\n    ) AS service_name,\n\n    (\n        SELECT google_calendar_event_id\n        FROM task_context\n    ) AS google_calendar_event_id,\n\n    (\n        SELECT attempt_count\n        FROM no_answer_task\n    ) AS attempt_count,\n\n    (\n        SELECT due_at\n        FROM no_answer_task\n    ) AS next_due_at,\n\n    CASE\n        WHEN request.action = 'resolve_cancelled'\n             AND EXISTS (\n                SELECT 1 FROM resolved_cancelled_task\n             )\n            THEN 'delete'\n\n        WHEN request.action = 'resolve_reschedule'\n             AND EXISTS (\n                SELECT 1 FROM resolved_reschedule_task\n             )\n            THEN 'find_available_slots'\n\n        ELSE 'none'\n    END AS next_action\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.handoff_task_id,\n  $json.action,\n  $json.actor_name,\n  $json.contact_channel,\n  $json.note,\n  $json.next_followup_minutes\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -112,
+        -48
+      ],
+      "id": "8492a43c-abd8-4447-a96c-8d3e0be3f009",
+      "name": "Apply Human Handoff Action"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fe2c72b4-4974-4828-b13a-960569763290",
+              "leftValue": "={{ $json.success === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        144,
+        -48
+      ],
+      "id": "ba664490-b505-425c-817b-e3932743a267",
+      "name": "Was Handoff Action Applied?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1c788edb-9e87-470c-b67f-17d96bda01e0",
+              "leftValue": "={{ $json.next_action }}",
+              "rightValue": "delete",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        400,
+        -144
+      ],
+      "id": "8510a768-cf3e-40a4-8b4d-b979ed12c342",
+      "name": "Should Delete Handoff Calendar Event?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b6894181-41f0-4b27-b4ba-dcce396f5bdf",
+              "leftValue": "={{ Boolean($json.google_calendar_event_id) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        656,
+        -240
+      ],
+      "id": "274c2861-5b12-47b1-9fdf-ec60e389a26d",
+      "name": "Has Handoff Calendar Event?"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "YOUR_CALENDAR_ID",
+          "mode": "list",
+          "cachedResultName": "Clinic Demo - Dr Test"
+        },
+        "eventId": "={{ $('Apply Human Handoff Action').first().json.google_calendar_event_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        912,
+        -336
+      ],
+      "id": "3d45407f-d7f7-4f14-905e-08786f5b3ff7",
+      "name": "Delete Handoff Calendar Event",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const db = $('Apply Human Handoff Action').first().json;\n\nconst hasError =\n  Boolean($json.error) ||\n  Boolean($json.errorMessage) ||\n  $json.success === false;\n\nreturn [{\n  json: {\n    ...db,\n    calendar_sync_status:\n      hasError ? 'delete_failed' : 'deleted',\n    calendar_sync_message:\n      hasError\n        ? 'نوبت لغو شد، اما حذف رویداد Google Calendar نیاز به بررسی دارد.'\n        : 'رویداد Google Calendar حذف شد.',\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        -240
+      ],
+      "id": "6e53cd85-f7f0-4293-adec-e04dcfc4b512",
+      "name": "Return Handoff Cancellation Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$json,\n    calendar_sync_status: 'not_required',\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        -48
+      ],
+      "id": "8332e639-19f4-4af9-94c8-f83f322e95fe",
+      "name": "Return Handoff Action Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: $json.result ?? 'handoff_action_failed',\n    message: $json.message ?? 'اقدام روی تسک انجام نشد.',\n    handoff_task_id: $json.handoff_task_id ?? null,\n    appointment_id: $json.appointment_id ?? null,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        80
+      ],
+      "id": "a93fbb59-dff9-472c-9ca7-e711060efb30",
+      "name": "Return Handoff Action Rejection"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: 'invalid_request',\n    message: 'اطلاعات اقدام منشی ناقص یا نامعتبر است.',\n    errors: $json.errors ?? [],\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        176
+      ],
+      "id": "f9e6c20a-b655-425b-9752-b8703659181a",
+      "name": "Return Handoff Action Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## پردازش تسک منشی\n\nhandoff_task_id را از Workflow شماره 32 بردار.\n\n**actionهای مجاز:**\n- claim: تخصیص تسک به منشی\n- release: بازگرداندن تسک به صف عمومی\n- mark_no_answer: ثبت عدم پاسخ و زمان پیگیری بعدی\n- resolve_confirmed: تأیید حضور بیمار\n- resolve_cancelled: لغو نوبت و حذف Calendar\n- resolve_reschedule: ثبت درخواست جابه‌جایی\n- close_no_action: بستن بدون اقدام بیشتر\n\nمقدار پیش‌فرض روی claim قرار دارد.\n\nاصلاح V2:\nدر صورت نبود Calendar Event، وضعیت not_present برگردانده می‌شود.",
+        "height": 430,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1320,
+        -320
+      ],
+      "id": "66c3ab8d-9c5b-4b57-a7e8-90ceeaaa81ec",
+      "name": "How to Use"
+    },
+    {
+      "parameters": {
+        "jsCode": "const db = $('Apply Human Handoff Action').first().json;\n\nreturn [{\n  json: {\n    ...db,\n    calendar_sync_status: 'not_present',\n    calendar_sync_message:\n      'اقدام روی تسک انجام شد و رویدادی در Google Calendar برای حذف وجود نداشت.',\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        240
+      ],
+      "id": "c2f62472-75d0-462b-85a8-1676905aa2b6",
+      "name": "Return Handoff Without Calendar Event"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Handoff Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Handoff Action": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Handoff Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Process Handoff Task": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Handoff Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Handoff Action": {
+      "main": [
+        [
+          {
+            "node": "Is Handoff Action Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Handoff Action Valid?": {
+      "main": [
+        [
+          {
+            "node": "Apply Human Handoff Action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Handoff Action Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply Human Handoff Action": {
+      "main": [
+        [
+          {
+            "node": "Was Handoff Action Applied?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Was Handoff Action Applied?": {
+      "main": [
+        [
+          {
+            "node": "Should Delete Handoff Calendar Event?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Handoff Action Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Delete Handoff Calendar Event?": {
+      "main": [
+        [
+          {
+            "node": "Has Handoff Calendar Event?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Handoff Action Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Handoff Calendar Event?": {
+      "main": [
+        [
+          {
+            "node": "Delete Handoff Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Handoff Without Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Handoff Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Return Handoff Cancellation Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

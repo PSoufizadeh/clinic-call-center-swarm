@@ -1,0 +1,649 @@
+{
+  "name": "84 - Core - Dispatch Queued Messages - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1640,
+        240
+      ],
+      "id": "8c94e81d-422d-453f-97c8-0330ddf619aa",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ef4abf3a-0eb6-4eee-b6f7-b04abe168266",
+              "name": "batch_size",
+              "value": 10,
+              "type": "number"
+            },
+            {
+              "id": "0d85fa49-fd4b-4f02-b287-0775f5d73b91",
+              "name": "webhook_base_url",
+              "value": "http://localhost:5678/webhook",
+              "type": "string"
+            },
+            {
+              "id": "d43a37e5-56f4-42aa-a465-1c068fe4a776",
+              "name": "confirm_dispatch",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1400,
+        240
+      ],
+      "id": "f5917522-11fa-47ee-86ae-690ddb51d24e",
+      "name": "Manual Dispatch Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/communications/messages/dispatch",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1400,
+        -80
+      ],
+      "id": "3b1ec38f-38b1-455e-ae88-f541b07e114c",
+      "name": "Webhook - Dispatch Queued Messages"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input=$json.body??$json;\nconst text=v=>v===null||v===undefined?'':String(v).trim();\nconst bool=v=>typeof v==='boolean'?v:['true','1','yes','on'].includes(text(v).toLowerCase());\n\nconst batch_size=Number(input.batch_size??10);\nconst webhook_base_url=text(input.webhook_base_url||'http://localhost:5678/webhook').replace(/\\/+$/,'');\nconst confirm_dispatch=bool(input.confirm_dispatch);\nconst errors=[];\n\nif(!Number.isInteger(batch_size)||batch_size<1||batch_size>100){\n  errors.push({field:'batch_size',message:'اندازه Batch باید بین 1 و 100 باشد.'});\n}\nif(!/^https?:\\/\\/.+/i.test(webhook_base_url)){\n  errors.push({field:'webhook_base_url',message:'آدرس Webhook معتبر نیست.'});\n}\nif(confirm_dispatch!==true){\n  errors.push({field:'confirm_dispatch',message:'Dispatch باید تأیید شود.'});\n}\n\nreturn [{json:{\n  batch_size,webhook_base_url,\n  permission_url:`${webhook_base_url}/clinic/communications/check-permission`,\n  delivery_callback_url:`${webhook_base_url}/clinic/communications/messages/delivery-status`,\n  confirm_dispatch,\n  validation_status:errors.length?'invalid':'valid',\n  errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1128,
+        80
+      ],
+      "id": "9841289c-2a1b-4d04-8cc4-1d180def3396",
+      "name": "Normalize and Validate Dispatch Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7c3a2e41-adf4-4232-8a06-a6d39310bf46",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -888,
+        80
+      ],
+      "id": "ca5dab23-4c39-4cb0-89b4-ac8e10cbe757",
+      "name": "Is Dispatch Request Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH due AS (\n  SELECT m.id\n  FROM outbound_messages m\n  WHERE m.status IN ('queued','scheduled','failed')\n    AND m.next_attempt_at<=NOW()\n    AND m.scheduled_at<=NOW()\n    AND m.attempt_count<m.max_attempts\n  ORDER BY m.priority DESC,m.next_attempt_at,m.created_at\n  FOR UPDATE SKIP LOCKED\n  LIMIT $1::INTEGER\n),\nclaimed AS (\n  UPDATE outbound_messages m\n  SET status='processing',\n      attempt_count=m.attempt_count+1,\n      updated_at=NOW()\n  FROM due\n  WHERE m.id=due.id\n  RETURNING m.*\n),\nrows AS (\n  SELECT\n    c.id outbound_message_id,c.clinic_id,clinic.name clinic_name,\n    c.patient_id,c.channel,c.purpose,\n    c.message_type,c.template_code,c.language,c.recipient,c.subject,\n    c.message_text,c.payload,c.related_entity_type,c.related_entity_id,\n    c.request_reference,c.idempotency_key,c.priority,c.attempt_count,\n    c.max_attempts,c.scheduled_at,\n    a.id adapter_id,a.adapter_name,a.adapter_url,\n    a.request_timeout_seconds,a.enabled adapter_enabled\n  FROM claimed c\n  INNER JOIN clinics clinic\n    ON clinic.id=c.clinic_id\n  LEFT JOIN communication_channel_adapters a\n    ON a.clinic_id=c.clinic_id\n   AND a.channel=c.channel\n)\nSELECT\n  COALESCE((SELECT JSONB_AGG(TO_JSONB(rows)) FROM rows),'[]'::JSONB) messages,\n  COALESCE((SELECT COUNT(*) FROM rows),0) claimed_count;",
+        "options": {
+          "queryReplacement": "={{ [ $json.batch_size ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -632,
+        -48
+      ],
+      "id": "58a98b0b-43a1-4596-9d43-49ac68ab77b9",
+      "name": "Claim Due Outbound Messages"
+    },
+    {
+      "parameters": {
+        "jsCode": "const messages=Array.isArray($json.messages)?$json.messages:[];\nconst cfg=$('Normalize and Validate Dispatch Request').first().json;\n\nif(!messages.length){\n  return [{json:{\n    has_message:false,\n    success:true,\n    result:'outbound_queue_empty',\n    claimed_count:0\n  }}];\n}\n\nreturn messages.map(message=>({json:{\n  ...message,\n  has_message:true,\n  permission_url:cfg.permission_url,\n  delivery_callback_url:cfg.delivery_callback_url\n}}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -376,
+        -48
+      ],
+      "id": "16778c07-fc21-41ec-80e8-c7dfaa08cc58",
+      "name": "Expand Claimed Messages"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a952978f-8c67-4037-b95d-37acb3b851ce",
+              "leftValue": "={{ $json.has_message === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -120,
+        -48
+      ],
+      "id": "b488999a-1757-4b70-a596-acf7b55a1786",
+      "name": "Was a Message Claimed?"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{\n  ...$json,\n  permission_request:{\n    clinic_name:$json.clinic_name || '',\n    mobile:$json.recipient,\n    channel:$json.channel,\n    purpose:$json.purpose,\n    requested_at:new Date().toISOString(),\n    request_reference:$json.request_reference || $json.idempotency_key,\n    confirm_check:true\n  }\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        136,
+        -144
+      ],
+      "id": "38a92899-f90d-4265-be7a-75272ff85edb",
+      "name": "Prepare Dispatch Permission Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.permission_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.permission_request }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        392,
+        -144
+      ],
+      "id": "28e2ae82-589d-4e40-a89e-bd554dafa6d3",
+      "name": "Recheck Permission Before Dispatch",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b0f229c7-13e2-43cb-86e7-387e4c3e9005",
+              "leftValue": "={{ $json.allowed === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        648,
+        -144
+      ],
+      "id": "56f7ee1e-95ba-4670-8e6d-58d9b9a83762",
+      "name": "Is Message Still Permitted?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "db81bbf5-aa20-4f13-9acb-72938d345b15",
+              "leftValue": "={{ Boolean($('Prepare Dispatch Permission Request').item.json.adapter_enabled) && Boolean($('Prepare Dispatch Permission Request').item.json.adapter_url) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        904,
+        -240
+      ],
+      "id": "01d427b3-67fc-4ac5-af3b-31f87d72c74c",
+      "name": "Is Channel Adapter Configured?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const original=$('Prepare Dispatch Permission Request').item.json;\n\nreturn [{json:{\n  ...original,\n  adapter_request:{\n    message_id:original.outbound_message_id,\n    idempotency_key:original.idempotency_key,\n    channel:original.channel,\n    recipient:original.recipient,\n    message_type:original.message_type,\n    template_code:original.template_code || null,\n    language:original.language,\n    subject:original.subject || null,\n    message_text:original.message_text,\n    payload:original.payload || {},\n    callback_url:original.delivery_callback_url\n  }\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1160,
+        -336
+      ],
+      "id": "e9d9eef4-1767-45e8-8bb4-345727d77c54",
+      "name": "Prepare Adapter Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.adapter_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.adapter_request }}",
+        "options": {
+          "timeout": "={{ $json.request_timeout_seconds * 1000 }}",
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1416,
+        -336
+      ],
+      "id": "fddb84a7-39d5-4176-8478-fef34f407b19",
+      "name": "Call Channel Adapter",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const original=$('Prepare Adapter Request').item.json;\nconst response=$json??{};\nconst statusCode=Number(response.statusCode??response.status??200);\nconst body=response.body??response;\nconst explicitFailure=\n  response.error!==undefined ||\n  body?.success===false ||\n  statusCode>=400;\n\nconst providerId=String(\n  body?.provider_message_id ||\n  body?.message_id ||\n  body?.id ||\n  ''\n).trim();\n\nreturn [{json:{\n  outbound_message_id:Number(original.outbound_message_id),\n  adapter_id:Number(original.adapter_id||0),\n  attempt_number:Number(original.attempt_count),\n  result:explicitFailure?'failed':'accepted',\n  provider_message_id:providerId,\n  error_code:explicitFailure?String(body?.error_code||statusCode||'adapter_error'):'',\n  error_message:explicitFailure?String(body?.error_message||body?.message||response.error?.message||'Adapter request failed.'):'',\n  request_payload_text:JSON.stringify(original.adapter_request||{}),\n  response_payload_text:JSON.stringify(response||{}),\n  max_attempts:Number(original.max_attempts),\n  accepted:!explicitFailure\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1672,
+        -336
+      ],
+      "id": "3d3412e7-9c2c-4e52-a4d0-592cc08895d5",
+      "name": "Normalize Adapter Outcome"
+    },
+    {
+      "parameters": {
+        "jsCode": "const original=$('Prepare Dispatch Permission Request').item.json;\nreturn [{json:{\n  outbound_message_id:Number(original.outbound_message_id),\n  adapter_id:0,\n  attempt_number:Number(original.attempt_count),\n  result:'adapter_missing',\n  provider_message_id:'',\n  error_code:'adapter_not_configured',\n  error_message:'Adapter فعال برای این کانال تنظیم نشده است.',\n  request_payload_text:'{}',\n  response_payload_text:'{}',\n  max_attempts:Number(original.max_attempts),\n  accepted:false\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1160,
+        -144
+      ],
+      "id": "1082d903-5ab3-40de-a3bd-8587e93bc3a4",
+      "name": "Build Missing Adapter Outcome"
+    },
+    {
+      "parameters": {
+        "jsCode": "const original=$('Prepare Dispatch Permission Request').item.json;\nconst permission=$json??{};\nconst deferred=permission.decision==='deferred';\nreturn [{json:{\n  outbound_message_id:Number(original.outbound_message_id),\n  adapter_id:Number(original.adapter_id||0),\n  attempt_number:Number(original.attempt_count),\n  result:deferred?'deferred':'blocked',\n  provider_message_id:'',\n  error_code:String(permission.decision_reason||permission.result||'permission_denied'),\n  error_message:deferred?'ارسال به دلیل ترجیحات زمانی بیمار به تعویق افتاد.':'ارسال توسط کنترل رضایت یا ترجیحات بیمار مسدود شد.',\n  request_payload_text:JSON.stringify(permission||{}),\n  response_payload_text:JSON.stringify(permission||{}),\n  max_attempts:Number(original.max_attempts),\n  accepted:false\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        904,
+        0
+      ],
+      "id": "27f48973-a8c0-4059-83f0-90a82d7c7dc4",
+      "name": "Build Permission Outcome"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH r AS (\n  SELECT $1::BIGINT message_id,NULLIF($2::BIGINT,0) adapter_id,\n         $3::INTEGER attempt_number,$4::TEXT result,\n         NULLIF($5::TEXT,'') provider_message_id,\n         NULLIF($6::TEXT,'') error_code,NULLIF($7::TEXT,'') error_message,\n         $8::JSONB request_payload,$9::JSONB response_payload,\n         $10::INTEGER max_attempts\n),\nattempt AS (\n  INSERT INTO outbound_message_attempts(\n    outbound_message_id,attempt_number,adapter_id,request_payload,response_payload,\n    result,provider_message_id,error_code,error_message,completed_at\n  )\n  SELECT message_id,attempt_number,adapter_id,request_payload,response_payload,\n         result,provider_message_id,error_code,error_message,NOW()\n  FROM r\n  ON CONFLICT(outbound_message_id,attempt_number) DO UPDATE SET\n    adapter_id=EXCLUDED.adapter_id,response_payload=EXCLUDED.response_payload,\n    result=EXCLUDED.result,provider_message_id=EXCLUDED.provider_message_id,\n    error_code=EXCLUDED.error_code,error_message=EXCLUDED.error_message,\n    completed_at=NOW()\n  RETURNING *\n),\nupdated AS (\n  UPDATE outbound_messages m\n  SET attempt_count=CASE\n        WHEN r.result='deferred' THEN GREATEST(m.attempt_count-1,0)\n        ELSE m.attempt_count\n      END,\n      status=CASE\n        WHEN r.result='accepted' THEN 'accepted'\n        WHEN r.result='blocked' THEN 'blocked'\n        WHEN r.result='deferred' THEN 'scheduled'\n        WHEN m.attempt_count>=m.max_attempts THEN 'failed'\n        ELSE 'failed'\n      END,\n      provider_message_id=COALESCE(r.provider_message_id,m.provider_message_id),\n      last_error_code=r.error_code,\n      last_error_message=r.error_message,\n      accepted_at=CASE WHEN r.result='accepted' THEN NOW() ELSE m.accepted_at END,\n      failed_at=CASE WHEN r.result IN ('failed','adapter_missing','timeout') THEN NOW() ELSE m.failed_at END,\n      next_attempt_at=CASE\n        WHEN r.result='deferred' THEN NOW()+INTERVAL '1 hour'\n        WHEN r.result IN ('failed','adapter_missing','timeout')\n          THEN NOW()+MAKE_INTERVAL(mins=>LEAST(240,GREATEST(5,POWER(2,m.attempt_count)::INTEGER*5)))\n        ELSE m.next_attempt_at\n      END,\n      updated_at=NOW()\n  FROM r\n  WHERE m.id=r.message_id\n  RETURNING m.*\n)\nSELECT TRUE success,'dispatch_outcome_saved' result,\n       (SELECT id FROM updated) outbound_message_id,\n       (SELECT status FROM updated) message_status,\n       (SELECT attempt_count FROM updated) attempt_count,\n       (SELECT next_attempt_at FROM updated) next_attempt_at,\n       (SELECT provider_message_id FROM updated) provider_message_id;",
+        "options": {
+          "queryReplacement": "={{ [ $json.outbound_message_id,$json.adapter_id,$json.attempt_number,$json.result,$json.provider_message_id,$json.error_code,$json.error_message,$json.request_payload_text,$json.response_payload_text,$json.max_attempts ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1928,
+        -144
+      ],
+      "id": "34467038-63f8-4c55-8a14-374a69ca91ef",
+      "name": "Persist Dispatch Outcome"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات Dispatch نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -632,
+        176
+      ],
+      "id": "e9bc040a-86c2-4d44-9a75-30c34aed49a1",
+      "name": "Return Dispatch Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## Dispatch مرکزی\n\nپیام‌های Due با FOR UPDATE SKIP LOCKED Claim می‌شوند.\n\nقبل از ارسال، مجوز Workflow 79 دوباره بررسی می‌شود.\n\nارسال واقعی از طریق Adapter URL هر کانال انجام می‌شود.",
+        "height": 380,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1860,
+        -300
+      ],
+      "id": "8da5b6fe-5732-4122-b0c6-6bdf29fbf3ae",
+      "name": "How to Use"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:true,result:'outbound_queue_empty',claimed_count:0,message:'پیام آماده‌ای برای Dispatch وجود ندارد.'}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        136,
+        48
+      ],
+      "id": "c67128cb-d9c5-4b82-91cd-3b8589336a22",
+      "name": "Return Empty Outbound Queue"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Dispatch Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Dispatch Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Dispatch Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Dispatch Queued Messages": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Dispatch Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Dispatch Request": {
+      "main": [
+        [
+          {
+            "node": "Is Dispatch Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Dispatch Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Claim Due Outbound Messages",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Dispatch Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim Due Outbound Messages": {
+      "main": [
+        [
+          {
+            "node": "Expand Claimed Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand Claimed Messages": {
+      "main": [
+        [
+          {
+            "node": "Was a Message Claimed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Was a Message Claimed?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Dispatch Permission Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Empty Outbound Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Dispatch Permission Request": {
+      "main": [
+        [
+          {
+            "node": "Recheck Permission Before Dispatch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recheck Permission Before Dispatch": {
+      "main": [
+        [
+          {
+            "node": "Is Message Still Permitted?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Message Still Permitted?": {
+      "main": [
+        [
+          {
+            "node": "Is Channel Adapter Configured?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Permission Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Channel Adapter Configured?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Adapter Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Missing Adapter Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Adapter Request": {
+      "main": [
+        [
+          {
+            "node": "Call Channel Adapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Channel Adapter": {
+      "main": [
+        [
+          {
+            "node": "Normalize Adapter Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Adapter Outcome": {
+      "main": [
+        [
+          {
+            "node": "Persist Dispatch Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Missing Adapter Outcome": {
+      "main": [
+        [
+          {
+            "node": "Persist Dispatch Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Permission Outcome": {
+      "main": [
+        [
+          {
+            "node": "Persist Dispatch Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

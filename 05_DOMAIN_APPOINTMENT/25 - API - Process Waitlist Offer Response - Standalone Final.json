@@ -1,0 +1,626 @@
+{
+  "name": "25 - API - Process Waitlist Offer Response - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1320,
+        176
+      ],
+      "id": "be187702-c089-4ec3-98e5-a95eead49cd2",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "69cbf05d-aa59-4a2b-82ef-89f7820ab7a4",
+              "name": "offer_token",
+              "value": "REPLACE_WITH_REAL_OFFER_TOKEN",
+              "type": "string"
+            },
+            {
+              "id": "9d9f4e17-76a2-479c-b3ed-f57ac75dc760",
+              "name": "mobile",
+              "value": "09000000000",
+              "type": "string"
+            },
+            {
+              "id": "e0d22a94-af81-42db-b3b1-a0ca4f130ce4",
+              "name": "response",
+              "value": "decline",
+              "type": "string"
+            },
+            {
+              "id": "f3175fdc-7db5-487e-9c13-66c30df6caa6",
+              "name": "response_note",
+              "value": "پاسخ بیمار به پیشنهاد لیست انتظار",
+              "type": "string"
+            },
+            {
+              "id": "bb01b381-60df-4fb1-9973-84ec3247d248",
+              "name": "confirm_response",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1080,
+        176
+      ],
+      "id": "9f79d2c5-9fba-48a7-bb75-fde061d5d537",
+      "name": "Manual Waitlist Offer Response"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/waitlist/process-offer-response",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1080,
+        -96
+      ],
+      "id": "6f23c005-fa1c-43f0-92cf-ce6dc1dd359c",
+      "name": "Webhook - Process Waitlist Offer Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst offer_token = text(input.offer_token);\nconst mobile = text(input.mobile);\nconst response = text(input.response).toLowerCase();\nconst response_note = text(input.response_note);\nconst confirm_response = toBoolean(input.confirm_response);\n\nconst errors = [];\n\nif (!offer_token) {\n  errors.push({\n    field: 'offer_token',\n    message: 'توکن پیشنهاد الزامی است.',\n  });\n}\n\nif (!mobile) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل بیمار الزامی است.',\n  });\n}\n\nif (mobile && !/^\\+?[0-9]{8,15}$/.test(mobile)) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل باید فقط شامل اعداد و در صورت نیاز علامت + باشد.',\n  });\n}\n\nif (!['accept', 'decline'].includes(response)) {\n  errors.push({\n    field: 'response',\n    message: 'response باید accept یا decline باشد.',\n  });\n}\n\nif (response_note.length > 500) {\n  errors.push({\n    field: 'response_note',\n    message: 'یادداشت پاسخ نباید بیشتر از 500 کاراکتر باشد.',\n  });\n}\n\nif (confirm_response !== true) {\n  errors.push({\n    field: 'confirm_response',\n    message: 'پاسخ بیمار باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [\n  {\n    json: {\n      offer_token,\n      mobile,\n      response,\n      response_note,\n      confirm_response,\n      validation_status: errors.length === 0 ? 'valid' : 'invalid',\n      errors,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -808,
+        48
+      ],
+      "id": "98edb769-c167-4612-92a2-0465940b7cc4",
+      "name": "Normalize and Validate Offer Response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "37755e54-fe8e-41a2-9bab-35f624b15196",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -568,
+        48
+      ],
+      "id": "0aaf717c-b3b5-4079-8205-fe93ce88ca3d",
+      "name": "Is Offer Response Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS offer_token,\n        $2::TEXT AS mobile\n),\n\ntarget_offer AS (\n    SELECT\n        offer.id AS offer_id,\n        offer.waitlist_id,\n        offer.offer_token,\n        offer.status AS offer_status,\n        offer.offered_starts_at,\n        offer.offered_ends_at,\n        offer.offered_at,\n        offer.expires_at,\n        offer.booked_appointment_id,\n\n        waitlist.status AS waitlist_status,\n        waitlist.clinic_id,\n        waitlist.doctor_id,\n        waitlist.patient_id,\n        waitlist.service_id,\n        waitlist.original_appointment_id,\n        waitlist.disruption_case_id,\n\n        patient.full_name AS patient_name,\n        patient.mobile,\n\n        clinic.name AS clinic_name,\n        clinic.timezone,\n\n        doctor.full_name AS doctor_name,\n\n        service.name AS service_name\n\n    FROM appointment_waitlist_offers offer\n\n    INNER JOIN appointment_waitlist waitlist\n        ON waitlist.id = offer.waitlist_id\n\n    INNER JOIN patients patient\n        ON patient.id = waitlist.patient_id\n\n    INNER JOIN clinics clinic\n        ON clinic.id = waitlist.clinic_id\n\n    INNER JOIN doctors doctor\n        ON doctor.id = waitlist.doctor_id\n\n    LEFT JOIN services service\n        ON service.id = waitlist.service_id\n\n    INNER JOIN request_data r\n        ON r.offer_token = offer.offer_token\n       AND r.mobile = patient.mobile\n\n    LIMIT 1\n),\n\nexpired_offer AS (\n    UPDATE appointment_waitlist_offers offer\n\n    SET\n        status = 'expired',\n        responded_at = COALESCE(\n            offer.responded_at,\n            NOW()\n        ),\n        updated_at = NOW()\n\n    FROM target_offer target\n\n    WHERE offer.id = target.offer_id\n      AND target.offer_status = 'offered'\n      AND target.expires_at <= NOW()\n\n    RETURNING\n        offer.id AS offer_id,\n        offer.waitlist_id\n),\n\nreactivated_waitlist AS (\n    UPDATE appointment_waitlist waitlist\n\n    SET\n        status = 'active',\n        updated_at = NOW()\n\n    FROM expired_offer expired\n\n    WHERE waitlist.id = expired.waitlist_id\n      AND waitlist.status = 'offered'\n\n    RETURNING waitlist.id\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM target_offer\n        )\n            THEN FALSE\n\n        WHEN (\n            SELECT offer_status\n            FROM target_offer\n        ) <> 'offered'\n            THEN FALSE\n\n        WHEN (\n            SELECT expires_at\n            FROM target_offer\n        ) <= NOW()\n            THEN FALSE\n\n        WHEN (\n            SELECT waitlist_status\n            FROM target_offer\n        ) <> 'offered'\n            THEN FALSE\n\n        ELSE TRUE\n    END AS processable,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM target_offer\n        )\n            THEN 'offer_not_found'\n\n        WHEN (\n            SELECT offer_status\n            FROM target_offer\n        ) = 'accepted'\n            THEN 'offer_already_accepted'\n\n        WHEN (\n            SELECT offer_status\n            FROM target_offer\n        ) = 'declined'\n            THEN 'offer_already_declined'\n\n        WHEN (\n            SELECT offer_status\n            FROM target_offer\n        ) = 'expired'\n            THEN 'offer_expired'\n\n        WHEN (\n            SELECT offer_status\n            FROM target_offer\n        ) = 'cancelled'\n            THEN 'offer_cancelled'\n\n        WHEN (\n            SELECT expires_at\n            FROM target_offer\n        ) <= NOW()\n            THEN 'offer_expired'\n\n        WHEN (\n            SELECT waitlist_status\n            FROM target_offer\n        ) <> 'offered'\n            THEN 'waitlist_not_offered'\n\n        ELSE 'offer_ready'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM target_offer\n        )\n            THEN 'پیشنهاد مطابق توکن و شماره موبایل واردشده پیدا نشد.'\n\n        WHEN (\n            SELECT offer_status\n            FROM target_offer\n        ) = 'accepted'\n            THEN 'این پیشنهاد قبلاً پذیرفته شده است.'\n\n        WHEN (\n            SELECT offer_status\n            FROM target_offer\n        ) = 'declined'\n            THEN 'این پیشنهاد قبلاً رد شده است.'\n\n        WHEN (\n            SELECT offer_status\n            FROM target_offer\n        ) = 'cancelled'\n            THEN 'این پیشنهاد دیگر فعال نیست.'\n\n        WHEN (\n            SELECT offer_status\n            FROM target_offer\n        ) = 'expired'\n            THEN 'زمان اعتبار این پیشنهاد به پایان رسیده است.'\n\n        WHEN (\n            SELECT expires_at\n            FROM target_offer\n        ) <= NOW()\n            THEN 'زمان اعتبار این پیشنهاد به پایان رسیده و بیمار به صف انتظار بازگشت.'\n\n        WHEN (\n            SELECT waitlist_status\n            FROM target_offer\n        ) <> 'offered'\n            THEN 'وضعیت فعلی لیست انتظار اجازه ثبت پاسخ این پیشنهاد را نمی‌دهد.'\n\n        ELSE 'پیشنهاد آماده ثبت پاسخ بیمار است.'\n    END AS message,\n\n    (\n        SELECT offer_id\n        FROM target_offer\n    ) AS offer_id,\n\n    (\n        SELECT waitlist_id\n        FROM target_offer\n    ) AS waitlist_id,\n\n    (\n        SELECT patient_name\n        FROM target_offer\n    ) AS patient_name,\n\n    (\n        SELECT mobile\n        FROM target_offer\n    ) AS mobile,\n\n    (\n        SELECT clinic_name\n        FROM target_offer\n    ) AS clinic_name,\n\n    (\n        SELECT doctor_name\n        FROM target_offer\n    ) AS doctor_name,\n\n    (\n        SELECT service_name\n        FROM target_offer\n    ) AS service_name,\n\n    (\n        SELECT offered_starts_at\n        FROM target_offer\n    ) AS offered_starts_at,\n\n    (\n        SELECT offered_ends_at\n        FROM target_offer\n    ) AS offered_ends_at,\n\n    (\n        SELECT TO_CHAR(\n            offered_starts_at\n            AT TIME ZONE timezone,\n            'YYYY-MM-DD HH24:MI'\n        )\n        FROM target_offer\n    ) AS offered_appointment_start,\n\n    (\n        SELECT expires_at\n        FROM target_offer\n    ) AS expires_at\n\nFROM request_data;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.offer_token,\n  $json.mobile\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -312,
+        -48
+      ],
+      "id": "51201c9c-c974-4ce9-bf37-ed2d2ba88ab2",
+      "name": "Check Waitlist Offer"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6e60e30d-ebf1-4387-999c-7224394b469e",
+              "leftValue": "={{ $json.processable }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -56,
+        -48
+      ],
+      "id": "60490275-a6f2-46f3-a815-7fc0f106efd0",
+      "name": "Can Offer Be Processed?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9fa886d2-7a80-41e8-aefe-50e883051a7d",
+              "leftValue": "={{ $('Normalize and Validate Offer Response').first().json.response }}",
+              "rightValue": "accept",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        200,
+        -144
+      ],
+      "id": "3a041cbd-ff26-42f8-a55e-3be080a158b8",
+      "name": "Did Patient Accept?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS offer_token,\n        $2::TEXT AS mobile,\n        $3::TEXT AS response_note\n),\n\noffer_context AS (\n    SELECT\n        offer.id AS offer_id,\n        offer.waitlist_id,\n        offer.offer_token,\n        offer.offered_starts_at,\n        offer.offered_ends_at,\n\n        waitlist.clinic_id,\n        waitlist.doctor_id,\n        waitlist.patient_id,\n        waitlist.service_id,\n        waitlist.original_appointment_id,\n        waitlist.disruption_case_id,\n\n        patient.full_name AS patient_name,\n        patient.mobile,\n\n        clinic.name AS clinic_name,\n        clinic.timezone,\n\n        doctor.full_name AS doctor_name,\n\n        service.name AS service_name,\n\n        original.visit_reason,\n\n        r.response_note\n\n    FROM appointment_waitlist_offers offer\n\n    INNER JOIN appointment_waitlist waitlist\n        ON waitlist.id = offer.waitlist_id\n\n    INNER JOIN patients patient\n        ON patient.id = waitlist.patient_id\n\n    INNER JOIN clinics clinic\n        ON clinic.id = waitlist.clinic_id\n\n    INNER JOIN doctors doctor\n        ON doctor.id = waitlist.doctor_id\n\n    LEFT JOIN services service\n        ON service.id = waitlist.service_id\n\n    LEFT JOIN appointments original\n        ON original.id = waitlist.original_appointment_id\n\n    INNER JOIN request_data r\n        ON r.offer_token = offer.offer_token\n       AND r.mobile = patient.mobile\n\n    WHERE offer.status = 'offered'\n      AND offer.expires_at > NOW()\n      AND waitlist.status = 'offered'\n\n    LIMIT 1\n),\n\nslot_state AS (\n    SELECT\n        context.*,\n\n        EXISTS (\n            SELECT 1\n            FROM schedule_exceptions exception\n\n            WHERE exception.doctor_id =\n                  context.doctor_id\n\n              AND exception.is_active = TRUE\n              AND exception.exception_type =\n                  'unavailable'\n\n              AND exception.starts_at <\n                    context.offered_ends_at\n\n              AND exception.ends_at >\n                    context.offered_starts_at\n        ) AS is_blocked,\n\n        EXISTS (\n            SELECT 1\n            FROM appointments existing\n\n            WHERE existing.doctor_id =\n                  context.doctor_id\n\n              AND existing.status IN (\n                  'pending',\n                  'confirmed'\n              )\n\n              AND existing.starts_at <\n                    context.offered_ends_at\n\n              AND existing.ends_at >\n                    context.offered_starts_at\n        ) AS has_appointment_conflict\n\n    FROM offer_context context\n),\n\ninserted_appointment AS (\n    INSERT INTO appointments (\n        clinic_id,\n        doctor_id,\n        patient_id,\n        service_id,\n\n        starts_at,\n        ends_at,\n\n        status,\n        booking_source,\n        visit_reason\n    )\n\n    SELECT\n        state.clinic_id,\n        state.doctor_id,\n        state.patient_id,\n        state.service_id,\n\n        state.offered_starts_at,\n        state.offered_ends_at,\n\n        'confirmed',\n        'assistant',\n\n        COALESCE(\n            state.visit_reason,\n            'ثبت نوبت از لیست انتظار'\n        )\n\n    FROM slot_state state\n\n    WHERE state.offered_starts_at > NOW()\n      AND state.is_blocked = FALSE\n      AND state.has_appointment_conflict = FALSE\n\n    ON CONFLICT DO NOTHING\n\n    RETURNING\n        id AS appointment_id,\n        clinic_id,\n        doctor_id,\n        patient_id,\n        service_id,\n        starts_at,\n        ends_at,\n        status\n),\n\naccepted_offer AS (\n    UPDATE appointment_waitlist_offers offer\n\n    SET\n        status = 'accepted',\n        responded_at = NOW(),\n        response_note = context.response_note,\n        booked_appointment_id =\n            appointment.appointment_id,\n        updated_at = NOW()\n\n    FROM offer_context context\n\n    INNER JOIN inserted_appointment appointment\n        ON TRUE\n\n    WHERE offer.id = context.offer_id\n      AND offer.status = 'offered'\n\n    RETURNING\n        offer.id AS offer_id,\n        offer.booked_appointment_id\n),\n\nbooked_waitlist AS (\n    UPDATE appointment_waitlist waitlist\n\n    SET\n        status = 'booked',\n        booked_appointment_id =\n            appointment.appointment_id,\n        updated_at = NOW()\n\n    FROM offer_context context\n\n    INNER JOIN inserted_appointment appointment\n        ON TRUE\n\n    INNER JOIN accepted_offer accepted\n        ON accepted.offer_id = context.offer_id\n\n    WHERE waitlist.id = context.waitlist_id\n      AND waitlist.status = 'offered'\n\n    RETURNING\n        waitlist.id AS waitlist_id,\n        waitlist.status AS waitlist_status,\n        waitlist.booked_appointment_id\n),\n\nresolved_disruption AS (\n    UPDATE appointment_disruption_cases disruption\n\n    SET\n        status = 'rescheduled',\n        patient_decision = 'reschedule',\n\n        selected_starts_at =\n            appointment.starts_at,\n\n        selected_ends_at =\n            appointment.ends_at,\n\n        decision_note =\n            context.response_note,\n\n        responded_at = COALESCE(\n            disruption.responded_at,\n            NOW()\n        ),\n\n        resolved_at = NOW(),\n        updated_at = NOW()\n\n    FROM offer_context context\n\n    INNER JOIN inserted_appointment appointment\n        ON TRUE\n\n    INNER JOIN booked_waitlist booked\n        ON booked.waitlist_id =\n           context.waitlist_id\n\n    WHERE disruption.id =\n          context.disruption_case_id\n\n    RETURNING disruption.id\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM offer_context\n        )\n            THEN FALSE\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM slot_state\n            WHERE is_blocked = TRUE\n        )\n            THEN FALSE\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM slot_state\n            WHERE has_appointment_conflict = TRUE\n        )\n            THEN FALSE\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM inserted_appointment\n        )\n            THEN TRUE\n\n        ELSE FALSE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM offer_context\n        )\n            THEN 'offer_not_processable'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM slot_state\n            WHERE is_blocked = TRUE\n        )\n            THEN 'offered_slot_blocked'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM slot_state\n            WHERE has_appointment_conflict = TRUE\n        )\n            THEN 'offered_slot_unavailable'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM inserted_appointment\n        )\n            THEN 'waitlist_offer_accepted'\n\n        ELSE 'booking_conflict'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM offer_context\n        )\n            THEN 'پیشنهاد دیگر قابل پردازش نیست.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM slot_state\n            WHERE is_blocked = TRUE\n        )\n            THEN 'زمان پیشنهادی اکنون در برنامه پزشک مسدود شده است.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM slot_state\n            WHERE has_appointment_conflict = TRUE\n        )\n            THEN 'زمان پیشنهادی دیگر در دسترس نیست.'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM inserted_appointment\n        )\n            THEN 'پیشنهاد پذیرفته و نوبت بیمار ثبت شد.'\n\n        ELSE 'در فاصله پذیرش پیشنهاد تا ثبت نوبت، وضعیت زمان تغییر کرده است.'\n    END AS message,\n\n    (\n        SELECT appointment_id\n        FROM inserted_appointment\n    ) AS appointment_id,\n\n    (\n        SELECT offer_id\n        FROM accepted_offer\n    ) AS offer_id,\n\n    (\n        SELECT waitlist_id\n        FROM booked_waitlist\n    ) AS waitlist_id,\n\n    (\n        SELECT patient_name\n        FROM offer_context\n    ) AS patient_name,\n\n    (\n        SELECT mobile\n        FROM offer_context\n    ) AS mobile,\n\n    (\n        SELECT doctor_name\n        FROM offer_context\n    ) AS doctor_name,\n\n    (\n        SELECT service_name\n        FROM offer_context\n    ) AS service_name,\n\n    (\n        SELECT starts_at\n        FROM inserted_appointment\n    ) AS starts_at,\n\n    (\n        SELECT ends_at\n        FROM inserted_appointment\n    ) AS ends_at,\n\n    (\n        SELECT TO_CHAR(\n            appointment.starts_at\n            AT TIME ZONE context.timezone,\n            'YYYY-MM-DD HH24:MI'\n        )\n        FROM inserted_appointment appointment\n        CROSS JOIN offer_context context\n    ) AS appointment_start,\n\n    (\n        SELECT status\n        FROM inserted_appointment\n    ) AS appointment_status\n\nFROM request_data;",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Normalize and Validate Offer Response').first().json.offer_token,\n  $('Normalize and Validate Offer Response').first().json.mobile,\n  $('Normalize and Validate Offer Response').first().json.response_note\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        456,
+        -240
+      ],
+      "id": "e7a23bb3-0fac-41ee-913c-42164594216a",
+      "name": "Accept Offer and Create Appointment",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3b73295d-d95b-4916-8652-b74528c4165b",
+              "leftValue": "={{ $json.success === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        712,
+        -240
+      ],
+      "id": "5ba10d08-270d-4fa8-87a4-8ce6fed171b1",
+      "name": "Was Waitlist Appointment Created?"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "YOUR_CALENDAR_ID",
+          "mode": "list",
+          "cachedResultName": "Clinic Demo - Dr Test"
+        },
+        "start": "={{ $('Accept Offer and Create Appointment').first().json.starts_at }}",
+        "end": "={{ $('Accept Offer and Create Appointment').first().json.ends_at }}",
+        "additionalFields": {
+          "summary": "={{ `نوبت ${$('Accept Offer and Create Appointment').first().json.patient_name} - ${$('Accept Offer and Create Appointment').first().json.service_name}` }}",
+          "description": "={{ `شناسه نوبت: ${$('Accept Offer and Create Appointment').first().json.appointment_id}\\nپزشک: ${$('Accept Offer and Create Appointment').first().json.doctor_name}\\nخدمت: ${$('Accept Offer and Create Appointment').first().json.service_name}\\nوضعیت: ثبت‌شده از لیست انتظار\\nمنبع ثبت: منشی هوشمند` }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        968,
+        -336
+      ],
+      "id": "97ed2b53-c8b3-4720-8e7b-34f7486f15bc",
+      "name": "Create Waitlist Appointment Calendar Event",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "41ece9aa-d028-4c01-9b23-5dfaf727a407",
+              "leftValue": "={{ Boolean($json.id) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1224,
+        -336
+      ],
+      "id": "69b3e9fc-b8f6-4c76-9256-48ba9c607636",
+      "name": "Was Calendar Event Created?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE appointments\nSET\n    google_calendar_event_id = $1,\n    updated_at = NOW()\nWHERE id = $2\nRETURNING\n    id AS appointment_id,\n    google_calendar_event_id;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.id,\n  $('Accept Offer and Create Appointment').first().json.appointment_id\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1480,
+        -432
+      ],
+      "id": "1dba0cfc-204f-4946-a236-cf3fecd111d7",
+      "name": "Save Waitlist Calendar Event ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "const booking = $('Accept Offer and Create Appointment').first().json;\nconst saved = $json;\n\nreturn [\n  {\n    json: {\n      ...booking,\n      success: true,\n      result: 'waitlist_offer_accepted',\n      message: 'پیشنهاد پذیرفته، نوبت ثبت و Google Calendar به‌روزرسانی شد.',\n      google_calendar_event_id:\n        saved.google_calendar_event_id ?? null,\n      calendar_sync_status: 'created',\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1736,
+        -432
+      ],
+      "id": "d4a01e01-4ec0-4370-8fbd-c834a89d4577",
+      "name": "Return Waitlist Acceptance Success"
+    },
+    {
+      "parameters": {
+        "jsCode": "const booking = $('Accept Offer and Create Appointment').first().json;\n\nreturn [\n  {\n    json: {\n      ...booking,\n      success: true,\n      result: 'waitlist_offer_accepted',\n      message: 'پیشنهاد پذیرفته و نوبت ثبت شد، اما ساخت رویداد Google Calendar ناموفق بود.',\n      google_calendar_event_id: null,\n      calendar_sync_status: 'create_failed',\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1480,
+        -240
+      ],
+      "id": "2a16c250-5f21-4932-8e65-46ec5ccebf34",
+      "name": "Return Waitlist Calendar Warning"
+    },
+    {
+      "parameters": {
+        "jsCode": "const message =\n  $json.error?.message ??\n  $json.errorMessage ??\n  $json.message ??\n  'خطای دیتابیس هنگام ثبت نوبت لیست انتظار رخ داد.';\n\nif (\n  String(message).includes(\n    'appointment_time_blocked_by_schedule_exception'\n  )\n) {\n  return [\n    {\n      json: {\n        success: false,\n        result: 'offered_slot_blocked',\n        message: 'زمان پیشنهادی اکنون در برنامه پزشک مسدود شده است.',\n      },\n    },\n  ];\n}\n\nreturn [\n  {\n    json: {\n      success: false,\n      result: 'waitlist_booking_database_error',\n      message,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        968,
+        -144
+      ],
+      "id": "27ce6291-5fad-4504-ba19-af8071cca50f",
+      "name": "Return Waitlist Acceptance Error"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS offer_token,\n        $2::TEXT AS mobile,\n        $3::TEXT AS response_note\n),\n\noffer_context AS (\n    SELECT\n        offer.id AS offer_id,\n        offer.waitlist_id,\n\n        waitlist.disruption_case_id,\n\n        patient.full_name AS patient_name,\n        patient.mobile,\n\n        doctor.full_name AS doctor_name,\n        service.name AS service_name,\n\n        r.response_note\n\n    FROM appointment_waitlist_offers offer\n\n    INNER JOIN appointment_waitlist waitlist\n        ON waitlist.id = offer.waitlist_id\n\n    INNER JOIN patients patient\n        ON patient.id = waitlist.patient_id\n\n    INNER JOIN doctors doctor\n        ON doctor.id = waitlist.doctor_id\n\n    LEFT JOIN services service\n        ON service.id = waitlist.service_id\n\n    INNER JOIN request_data r\n        ON r.offer_token = offer.offer_token\n       AND r.mobile = patient.mobile\n\n    WHERE offer.status = 'offered'\n      AND offer.expires_at > NOW()\n      AND waitlist.status = 'offered'\n\n    LIMIT 1\n),\n\ndeclined_offer AS (\n    UPDATE appointment_waitlist_offers offer\n\n    SET\n        status = 'declined',\n        responded_at = NOW(),\n        response_note = context.response_note,\n        updated_at = NOW()\n\n    FROM offer_context context\n\n    WHERE offer.id = context.offer_id\n      AND offer.status = 'offered'\n\n    RETURNING\n        offer.id AS offer_id,\n        offer.waitlist_id\n),\n\nreactivated_waitlist AS (\n    UPDATE appointment_waitlist waitlist\n\n    SET\n        status = 'active',\n        updated_at = NOW()\n\n    FROM declined_offer declined\n\n    WHERE waitlist.id = declined.waitlist_id\n      AND waitlist.status = 'offered'\n\n    RETURNING\n        waitlist.id AS waitlist_id,\n        waitlist.status AS waitlist_status\n)\n\nSELECT\n    CASE\n        WHEN EXISTS (\n            SELECT 1\n            FROM reactivated_waitlist\n        )\n            THEN TRUE\n        ELSE FALSE\n    END AS success,\n\n    CASE\n        WHEN EXISTS (\n            SELECT 1\n            FROM reactivated_waitlist\n        )\n            THEN 'waitlist_offer_declined'\n        ELSE 'decline_conflict'\n    END AS result,\n\n    CASE\n        WHEN EXISTS (\n            SELECT 1\n            FROM reactivated_waitlist\n        )\n            THEN 'پیشنهاد رد شد و بیمار در لیست انتظار فعال باقی ماند.'\n        ELSE 'در فاصله بررسی تا ثبت پاسخ، وضعیت پیشنهاد تغییر کرده است.'\n    END AS message,\n\n    (\n        SELECT offer_id\n        FROM declined_offer\n    ) AS offer_id,\n\n    (\n        SELECT waitlist_id\n        FROM reactivated_waitlist\n    ) AS waitlist_id,\n\n    (\n        SELECT patient_name\n        FROM offer_context\n    ) AS patient_name,\n\n    (\n        SELECT mobile\n        FROM offer_context\n    ) AS mobile,\n\n    (\n        SELECT doctor_name\n        FROM offer_context\n    ) AS doctor_name,\n\n    (\n        SELECT service_name\n        FROM offer_context\n    ) AS service_name,\n\n    'offer_to_next_patient'::TEXT\n        AS next_action\n\nFROM request_data;",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Normalize and Validate Offer Response').first().json.offer_token,\n  $('Normalize and Validate Offer Response').first().json.mobile,\n  $('Normalize and Validate Offer Response').first().json.response_note\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        456,
+        -48
+      ],
+      "id": "6046f5f7-fe53-4270-8f68-098518fb82af",
+      "name": "Decline Offer and Reactivate Waitlist"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      result: $json.result ?? 'offer_not_processable',\n      message: $json.message ?? 'پیشنهاد قابل پردازش نیست.',\n      offer_id: $json.offer_id ?? null,\n      waitlist_id: $json.waitlist_id ?? null,\n      patient_name: $json.patient_name ?? null,\n      offered_appointment_start:\n        $json.offered_appointment_start ?? null,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        80
+      ],
+      "id": "6ef6f2b4-6c63-4b3f-af74-060731ac7666",
+      "name": "Return Offer Processing Rejection"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      result: 'invalid_request',\n      message: 'اطلاعات پاسخ بیمار ناقص یا نامعتبر است.',\n      errors: $json.errors ?? [],\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -312,
+        176
+      ],
+      "id": "3a24a0cb-e2bc-445d-83b1-3475758c869a",
+      "name": "Return Offer Response Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## پردازش پاسخ پیشنهاد لیست انتظار\n\n1. ابتدا Workflow شماره 24 را فقط یک‌بار اجرا کن.\n\n2. `offer_token` را از خروجی Workflow شماره 23 بردار.\n\n3. پاسخ‌های مجاز:\n- `accept`: نوبت ثبت و Calendar ساخته می‌شود.\n- `decline`: پیشنهاد رد و بیمار دوباره active می‌شود.\n\n4. پیشنهاد منقضی‌شده خودکار expired شده و بیمار به صف بازمی‌گردد.\n\n5. مقدار پیش‌فرض تست روی decline است تا نوبت ناخواسته ساخته نشود.",
+        "height": 390,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1540,
+        -320
+      ],
+      "id": "d67b7b12-48cf-4b35-b48a-3be81d1480ea",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Waitlist Offer Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Waitlist Offer Response": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Offer Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Process Waitlist Offer Response": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Offer Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Offer Response": {
+      "main": [
+        [
+          {
+            "node": "Is Offer Response Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Offer Response Valid?": {
+      "main": [
+        [
+          {
+            "node": "Check Waitlist Offer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Offer Response Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Waitlist Offer": {
+      "main": [
+        [
+          {
+            "node": "Can Offer Be Processed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Can Offer Be Processed?": {
+      "main": [
+        [
+          {
+            "node": "Did Patient Accept?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Offer Processing Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Did Patient Accept?": {
+      "main": [
+        [
+          {
+            "node": "Accept Offer and Create Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Decline Offer and Reactivate Waitlist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Accept Offer and Create Appointment": {
+      "main": [
+        [
+          {
+            "node": "Was Waitlist Appointment Created?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Was Waitlist Appointment Created?": {
+      "main": [
+        [
+          {
+            "node": "Create Waitlist Appointment Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Waitlist Acceptance Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Waitlist Appointment Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Was Calendar Event Created?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Was Calendar Event Created?": {
+      "main": [
+        [
+          {
+            "node": "Save Waitlist Calendar Event ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Waitlist Calendar Warning",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Waitlist Calendar Event ID": {
+      "main": [
+        [
+          {
+            "node": "Return Waitlist Acceptance Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

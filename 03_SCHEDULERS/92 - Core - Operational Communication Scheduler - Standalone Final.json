@@ -1,0 +1,620 @@
+{
+  "name": "92 - Core - Operational Communication Scheduler - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1540,
+        -160
+      ],
+      "id": "9bf54a06-7136-471d-88c2-eaf1e024055b",
+      "name": "Every 15 Minutes"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d5091fe4-03cf-4793-a6ec-e73739c2bb1b",
+              "name": "clinic_name",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "224ec22c-346d-4abb-967b-5347a095e285",
+              "name": "channel",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "319c1b36-603d-4f78-8810-1386c1f315a9",
+              "name": "dispatch_batch_size",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "85378aa3-7d02-4fdd-bf4d-e4f601ca8eb7",
+              "name": "webhook_base_url",
+              "value": "http://localhost:5678/webhook",
+              "type": "string"
+            },
+            {
+              "id": "cf7bf1ba-684e-4a85-9777-ac07d517aecc",
+              "name": "confirm_run",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1300,
+        -160
+      ],
+      "id": "1a542e98-250d-4048-bd08-c5c1d95af18f",
+      "name": "Scheduled Defaults"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1540,
+        80
+      ],
+      "id": "ccb44857-bf7f-4cf7-a045-f5cbbf86fa78",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "85d78a4a-53b9-45bf-ae0e-fe45e04ff834",
+              "name": "clinic_name",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "4796a9ee-ebe7-4385-947f-5f80d838dfa2",
+              "name": "channel",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "a95dd573-a931-4c08-b203-04f05f93a1a1",
+              "name": "dispatch_batch_size",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "448ea478-622d-47d9-a925-6bbce75ac4e9",
+              "name": "webhook_base_url",
+              "value": "http://localhost:5678/webhook",
+              "type": "string"
+            },
+            {
+              "id": "be1d32e7-a711-48bb-9174-9fd9f3f0f086",
+              "name": "confirm_run",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1300,
+        80
+      ],
+      "id": "c88cc64d-44fa-4a37-86ba-95ded9e69c42",
+      "name": "Manual Scheduler Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/communications/operational-scheduler/run",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1300,
+        240
+      ],
+      "id": "0ec70276-873d-46e6-8a58-80bd0b1f4eb6",
+      "name": "Webhook - Run Operational Scheduler"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input=$json.body??$json;\nconst text=v=>v===null||v===undefined?'':String(v).trim();\nconst bool=v=>typeof v==='boolean'?v:['true','1','yes','on'].includes(text(v).toLowerCase());\n\nconst clinic_name=text(input.clinic_name);\nconst channel=text(input.channel||'whatsapp').toLowerCase();\nconst dispatch_batch_size=Number(input.dispatch_batch_size??100);\nconst webhook_base_url=text(input.webhook_base_url||'http://localhost:5678/webhook').replace(/\\/+$/,'');\nconst confirm_run=bool(input.confirm_run);\n\nconst errors=[];\nif(!['whatsapp','sms','email','phone','web_push','in_app'].includes(channel)){\n  errors.push({field:'channel',message:'کانال معتبر نیست.'});\n}\nif(!Number.isInteger(dispatch_batch_size)||dispatch_batch_size<1||dispatch_batch_size>500){\n  errors.push({field:'dispatch_batch_size',message:'Batch باید بین 1 و 500 باشد.'});\n}\nif(!/^https?:\\/\\/.+/i.test(webhook_base_url)){\n  errors.push({field:'webhook_base_url',message:'آدرس Webhook معتبر نیست.'});\n}\nif(confirm_run!==true){\n  errors.push({field:'confirm_run',message:'اجرای Scheduler باید تأیید شود.'});\n}\n\nreturn [{json:{\n  clinic_name,channel,dispatch_batch_size,webhook_base_url,confirm_run,\n  validation_status:errors.length?'invalid':'valid',errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1028,
+        48
+      ],
+      "id": "4d01eb1d-f1d6-4f1b-bfe1-caad82b6dba2",
+      "name": "Normalize and Validate Scheduler Run"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "014ce20f-9f45-4f2e-8786-743ebbf0e1c5",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -788,
+        48
+      ],
+      "id": "86d64599-c2c6-4d31-8f09-082bb588e351",
+      "name": "Is Scheduler Run Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT NULLIF($1::TEXT, '') AS clinic_name\n)\nSELECT\n    COALESCE(\n        JSONB_AGG(\n            JSONB_BUILD_OBJECT(\n                'clinic_id',\n                    clinic.id,\n                'clinic_name',\n                    clinic.name,\n                'timezone',\n                    clinic.timezone\n            )\n            ORDER BY clinic.id\n        ),\n        '[]'::JSONB\n    ) AS clinics\nFROM clinics clinic\nCROSS JOIN request_data request\nWHERE clinic.is_active = TRUE\n  AND (\n        request.clinic_name IS NULL\n        OR clinic.name = request.clinic_name\n      );",
+        "options": {
+          "queryReplacement": "={{ [ $json.clinic_name ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -532,
+        -48
+      ],
+      "id": "ed9045c9-a822-41d6-bd48-95b497f4e0d8",
+      "name": "Load Active Clinics"
+    },
+    {
+      "parameters": {
+        "jsCode": "const config=$('Normalize and Validate Scheduler Run').first().json;\nconst clinics=Array.isArray($json.clinics)?$json.clinics:[];\n\nif(!clinics.length){\n  return [{json:{\n    has_task:false,\n    task_type:'none',\n    result:'no_active_clinics',\n    clinic_count:0,\n    webhook_base_url:config.webhook_base_url,\n    dispatch_batch_size:config.dispatch_batch_size\n  }}];\n}\n\nconst tasks=[];\n\nfor(const clinic of clinics){\n  const common={\n    clinic_name:clinic.clinic_name,\n    webhook_base_url:config.webhook_base_url,\n    confirm_run:true\n  };\n\n  tasks.push({\n    task_type:'appointment_confirmations',\n    clinic_name:clinic.clinic_name,\n    url:`${config.webhook_base_url}/clinic/communications/appointment-confirmations/generate-and-queue`,\n    payload:{\n      ...common,\n      window_start_hours:20,\n      window_end_hours:28,\n      response_deadline_hours:12,\n      channel:config.channel,\n      limit:200\n    }\n  });\n\n  tasks.push({\n    task_type:'post_visit_followups',\n    clinic_name:clinic.clinic_name,\n    url:`${config.webhook_base_url}/clinic/communications/post-visit/generate-and-queue`,\n    payload:{\n      ...common,\n      followup_stage:'first_day',\n      visit_end_min_hours_ago:18,\n      visit_end_max_hours_ago:30,\n      response_deadline_hours:24,\n      channel:config.channel,\n      limit:200\n    }\n  });\n\n  tasks.push({\n    task_type:'unanswered_confirmation_escalation',\n    clinic_name:clinic.clinic_name,\n    url:`${config.webhook_base_url}/clinic/appointments/escalate-unanswered-confirmations`,\n    payload:{\n      clinic_name:clinic.clinic_name,\n      lookback_hours:72,\n      future_window_hours:48,\n      limit:200,\n      confirm_escalation:true\n    }\n  });\n}\n\nreturn tasks.map(task=>({json:{\n  ...task,\n  has_task:true,\n  clinic_count:clinics.length,\n  webhook_base_url:config.webhook_base_url,\n  dispatch_batch_size:config.dispatch_batch_size\n}}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -276,
+        -48
+      ],
+      "id": "ec3ba99c-9fb8-4b35-9524-5d518a237d9f",
+      "name": "Build Scheduler Tasks"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e49fa38b-b125-4f06-9155-e03542796d7a",
+              "leftValue": "={{ $json.has_task === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -20,
+        -48
+      ],
+      "id": "61126cf5-ca98-4c7e-bc80-f96bd3e38897",
+      "name": "Is There a Scheduler Task?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        236,
+        -144
+      ],
+      "id": "9a3932bc-5b15-4391-ae2a-48e8c0d73915",
+      "name": "Execute Operational Task",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const task=$('Build Scheduler Tasks').item.json;\nreturn [{json:{\n  task_type:task.task_type,\n  clinic_name:task.clinic_name,\n  success:$json.success!==false,\n  result:$json.result||'task_completed',\n  raw_result:$json\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        492,
+        -144
+      ],
+      "id": "68c17a83-8fe1-4ce9-ba83-5abc6bad2851",
+      "name": "Normalize Operational Task Result"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items=$input.all().map(item=>item.json);\nconst config=$('Normalize and Validate Scheduler Run').first().json;\n\nconst failed=items.filter(item=>item.success===false);\nconst byType={};\n\nfor(const item of items){\n  byType[item.task_type]=(byType[item.task_type]||0)+1;\n}\n\nreturn [{json:{\n  success:failed.length===0,\n  result:failed.length?'scheduler_tasks_completed_with_errors':'scheduler_tasks_completed',\n  task_count:items.length,\n  failed_task_count:failed.length,\n  task_counts_by_type:byType,\n  task_results:items,\n  webhook_base_url:config.webhook_base_url,\n  dispatch_batch_size:config.dispatch_batch_size,\n  dispatch_url:`${config.webhook_base_url}/clinic/communications/messages/dispatch`,\n  maintenance_url:`${config.webhook_base_url}/clinic/communications/messages/retry-maintenance`\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        748,
+        -48
+      ],
+      "id": "7d44b55b-2e56-4d69-adcb-18a1b7d6017d",
+      "name": "Collapse Scheduler Task Results"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.dispatch_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { batch_size:$json.dispatch_batch_size,webhook_base_url:$json.webhook_base_url,confirm_dispatch:true } }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1004,
+        -48
+      ],
+      "id": "f979d51b-ae64-4c8f-b647-293dd405bba9",
+      "name": "Dispatch Due Messages",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const results=$input.all().map(item=>item.json);\nconst scheduler=$('Collapse Scheduler Task Results').first().json;\n\nreturn [{json:{\n  ...scheduler,\n  dispatch_result_count:results.length,\n  dispatch_results:results\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        -48
+      ],
+      "id": "ed915525-5ff1-4731-97a3-26748ccc6272",
+      "name": "Collapse Dispatch Results"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.maintenance_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { stuck_processing_minutes:15,retry_batch_size:200,confirm_maintenance:true } }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1516,
+        -48
+      ],
+      "id": "e53e8ecd-5d5e-4b54-8d0c-97b433d4eb4f",
+      "name": "Run Retry Maintenance",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const scheduler=$('Collapse Dispatch Results').first().json;\nreturn [{json:{\n  success:scheduler.success&&$json.success!==false,\n  result:'operational_communication_scheduler_completed',\n  task_count:scheduler.task_count,\n  failed_task_count:scheduler.failed_task_count,\n  task_counts_by_type:scheduler.task_counts_by_type,\n  dispatch_result_count:scheduler.dispatch_result_count,\n  retry_maintenance_result:$json.result||null,\n  released_stuck_count:$json.released_stuck_count??0,\n  requeued_count:$json.requeued_count??0,\n  dead_lettered_count:$json.dead_lettered_count??0,\n  unresolved_dead_letter_count:$json.unresolved_dead_letter_count??0\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1772,
+        -48
+      ],
+      "id": "8669ed0d-eb11-4955-84c5-2445302ef4eb",
+      "name": "Return Scheduler Summary"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'تنظیمات Scheduler نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -532,
+        160
+      ],
+      "id": "5e861ef9-8bf4-4fa0-b9d0-db871375cd2c",
+      "name": "Return Scheduler Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## Scheduler عملیاتی مشترک\n\nهر 15 دقیقه:\n- درخواست‌های تأیید نوبت تولید و صف می‌شوند\n- پیگیری‌های پس از مراجعه تولید و صف می‌شوند\n- عدم پاسخ به تأییدها به Handoff می‌رود\n- پیام‌های Due ارسال می‌شوند\n- Retry و Dead Letter نگهداری می‌شوند\n\nWorkflow را فقط پس از فعال‌بودن 27،30،35،79،83،84،86،88 و 89 فعال کن.",
+        "height": 480,
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1780,
+        -360
+      ],
+      "id": "7ba6e19c-dbe4-4459-974b-b9a2f7349d12",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 15 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Scheduled Defaults",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scheduled Defaults": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Scheduler Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Scheduler Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Scheduler Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Scheduler Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Run Operational Scheduler": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Scheduler Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Scheduler Run": {
+      "main": [
+        [
+          {
+            "node": "Is Scheduler Run Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Scheduler Run Valid?": {
+      "main": [
+        [
+          {
+            "node": "Load Active Clinics",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Scheduler Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Active Clinics": {
+      "main": [
+        [
+          {
+            "node": "Build Scheduler Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Scheduler Tasks": {
+      "main": [
+        [
+          {
+            "node": "Is There a Scheduler Task?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is There a Scheduler Task?": {
+      "main": [
+        [
+          {
+            "node": "Execute Operational Task",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Collapse Scheduler Task Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Operational Task": {
+      "main": [
+        [
+          {
+            "node": "Normalize Operational Task Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Operational Task Result": {
+      "main": [
+        [
+          {
+            "node": "Collapse Scheduler Task Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collapse Scheduler Task Results": {
+      "main": [
+        [
+          {
+            "node": "Dispatch Due Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dispatch Due Messages": {
+      "main": [
+        [
+          {
+            "node": "Collapse Dispatch Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collapse Dispatch Results": {
+      "main": [
+        [
+          {
+            "node": "Run Retry Maintenance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Retry Maintenance": {
+      "main": [
+        [
+          {
+            "node": "Return Scheduler Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

@@ -1,0 +1,67 @@
+{
+  "name": "17 - DB - Add Doctor Schedule Exceptions",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "5a1f620a-a96f-4d72-88d8-677b630266f6",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE EXTENSION IF NOT EXISTS btree_gist;\n\nCREATE TABLE IF NOT EXISTS schedule_exceptions (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    doctor_id BIGINT NOT NULL\n        REFERENCES doctors(id)\n        ON DELETE CASCADE,\n\n    exception_type TEXT NOT NULL DEFAULT 'unavailable'\n        CHECK (exception_type IN ('unavailable')),\n\n    starts_at TIMESTAMPTZ NOT NULL,\n    ends_at TIMESTAMPTZ NOT NULL,\n\n    reason TEXT NOT NULL,\n    source TEXT NOT NULL DEFAULT 'assistant',\n    created_by TEXT,\n\n    is_active BOOLEAN NOT NULL DEFAULT TRUE,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    CHECK (ends_at > starts_at)\n);\n\nCREATE INDEX IF NOT EXISTS idx_schedule_exceptions_doctor_time\n    ON schedule_exceptions (\n        doctor_id,\n        starts_at,\n        ends_at\n    )\n    WHERE is_active = TRUE;\n\nDO $$\nBEGIN\n    IF NOT EXISTS (\n        SELECT 1\n        FROM pg_constraint\n        WHERE conname = 'no_overlapping_active_doctor_blocks'\n    ) THEN\n        ALTER TABLE schedule_exceptions\n            ADD CONSTRAINT no_overlapping_active_doctor_blocks\n            EXCLUDE USING gist (\n                doctor_id WITH =,\n                tstzrange(starts_at, ends_at, '[)') WITH &&\n            )\n            WHERE (\n                is_active = TRUE\n                AND exception_type = 'unavailable'\n            );\n    END IF;\nEND\n$$;\n\nCREATE OR REPLACE FUNCTION prevent_appointment_in_blocked_time()\nRETURNS TRIGGER\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    IF NEW.status IN ('pending', 'confirmed')\n       AND EXISTS (\n            SELECT 1\n            FROM schedule_exceptions se\n            WHERE se.doctor_id = NEW.doctor_id\n              AND se.is_active = TRUE\n              AND se.exception_type = 'unavailable'\n              AND se.starts_at < NEW.ends_at\n              AND se.ends_at > NEW.starts_at\n       )\n    THEN\n        RAISE EXCEPTION\n            USING\n                ERRCODE = 'P0001',\n                MESSAGE = 'appointment_time_blocked_by_schedule_exception';\n    END IF;\n\n    RETURN NEW;\nEND;\n$$;\n\nDROP TRIGGER IF EXISTS trg_prevent_appointment_in_blocked_time\n    ON appointments;\n\nCREATE TRIGGER trg_prevent_appointment_in_blocked_time\nBEFORE INSERT OR UPDATE OF\n    doctor_id,\n    starts_at,\n    ends_at,\n    status\nON appointments\nFOR EACH ROW\nEXECUTE FUNCTION prevent_appointment_in_blocked_time();\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار استثناهای برنامه پزشک و کنترل مرکزی رزرو ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "9393a821-2c63-489e-84f5-6f02f85dd690",
+      "name": "Create Schedule Exceptions Structure"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nاین Workflow جدول `schedule_exceptions` را می‌سازد و یک کنترل مرکزی روی جدول appointments قرار می‌دهد تا هیچ نوبت فعال داخل بازه مسدودشده ثبت یا جابه‌جا نشود.\n\nپس از اجرای موفق، Workflow را غیرفعال نگه دار.",
+        "height": 280,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        -240
+      ],
+      "id": "842811ef-7f6d-4c53-ae61-519bd8b337ea",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Schedule Exceptions Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

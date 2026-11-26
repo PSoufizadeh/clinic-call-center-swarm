@@ -1,0 +1,298 @@
+{
+  "name": "07 - Core - Create Appointment - Schedule Guarded V2",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE UNIQUE INDEX IF NOT EXISTS uq_patients_clinic_mobile\n    ON patients(clinic_id, mobile);\n\nWITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        $2::TEXT AS doctor_name,\n        $3::TEXT AS service_name,\n        $4::TEXT AS patient_name,\n        $5::TEXT AS mobile,\n        $6::DATE AS target_date,\n        $7::TIME AS start_time,\n        $8::TEXT AS visit_reason\n),\n\nbase_context AS (\n    SELECT\n        c.id AS clinic_id,\n        c.name AS clinic_name,\n        c.timezone,\n\n        d.id AS doctor_id,\n        d.full_name AS doctor_name,\n        d.buffer_minutes,\n\n        s.id AS service_id,\n        s.name AS service_name,\n        s.duration_minutes,\n\n        r.patient_name,\n        r.mobile,\n        r.target_date,\n        r.start_time,\n        r.visit_reason\n\n    FROM request_data r\n\n    INNER JOIN clinics c\n        ON c.name = r.clinic_name\n       AND c.is_active = TRUE\n\n    INNER JOIN doctors d\n        ON d.clinic_id = c.id\n       AND d.full_name = r.doctor_name\n       AND d.is_active = TRUE\n\n    INNER JOIN services s\n        ON s.clinic_id = c.id\n       AND s.name = r.service_name\n       AND s.is_active = TRUE\n\n    ORDER BY d.id, s.id\n    LIMIT 1\n),\n\nvalid_slot AS (\n    SELECT\n        bc.*,\n\n        slot.slot_start_local,\n\n        slot.slot_start_local\n            AT TIME ZONE bc.timezone\n            AS starts_at,\n\n        (\n            slot.slot_start_local\n            + make_interval(mins => bc.duration_minutes)\n        ) AT TIME ZONE bc.timezone\n            AS ends_at\n\n    FROM base_context bc\n\n    INNER JOIN doctor_schedules ds\n        ON ds.doctor_id = bc.doctor_id\n       AND ds.is_active = TRUE\n       AND ds.weekday =\n            EXTRACT(ISODOW FROM bc.target_date)::INTEGER\n       AND (\n            ds.valid_from IS NULL\n            OR ds.valid_from <= bc.target_date\n       )\n       AND (\n            ds.valid_to IS NULL\n            OR ds.valid_to >= bc.target_date\n       )\n\n    CROSS JOIN LATERAL generate_series(\n        bc.target_date + ds.start_time,\n\n        bc.target_date\n            + ds.end_time\n            - make_interval(mins => bc.duration_minutes),\n\n        make_interval(\n            mins => bc.duration_minutes + bc.buffer_minutes\n        )\n    ) AS slot(slot_start_local)\n\n    WHERE slot.slot_start_local =\n          bc.target_date + bc.start_time\n\n    LIMIT 1\n),\n\nslot_state AS (\n    SELECT\n        vs.*,\n\n        EXISTS (\n            SELECT 1\n            FROM schedule_exceptions se\n\n            WHERE se.doctor_id = vs.doctor_id\n              AND se.is_active = TRUE\n              AND se.exception_type = 'unavailable'\n\n              AND se.starts_at < vs.ends_at\n              AND se.ends_at > vs.starts_at\n        ) AS is_blocked,\n\n        EXISTS (\n            SELECT 1\n            FROM appointments existing\n\n            WHERE existing.doctor_id = vs.doctor_id\n              AND existing.status IN ('pending', 'confirmed')\n\n              AND existing.starts_at < vs.ends_at\n              AND existing.ends_at > vs.starts_at\n        ) AS has_appointment_conflict\n\n    FROM valid_slot vs\n),\n\nupsert_patient AS (\n    INSERT INTO patients (\n        clinic_id,\n        full_name,\n        mobile\n    )\n\n    SELECT\n        clinic_id,\n        patient_name,\n        mobile\n\n    FROM slot_state\n\n    WHERE starts_at > NOW()\n      AND is_blocked = FALSE\n      AND has_appointment_conflict = FALSE\n\n    ON CONFLICT (clinic_id, mobile)\n    DO UPDATE SET\n        full_name = EXCLUDED.full_name,\n        updated_at = NOW()\n\n    RETURNING\n        id,\n        clinic_id,\n        full_name,\n        mobile\n),\n\ninserted_appointment AS (\n    INSERT INTO appointments (\n        clinic_id,\n        doctor_id,\n        patient_id,\n        service_id,\n        starts_at,\n        ends_at,\n        status,\n        booking_source,\n        visit_reason\n    )\n\n    SELECT\n        ss.clinic_id,\n        ss.doctor_id,\n        p.id,\n        ss.service_id,\n        ss.starts_at,\n        ss.ends_at,\n        'confirmed',\n        'assistant',\n        ss.visit_reason\n\n    FROM slot_state ss\n\n    INNER JOIN upsert_patient p\n        ON p.clinic_id = ss.clinic_id\n       AND p.mobile = ss.mobile\n\n    ON CONFLICT DO NOTHING\n\n    RETURNING\n        id,\n        clinic_id,\n        doctor_id,\n        patient_id,\n        service_id,\n        starts_at,\n        ends_at,\n        status\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM base_context)\n            THEN 'configuration_not_found'\n        WHEN NOT EXISTS (SELECT 1 FROM valid_slot)\n            THEN 'invalid_target_slot'\n        WHEN (\n            SELECT starts_at <= NOW()\n            FROM slot_state\n        )\n            THEN 'target_time_in_past'\n        WHEN (\n            SELECT is_blocked\n            FROM slot_state\n        )\n            THEN 'blocked_by_schedule_exception'\n        WHEN (\n            SELECT has_appointment_conflict\n            FROM slot_state\n        )\n            THEN 'slot_unavailable'\n        WHEN EXISTS (SELECT 1 FROM inserted_appointment)\n            THEN 'created'\n        ELSE 'slot_unavailable'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM base_context)\n            THEN 'کلینیک، پزشک یا خدمت مطابق ورودی پیدا نشد.'\n        WHEN NOT EXISTS (SELECT 1 FROM valid_slot)\n            THEN 'زمان انتخاب‌شده با برنامه کاری پزشک تطابق ندارد.'\n        WHEN (\n            SELECT starts_at <= NOW()\n            FROM slot_state\n        )\n            THEN 'زمان انتخاب‌شده باید مربوط به آینده باشد.'\n        WHEN (\n            SELECT is_blocked\n            FROM slot_state\n        )\n            THEN 'این بازه زمانی در برنامه پزشک مسدود شده است.'\n        WHEN (\n            SELECT has_appointment_conflict\n            FROM slot_state\n        )\n            THEN 'زمان انتخاب‌شده در دسترس نیست.'\n        WHEN EXISTS (SELECT 1 FROM inserted_appointment)\n            THEN 'نوبت با موفقیت ثبت شد.'\n        ELSE 'زمان انتخاب‌شده در دسترس نیست.'\n    END AS message,\n\n    (\n        SELECT id\n        FROM inserted_appointment\n        LIMIT 1\n    ) AS appointment_id,\n\n    r.patient_name,\n\n    COALESCE(\n        (\n            SELECT doctor_name\n            FROM base_context\n        ),\n        r.doctor_name\n    ) AS doctor_name,\n\n    COALESCE(\n        (\n            SELECT service_name\n            FROM base_context\n        ),\n        r.service_name\n    ) AS service_name,\n\n    (\n        SELECT TO_CHAR(\n            starts_at AT TIME ZONE timezone,\n            'YYYY-MM-DD HH24:MI'\n        )\n        FROM valid_slot\n    ) AS appointment_start,\n\n    (\n        SELECT TO_CHAR(\n            ends_at AT TIME ZONE timezone,\n            'YYYY-MM-DD HH24:MI'\n        )\n        FROM valid_slot\n    ) AS appointment_end,\n\n    (\n        SELECT status\n        FROM inserted_appointment\n        LIMIT 1\n    ) AS status\n\nFROM request_data r;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.doctor_name,\n  $json.service_name,\n  $json.patient_name,\n  $json.mobile,\n  $json.target_date,\n  $json.start_time,\n  $json.visit_reason\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -512,
+        -384
+      ],
+      "id": "7054510a-d303-4357-9c73-487b36e61d40",
+      "name": "Create Appointment"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dbdb187a-0e76-4161-97ed-c9df4f2b8c89",
+              "leftValue": "={{ $json.result }}",
+              "rightValue": "created",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -304,
+        -384
+      ],
+      "id": "14a71fc8-d30f-4663-ad80-9873f72296e7",
+      "name": "Was Appointment Created?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    a.id AS appointment_id,\n    a.starts_at,\n    a.ends_at,\n    a.status,\n\n    c.name AS clinic_name,\n    c.timezone,\n\n    d.full_name AS doctor_name,\n\n    p.full_name AS patient_name,\n    p.mobile AS patient_mobile,\n\n    s.name AS service_name,\n\n    a.visit_reason,\n    a.google_calendar_event_id\n\nFROM appointments a\n\nINNER JOIN clinics c\n    ON c.id = a.clinic_id\n\nINNER JOIN doctors d\n    ON d.id = a.doctor_id\n\nINNER JOIN patients p\n    ON p.id = a.patient_id\n\nLEFT JOIN services s\n    ON s.id = a.service_id\n\nWHERE a.id = $1\n  AND a.google_calendar_event_id IS NULL;",
+        "options": {
+          "queryReplacement": "={{ [ $json.appointment_id ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -112,
+        -480
+      ],
+      "id": "dbab418a-3d86-4699-820c-fca850532143",
+      "name": "Get Appointment Details"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "YOUR_CALENDAR_ID",
+          "mode": "list",
+          "cachedResultName": "Clinic Demo - Dr Test"
+        },
+        "start": "={{ $json.starts_at }}",
+        "end": "={{ $json.ends_at }}",
+        "additionalFields": {
+          "description": "={{ \n`شناسه نوبت: ${$json.appointment_id}\nپزشک: ${$json.doctor_name}\nخدمت: ${$json.service_name}\nمنبع ثبت: منشی هوشمند`\n}}",
+          "summary": "={{ `نوبت ${$json.patient_name} - ${$json.service_name}` }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        96,
+        -480
+      ],
+      "id": "826af304-0c1f-40f3-95e6-481a690555ca",
+      "name": "Create Calendar Event"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE appointments\nSET\n    google_calendar_event_id = $1,\n    updated_at = NOW()\nWHERE id = $2\nRETURNING\n    id AS appointment_id,\n    google_calendar_event_id,\n    status,\n    starts_at,\n    ends_at;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.id,\n  $('Get Appointment Details').first().json.appointment_id\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        304,
+        -480
+      ],
+      "id": "0449399a-55e3-48b9-bac0-7e943cd9d3f1",
+      "name": "Save Calendar Event ID"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "clinic_name"
+            },
+            {
+              "name": "doctor_name"
+            },
+            {
+              "name": "service_name"
+            },
+            {
+              "name": "patient_name"
+            },
+            {
+              "name": "mobile"
+            },
+            {
+              "name": "target_date"
+            },
+            {
+              "name": "start_time"
+            },
+            {
+              "name": "visit_reason"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -720,
+        -384
+      ],
+      "id": "764ca918-f471-4644-a9a2-aa82518623f9",
+      "name": "Booking Input"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e463fb7a-9cb2-431f-860f-13a7309b990b",
+              "name": "success",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "590840d3-d6f6-4630-80fe-afbf03747b13",
+              "name": "result",
+              "value": "={{ $('Create Appointment').first().json.result ?? 'slot_unavailable' }}",
+              "type": "string"
+            },
+            {
+              "id": "3d8bfb45-48a7-44a3-aa89-0f86bcfedb13",
+              "name": "message",
+              "value": "={{ $('Create Appointment').first().json.message ?? 'زمان انتخاب‌شده در دسترس نیست.' }}",
+              "type": "string"
+            },
+            {
+              "id": "bf526d4b-4c22-4364-a230-ad99ea4a5b7d",
+              "name": "appointment_id",
+              "value": "={{ $('Create Appointment').first().json.appointment_id ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "117783ce-3227-4ac6-bfe4-cec1c86d4cd2",
+              "name": "service_name",
+              "value": "={{ $('Create Appointment').first().json.service_name ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "64f29847-adc5-458d-9bd0-0a4abcc0a00f",
+              "name": "appointment_start",
+              "value": "={{ $('Create Appointment').first().json.appointment_start ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "fee82a73-c800-49a2-88fb-7a9a0756d7f7",
+              "name": "appointment_end",
+              "value": "={{ $('Create Appointment').first().json.appointment_end ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "21d10991-2df8-4543-997c-124344c0f895",
+              "name": "patient_name",
+              "value": "={{ $('Create Appointment').first().json.patient_name ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "90d26501-cd3c-48db-8180-9917e0c65a86",
+              "name": "doctor_name",
+              "value": "={{ $('Create Appointment').first().json.doctor_name ?? '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -96,
+        -288
+      ],
+      "id": "9e008b1e-f3ea-4e75-9c21-949c34a8c9a3",
+      "name": "Booking Result - Unavailable"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Create Appointment": {
+      "main": [
+        [
+          {
+            "node": "Was Appointment Created?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Was Appointment Created?": {
+      "main": [
+        [
+          {
+            "node": "Get Appointment Details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Booking Result - Unavailable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Appointment Details": {
+      "main": [
+        [
+          {
+            "node": "Create Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Save Calendar Event ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Booking Input": {
+      "main": [
+        [
+          {
+            "node": "Create Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": [],
+  "id": "obzCbNzmSeVRpNwD"
+}

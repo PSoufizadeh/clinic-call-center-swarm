@@ -1,0 +1,267 @@
+{
+  "name": "18 - API - Block Doctor Time - Corrected V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "e7c4e578-80e1-4680-81a5-1400ccf61a6b",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c39b42eb-88f6-4453-92bf-b483ec8d60d8",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "f793b6c8-880c-4be8-9ed0-04374c93bde8",
+              "name": "doctor_name",
+              "value": "دکتر آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "04ee42a1-9013-4a73-a3ce-8095005ee541",
+              "name": "start_date",
+              "value": "2026-08-06",
+              "type": "string"
+            },
+            {
+              "id": "6b0ccb31-ec59-4cb9-ae50-240fd2ae68f3",
+              "name": "start_time",
+              "value": "09:00",
+              "type": "string"
+            },
+            {
+              "id": "024f94a7-9e2c-43a2-8cd8-f0e43a6c98fc",
+              "name": "end_date",
+              "value": "2026-08-06",
+              "type": "string"
+            },
+            {
+              "id": "20e1815f-2a56-46f3-95dc-81041c826c9a",
+              "name": "end_time",
+              "value": "13:00",
+              "type": "string"
+            },
+            {
+              "id": "0972db0e-7bde-4993-86b5-68ab13347540",
+              "name": "reason",
+              "value": "تغییر فوری برنامه پزشک",
+              "type": "string"
+            },
+            {
+              "id": "65e1de80-8cdf-40a4-8436-ee720f183295",
+              "name": "source",
+              "value": "secretary",
+              "type": "string"
+            },
+            {
+              "id": "dc50220e-9e04-4a44-8f12-26d28e014fba",
+              "name": "confirm_block",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "619020ff-c85d-4d17-b85e-1b9e8a5c7abd",
+      "name": "Manual Doctor Block Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/doctors/block-time",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "fe9e99d3-d321-4b70-9b56-4fc9e9e43046",
+      "name": "Webhook - Block Doctor Time"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst clinic_name = text(input.clinic_name);\nconst doctor_name = text(input.doctor_name);\nconst start_date = text(input.start_date);\nconst start_time = text(input.start_time);\nconst end_date = text(input.end_date);\nconst end_time = text(input.end_time);\nconst reason = text(input.reason);\nconst source = text(input.source || 'assistant');\nconst confirm_block = toBoolean(input.confirm_block);\n\nconst errors = [];\n\nfunction isRealIsoDate(value) {\n  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;\n\n  const [year, month, day] = value.split('-').map(Number);\n  const parsed = new Date(Date.UTC(year, month - 1, day));\n\n  return (\n    parsed.getUTCFullYear() === year &&\n    parsed.getUTCMonth() === month - 1 &&\n    parsed.getUTCDate() === day\n  );\n}\n\nconst isTime = (value) =>\n  /^([01]\\d|2[0-3]):[0-5]\\d$/.test(value);\n\nif (!clinic_name) {\n  errors.push({ field: 'clinic_name', message: 'نام کلینیک الزامی است.' });\n}\n\nif (!doctor_name) {\n  errors.push({ field: 'doctor_name', message: 'نام پزشک الزامی است.' });\n}\n\nif (!isRealIsoDate(start_date)) {\n  errors.push({\n    field: 'start_date',\n    message: 'تاریخ شروع باید معتبر و با قالب YYYY-MM-DD باشد.',\n  });\n}\n\nif (!isTime(start_time)) {\n  errors.push({\n    field: 'start_time',\n    message: 'ساعت شروع باید با قالب HH:MM باشد.',\n  });\n}\n\nif (!isRealIsoDate(end_date)) {\n  errors.push({\n    field: 'end_date',\n    message: 'تاریخ پایان باید معتبر و با قالب YYYY-MM-DD باشد.',\n  });\n}\n\nif (!isTime(end_time)) {\n  errors.push({\n    field: 'end_time',\n    message: 'ساعت پایان باید با قالب HH:MM باشد.',\n  });\n}\n\nif (!reason) {\n  errors.push({ field: 'reason', message: 'علت مسدودسازی الزامی است.' });\n}\n\nif (reason.length > 500) {\n  errors.push({\n    field: 'reason',\n    message: 'علت مسدودسازی نباید بیشتر از 500 کاراکتر باشد.',\n  });\n}\n\nif (!['assistant', 'secretary', 'doctor', 'admin'].includes(source)) {\n  errors.push({\n    field: 'source',\n    message: 'source باید assistant، secretary، doctor یا admin باشد.',\n  });\n}\n\nif (confirm_block !== true) {\n  errors.push({\n    field: 'confirm_block',\n    message: 'مسدودسازی بازه باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [\n  {\n    json: {\n      clinic_name,\n      doctor_name,\n      start_date,\n      start_time,\n      end_date,\n      end_time,\n      reason,\n      source,\n      confirm_block,\n      validation_status: errors.length === 0 ? 'valid' : 'invalid',\n      errors,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "e2def4ba-1b9e-4f1e-ae65-ffb6f0a2c528",
+      "name": "Normalize and Validate Doctor Block"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "46b9e109-9d30-42d2-8ae8-41716360bb07",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "ef3bc833-950a-4806-b83c-3e0133c982eb",
+      "name": "Is Doctor Block Request Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        $2::TEXT AS doctor_name,\n        $3::DATE AS start_date,\n        $4::TIME AS start_time,\n        $5::DATE AS end_date,\n        $6::TIME AS end_time,\n        $7::TEXT AS reason,\n        $8::TEXT AS source\n),\n\ndoctor_context AS (\n    SELECT\n        c.id AS clinic_id,\n        c.name AS clinic_name,\n        c.timezone,\n\n        d.id AS doctor_id,\n        d.full_name AS doctor_name,\n\n        r.start_date,\n        r.start_time,\n        r.end_date,\n        r.end_time,\n        r.reason,\n        r.source\n\n    FROM request_data r\n\n    INNER JOIN clinics c\n        ON c.name = r.clinic_name\n       AND c.is_active = TRUE\n\n    INNER JOIN doctors d\n        ON d.clinic_id = c.id\n       AND d.full_name = r.doctor_name\n       AND d.is_active = TRUE\n\n    ORDER BY d.id\n    LIMIT 1\n),\n\nrequested_window AS (\n    SELECT\n        dc.*,\n\n        (\n            dc.start_date + dc.start_time\n        ) AT TIME ZONE dc.timezone AS starts_at,\n\n        (\n            dc.end_date + dc.end_time\n        ) AT TIME ZONE dc.timezone AS ends_at\n\n    FROM doctor_context dc\n),\n\nexact_existing_exception AS (\n    SELECT\n        se.id AS exception_id,\n        se.clinic_id,\n        se.doctor_id,\n        se.starts_at,\n        se.ends_at,\n        se.reason,\n        se.source,\n        se.is_active,\n        se.created_at\n\n    FROM schedule_exceptions se\n\n    INNER JOIN requested_window rw\n        ON rw.doctor_id = se.doctor_id\n\n    WHERE se.is_active = TRUE\n      AND se.exception_type = 'unavailable'\n      AND se.starts_at = rw.starts_at\n      AND se.ends_at = rw.ends_at\n\n    ORDER BY se.id\n    LIMIT 1\n),\n\noverlapping_exceptions AS (\n    SELECT\n        se.id AS exception_id,\n        se.starts_at,\n        se.ends_at,\n        se.reason,\n        se.source\n\n    FROM schedule_exceptions se\n\n    INNER JOIN requested_window rw\n        ON rw.doctor_id = se.doctor_id\n\n    WHERE se.is_active = TRUE\n      AND se.exception_type = 'unavailable'\n      AND se.starts_at < rw.ends_at\n      AND se.ends_at > rw.starts_at\n\n    ORDER BY se.starts_at\n),\n\ninserted_exception AS (\n    INSERT INTO schedule_exceptions (\n        clinic_id,\n        doctor_id,\n        exception_type,\n        starts_at,\n        ends_at,\n        reason,\n        source,\n        is_active\n    )\n\n    SELECT\n        rw.clinic_id,\n        rw.doctor_id,\n        'unavailable',\n        rw.starts_at,\n        rw.ends_at,\n        rw.reason,\n        rw.source,\n        TRUE\n\n    FROM requested_window rw\n\n    WHERE rw.ends_at > rw.starts_at\n      AND rw.starts_at > NOW()\n      AND NOT EXISTS (\n          SELECT 1\n          FROM overlapping_exceptions\n      )\n\n    ON CONFLICT DO NOTHING\n\n    RETURNING\n        id AS exception_id,\n        clinic_id,\n        doctor_id,\n        starts_at,\n        ends_at,\n        reason,\n        source,\n        is_active,\n        created_at\n),\n\neffective_exception AS (\n    SELECT\n        ie.exception_id,\n        ie.clinic_id,\n        ie.doctor_id,\n        ie.starts_at,\n        ie.ends_at,\n        ie.reason,\n        ie.source,\n        ie.is_active,\n        ie.created_at,\n        'created'::TEXT AS exception_origin\n\n    FROM inserted_exception ie\n\n    UNION ALL\n\n    SELECT\n        ee.exception_id,\n        ee.clinic_id,\n        ee.doctor_id,\n        ee.starts_at,\n        ee.ends_at,\n        ee.reason,\n        ee.source,\n        ee.is_active,\n        ee.created_at,\n        'existing_exact_match'::TEXT AS exception_origin\n\n    FROM exact_existing_exception ee\n\n    WHERE NOT EXISTS (\n        SELECT 1\n        FROM inserted_exception\n    )\n),\n\naffected_appointments AS (\n    SELECT\n        a.id AS appointment_id,\n        a.starts_at,\n        a.ends_at,\n        a.status,\n        a.google_calendar_event_id,\n\n        p.full_name AS patient_name,\n        p.mobile,\n\n        d.full_name AS doctor_name,\n        s.name AS service_name,\n\n        c.timezone\n\n    FROM appointments a\n\n    INNER JOIN effective_exception ee\n        ON ee.doctor_id = a.doctor_id\n\n    INNER JOIN clinics c\n        ON c.id = a.clinic_id\n\n    INNER JOIN patients p\n        ON p.id = a.patient_id\n\n    INNER JOIN doctors d\n        ON d.id = a.doctor_id\n\n    LEFT JOIN services s\n        ON s.id = a.service_id\n\n    WHERE a.status IN ('pending', 'confirmed')\n      AND a.starts_at < ee.ends_at\n      AND a.ends_at > ee.starts_at\n\n    ORDER BY a.starts_at\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM doctor_context) THEN FALSE\n        WHEN (\n            SELECT rw.ends_at <= rw.starts_at\n            FROM requested_window rw\n        ) THEN FALSE\n        WHEN (\n            SELECT rw.starts_at <= NOW()\n            FROM requested_window rw\n        ) THEN FALSE\n        WHEN EXISTS (SELECT 1 FROM inserted_exception) THEN TRUE\n        WHEN EXISTS (SELECT 1 FROM exact_existing_exception) THEN TRUE\n        ELSE FALSE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM doctor_context)\n            THEN 'doctor_not_found'\n        WHEN (\n            SELECT rw.ends_at <= rw.starts_at\n            FROM requested_window rw\n        )\n            THEN 'invalid_time_range'\n        WHEN (\n            SELECT rw.starts_at <= NOW()\n            FROM requested_window rw\n        )\n            THEN 'start_time_in_past'\n        WHEN EXISTS (SELECT 1 FROM inserted_exception)\n            THEN 'schedule_exception_created'\n        WHEN EXISTS (SELECT 1 FROM exact_existing_exception)\n            THEN 'schedule_exception_already_exists'\n        ELSE 'overlapping_schedule_exception'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM doctor_context)\n            THEN 'کلینیک یا پزشک مطابق ورودی پیدا نشد.'\n        WHEN (\n            SELECT rw.ends_at <= rw.starts_at\n            FROM requested_window rw\n        )\n            THEN 'زمان پایان باید بعد از زمان شروع باشد.'\n        WHEN (\n            SELECT rw.starts_at <= NOW()\n            FROM requested_window rw\n        )\n            THEN 'زمان شروع مسدودسازی باید مربوط به آینده باشد.'\n        WHEN EXISTS (SELECT 1 FROM inserted_exception)\n            THEN 'بازه زمانی پزشک با موفقیت مسدود شد.'\n        WHEN EXISTS (SELECT 1 FROM exact_existing_exception)\n            THEN 'این بازه قبلاً مسدود شده است؛ شناسه همان بازه موجود برگردانده شد.'\n        ELSE 'این بازه با یک بازه مسدود فعال دیگر هم‌پوشانی دارد.'\n    END AS message,\n\n    (\n        SELECT ee.exception_id\n        FROM effective_exception ee\n        LIMIT 1\n    ) AS exception_id,\n\n    r.clinic_name,\n    r.doctor_name,\n\n    COALESCE(\n        (\n            SELECT TO_CHAR(\n                ee.starts_at AT TIME ZONE rw.timezone,\n                'YYYY-MM-DD HH24:MI'\n            )\n            FROM effective_exception ee\n            CROSS JOIN requested_window rw\n            LIMIT 1\n        ),\n        (\n            SELECT TO_CHAR(\n                rw.starts_at AT TIME ZONE rw.timezone,\n                'YYYY-MM-DD HH24:MI'\n            )\n            FROM requested_window rw\n        )\n    ) AS blocked_start,\n\n    COALESCE(\n        (\n            SELECT TO_CHAR(\n                ee.ends_at AT TIME ZONE rw.timezone,\n                'YYYY-MM-DD HH24:MI'\n            )\n            FROM effective_exception ee\n            CROSS JOIN requested_window rw\n            LIMIT 1\n        ),\n        (\n            SELECT TO_CHAR(\n                rw.ends_at AT TIME ZONE rw.timezone,\n                'YYYY-MM-DD HH24:MI'\n            )\n            FROM requested_window rw\n        )\n    ) AS blocked_end,\n\n    r.reason,\n    r.source,\n\n    (\n        SELECT COUNT(*)::INTEGER\n        FROM affected_appointments\n    ) AS affected_appointment_count,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'appointment_id', aa.appointment_id,\n                    'patient_name', aa.patient_name,\n                    'mobile', aa.mobile,\n                    'doctor_name', aa.doctor_name,\n                    'service_name', aa.service_name,\n                    'appointment_date',\n                        TO_CHAR(\n                            aa.starts_at AT TIME ZONE aa.timezone,\n                            'YYYY-MM-DD'\n                        ),\n                    'start_time',\n                        TO_CHAR(\n                            aa.starts_at AT TIME ZONE aa.timezone,\n                            'HH24:MI'\n                        ),\n                    'end_time',\n                        TO_CHAR(\n                            aa.ends_at AT TIME ZONE aa.timezone,\n                            'HH24:MI'\n                        ),\n                    'status', aa.status,\n                    'google_calendar_event_id',\n                        aa.google_calendar_event_id\n                )\n                ORDER BY aa.starts_at\n            )\n            FROM affected_appointments aa\n        ),\n        '[]'::JSONB\n    ) AS affected_appointments,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'exception_id', oe.exception_id,\n                    'blocked_start',\n                        TO_CHAR(\n                            oe.starts_at AT TIME ZONE rw.timezone,\n                            'YYYY-MM-DD HH24:MI'\n                        ),\n                    'blocked_end',\n                        TO_CHAR(\n                            oe.ends_at AT TIME ZONE rw.timezone,\n                            'YYYY-MM-DD HH24:MI'\n                        ),\n                    'reason', oe.reason,\n                    'source', oe.source\n                )\n                ORDER BY oe.starts_at\n            )\n            FROM overlapping_exceptions oe\n            CROSS JOIN requested_window rw\n        ),\n        '[]'::JSONB\n    ) AS overlapping_exceptions\n\nFROM request_data r;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.doctor_name,\n  $json.start_date,\n  $json.start_time,\n  $json.end_date,\n  $json.end_time,\n  $json.reason,\n  $json.source\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "017a48ae-bfb6-42f7-a0da-ea443474689e",
+      "name": "Create Doctor Schedule Exception"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      result: 'invalid_request',\n      message: 'اطلاعات درخواست ناقص یا نامعتبر است.',\n      affected_appointment_count: 0,\n      affected_appointments: [],\n      errors: $json.errors ?? [],\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "abba68e2-efe7-44e3-880e-a34aa1199b41",
+      "name": "Return Doctor Block Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## نسخه اصلاح‌شده V2\n\nاین نسخه اجرای دوباره همان بازه را بدون ایجاد رکورد تکراری مدیریت می‌کند.\n\n- اگر همان بازه قبلاً ثبت شده باشد، `success=true` و همان `exception_id` برمی‌گردد.\n- اگر هم‌پوشانی فقط جزئی باشد، `success=false` و فهرست `overlapping_exceptions` برمی‌گردد.\n- برای Workflow شماره 20، از `exception_id` خروجی استفاده کن.",
+        "height": 330,
+        "width": 440
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1120,
+        -256
+      ],
+      "id": "2f556430-a1c0-4d69-a4d2-2420b292fb1f",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Doctor Block Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Doctor Block Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Doctor Block",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Block Doctor Time": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Doctor Block",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Doctor Block": {
+      "main": [
+        [
+          {
+            "node": "Is Doctor Block Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Doctor Block Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Create Doctor Schedule Exception",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Doctor Block Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

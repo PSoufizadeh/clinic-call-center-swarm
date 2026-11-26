@@ -1,0 +1,261 @@
+{
+  "name": "109 - Core - Verify Channel Authentication and Signature - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "82f2a81a-30f7-4680-9e60-003a68faa538",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "26eaff4a-2f72-4ebd-8bcb-96eb40400148",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "7ca6992c-836f-471e-b166-916bd5ae6134",
+              "name": "client_name",
+              "value": "webchat-demo",
+              "type": "string"
+            },
+            {
+              "id": "fcbee508-dc71-447d-9716-8a87f18cf756",
+              "name": "channel",
+              "value": "webchat",
+              "type": "string"
+            },
+            {
+              "id": "224a7932-a3d7-4e3a-a0bf-43430071937c",
+              "name": "api_key",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "a84e7c5b-d249-4049-a90e-9fbb773540bb",
+              "name": "source_ip",
+              "value": "127.0.0.1",
+              "type": "string"
+            },
+            {
+              "id": "7a55464b-3966-4b48-8db7-f56700367de3",
+              "name": "signature_verified",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "cc3f1c01-a3aa-470d-8461-da48a659998b",
+              "name": "verification_reference",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "5aa65c4d-746c-4851-8440-64e53c83f54e",
+              "name": "confirm_check",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "a58e5da5-eb47-42e4-a524-3b3549d7d36c",
+      "name": "Manual Authentication Check"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/gateway/security/authenticate",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "c9621bb3-dfa0-4532-b4bc-d9200255be03",
+      "name": "Webhook - Verify Gateway Authentication"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst clinic_name = text(input.clinic_name);\nconst client_name = text(input.client_name);\nconst channel = text(input.channel).toLowerCase();\nconst api_key = text(input.api_key);\nconst source_ip = text(input.source_ip);\nconst signature_verified = bool(input.signature_verified);\nconst verification_reference = text(input.verification_reference);\nconst confirm_check = bool(input.confirm_check);\n\nconst channels = [\n  'whatsapp',\n  'sms',\n  'phone',\n  'telegram',\n  'webchat',\n  'manual',\n  'api',\n  'email',\n  'web_push',\n  'in_app',\n];\n\nconst errors = [];\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (!client_name) {\n  errors.push({\n    field: 'client_name',\n    message: 'نام Gateway Client الزامی است.',\n  });\n}\n\nif (!channels.includes(channel)) {\n  errors.push({\n    field: 'channel',\n    message: 'کانال معتبر نیست.',\n  });\n}\n\nif (confirm_check !== true) {\n  errors.push({\n    field: 'confirm_check',\n    message: 'بررسی Authentication باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    clinic_name,\n    client_name,\n    channel,\n    api_key,\n    source_ip,\n    signature_verified,\n    verification_reference,\n    confirm_check,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "6f029a07-fb31-410b-ac8f-f7f39501903e",
+      "name": "Normalize and Validate Authentication Check"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5a550322-7ced-43e3-ab5b-be17414d9e5b",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "9f14d0b2-ffc5-42bb-9fd6-c943dc39566d",
+      "name": "Is Authentication Check Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        $2::TEXT AS client_name,\n        $3::TEXT AS channel,\n        NULLIF($4::TEXT, '') AS api_key,\n        NULLIF($5::TEXT, '') AS source_ip,\n        $6::BOOLEAN AS signature_verified,\n        NULLIF($7::TEXT, '') AS verification_reference\n),\n\nclient_context AS (\n    SELECT\n        clinic.id AS clinic_id,\n        client.id AS client_id,\n        client.client_name,\n        client.channel,\n        client.provider_name,\n        client.auth_mode,\n        client.api_key_hash,\n        client.signature_verifier_url,\n        client.signature_credential_reference,\n        client.allowed_ip_addresses,\n        client.rate_limit_requests,\n        client.rate_limit_window_seconds,\n        client.replay_window_seconds,\n        client.enabled,\n        request.api_key,\n        request.source_ip,\n        request.signature_verified,\n        request.verification_reference\n    FROM request_data request\n    INNER JOIN clinics clinic\n        ON clinic.name = request.clinic_name\n       AND clinic.is_active = TRUE\n    INNER JOIN channel_gateway_clients client\n        ON client.clinic_id = clinic.id\n       AND client.client_name = request.client_name\n       AND client.channel = request.channel\n    LIMIT 1\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM client_context\n        )\n            THEN FALSE\n\n        WHEN context.enabled = FALSE\n            THEN FALSE\n\n        WHEN CARDINALITY(\n            context.allowed_ip_addresses\n        ) > 0\n         AND (\n            context.source_ip IS NULL\n            OR NOT (\n                context.source_ip =\n                ANY(context.allowed_ip_addresses)\n            )\n         )\n            THEN FALSE\n\n        WHEN context.auth_mode = 'api_key'\n         AND (\n            context.api_key IS NULL\n            OR context.api_key_hash IS NULL\n            OR ENCODE(\n                DIGEST(\n                    context.api_key,\n                    'sha256'\n                ),\n                'hex'\n            ) <> context.api_key_hash\n         )\n            THEN FALSE\n\n        WHEN context.auth_mode = 'provider_signature'\n         AND (\n            context.signature_verified = FALSE\n            OR context.verification_reference IS NULL\n         )\n            THEN FALSE\n\n        WHEN context.auth_mode = 'development_none'\n            THEN TRUE\n\n        ELSE TRUE\n    END AS allowed,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM client_context\n        )\n            THEN 'gateway_client_not_found'\n\n        WHEN context.enabled = FALSE\n            THEN 'gateway_client_disabled'\n\n        WHEN CARDINALITY(\n            context.allowed_ip_addresses\n        ) > 0\n         AND (\n            context.source_ip IS NULL\n            OR NOT (\n                context.source_ip =\n                ANY(context.allowed_ip_addresses)\n            )\n         )\n            THEN 'source_ip_not_allowed'\n\n        WHEN context.auth_mode = 'api_key'\n         AND context.api_key IS NULL\n            THEN 'api_key_missing'\n\n        WHEN context.auth_mode = 'api_key'\n         AND (\n            context.api_key_hash IS NULL\n            OR ENCODE(\n                DIGEST(\n                    context.api_key,\n                    'sha256'\n                ),\n                'hex'\n            ) <> context.api_key_hash\n         )\n            THEN 'api_key_invalid'\n\n        WHEN context.auth_mode = 'provider_signature'\n         AND context.signature_verified = FALSE\n            THEN 'provider_signature_not_verified'\n\n        WHEN context.auth_mode = 'provider_signature'\n         AND context.verification_reference IS NULL\n            THEN 'signature_verification_reference_missing'\n\n        ELSE 'authentication_allowed'\n    END AS result,\n\n    context.clinic_id,\n    context.client_id,\n    context.client_name,\n    context.channel,\n    context.provider_name,\n    context.auth_mode,\n\n    context.rate_limit_requests,\n    context.rate_limit_window_seconds,\n    context.replay_window_seconds,\n\n    context.signature_verifier_url,\n    context.signature_credential_reference\n\nFROM client_context context\n\nUNION ALL\n\nSELECT\n    FALSE AS allowed,\n    'gateway_client_not_found' AS result,\n    NULL::BIGINT AS clinic_id,\n    NULL::BIGINT AS client_id,\n    NULL::TEXT AS client_name,\n    NULL::TEXT AS channel,\n    NULL::TEXT AS provider_name,\n    NULL::TEXT AS auth_mode,\n    NULL::INTEGER AS rate_limit_requests,\n    NULL::INTEGER AS rate_limit_window_seconds,\n    NULL::INTEGER AS replay_window_seconds,\n    NULL::TEXT AS signature_verifier_url,\n    NULL::TEXT AS signature_credential_reference\n\nFROM request_data request\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM client_context\n);",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.client_name,\n  $json.channel,\n  $json.api_key,\n  $json.source_ip,\n  $json.signature_verified,\n  $json.verification_reference\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "e3e84284-21e4-4e4c-8da3-2119a7515a1f",
+      "name": "Verify Gateway Client"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{allowed:false,result:'invalid_request',message:'اطلاعات Authentication نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "31790245-dcf6-4a69-9c31-90209f9d3482",
+      "name": "Return Authentication Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## Authentication مرکزی Gateway\n\nحالت‌های پشتیبانی‌شده:\n- api_key\n- provider_signature\n- development_none\n\nAPI Key خام ذخیره نمی‌شود.\n\nprovider_signature فقط زمانی پذیرفته می‌شود که Adapter داخلی نتیجه Verify را همراه verification_reference ارسال کند.",
+        "height": 410,
+        "width": 530
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -300
+      ],
+      "id": "bcdde83a-08f7-4001-985e-d537784c2ddb",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Authentication Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Authentication Check": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Authentication Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Verify Gateway Authentication": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Authentication Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Authentication Check": {
+      "main": [
+        [
+          {
+            "node": "Is Authentication Check Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Authentication Check Valid?": {
+      "main": [
+        [
+          {
+            "node": "Verify Gateway Client",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Authentication Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

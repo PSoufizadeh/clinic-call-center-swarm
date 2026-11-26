@@ -1,0 +1,255 @@
+{
+  "name": "27 - API - Generate Upcoming Appointment Confirmations - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "e2a3ad98-80b0-4123-bb06-b5f9999d352b",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1a4eedb-0e7f-4803-b2d8-10f66b1bdb1b",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "d49ee1d3-45f6-47d3-a5f5-d996f5b5ee44",
+              "name": "window_start_hours",
+              "value": 20,
+              "type": "number"
+            },
+            {
+              "id": "b4a6ec8b-fde6-4c60-be93-cabb4b14dc5d",
+              "name": "window_end_hours",
+              "value": 28,
+              "type": "number"
+            },
+            {
+              "id": "3e15e479-26e2-484e-b06a-b6a40aa79e61",
+              "name": "response_deadline_hours",
+              "value": 12,
+              "type": "number"
+            },
+            {
+              "id": "ffe7faee-10f2-445e-8b48-988a267dca6e",
+              "name": "channel",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "0a3034b6-9974-46a7-86f8-f0eedff6fcbc",
+              "name": "limit",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "0862ec25-3655-4032-87dd-a2ccbff4814d",
+              "name": "confirm_generation",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "14b0977e-7f16-4556-9ac5-16a62ba0603e",
+      "name": "Manual Confirmation Generation Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/appointments/generate-confirmations",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "a4b8f180-5424-4ca7-89df-aa6ab77852ae",
+      "name": "Webhook - Generate Appointment Confirmations"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst clinic_name = text(input.clinic_name);\nconst window_start_hours = Number(input.window_start_hours ?? 20);\nconst window_end_hours = Number(input.window_end_hours ?? 28);\nconst response_deadline_hours = Number(input.response_deadline_hours ?? 12);\nconst channel = text(input.channel || 'whatsapp').toLowerCase();\nconst limit = Number(input.limit ?? 100);\nconst confirm_generation = toBoolean(input.confirm_generation);\n\nconst errors = [];\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (\n  !Number.isInteger(window_start_hours) ||\n  window_start_hours < 0 ||\n  window_start_hours > 720\n) {\n  errors.push({\n    field: 'window_start_hours',\n    message: 'window_start_hours باید یک عدد صحیح بین 0 و 720 باشد.',\n  });\n}\n\nif (\n  !Number.isInteger(window_end_hours) ||\n  window_end_hours < 1 ||\n  window_end_hours > 720 ||\n  window_end_hours <= window_start_hours\n) {\n  errors.push({\n    field: 'window_end_hours',\n    message: 'window_end_hours باید از window_start_hours بزرگ‌تر و حداکثر 720 باشد.',\n  });\n}\n\nif (\n  !Number.isInteger(response_deadline_hours) ||\n  response_deadline_hours < 1 ||\n  response_deadline_hours > 168\n) {\n  errors.push({\n    field: 'response_deadline_hours',\n    message: 'response_deadline_hours باید یک عدد صحیح بین 1 و 168 باشد.',\n  });\n}\n\nif (\n  !['whatsapp', 'sms', 'phone', 'telegram', 'web', 'manual'].includes(channel)\n) {\n  errors.push({\n    field: 'channel',\n    message: 'کانال انتخاب‌شده معتبر نیست.',\n  });\n}\n\nif (!Number.isInteger(limit) || limit < 1 || limit > 500) {\n  errors.push({\n    field: 'limit',\n    message: 'limit باید یک عدد صحیح بین 1 و 500 باشد.',\n  });\n}\n\nif (confirm_generation !== true) {\n  errors.push({\n    field: 'confirm_generation',\n    message: 'ایجاد درخواست‌های تأیید باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [\n  {\n    json: {\n      clinic_name,\n      window_start_hours,\n      window_end_hours,\n      response_deadline_hours,\n      channel,\n      limit,\n      confirm_generation,\n      validation_status: errors.length === 0 ? 'valid' : 'invalid',\n      errors,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "9af9837c-d891-4af5-9e08-a2c532414f06",
+      "name": "Normalize and Validate Confirmation Generation"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cd53a730-8a2a-4a74-8664-fd14724ec762",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "9e7c8148-07b5-42a3-99c7-7ae9ddc8abdb",
+      "name": "Is Confirmation Generation Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        LEAST(GREATEST($2::INTEGER, 0), 720) AS window_start_hours,\n        LEAST(GREATEST($3::INTEGER, 1), 720) AS window_end_hours,\n        LEAST(GREATEST($4::INTEGER, 1), 168) AS response_deadline_hours,\n        $5::TEXT AS channel,\n        LEAST(GREATEST($6::INTEGER, 1), 500) AS result_limit\n),\n\nexpired_requests AS (\n    UPDATE appointment_confirmation_requests request\n\n    SET\n        status = 'expired',\n        updated_at = NOW()\n\n    WHERE request.status = 'pending'\n      AND request.expires_at <= NOW()\n\n    RETURNING request.id\n),\n\nexpiry_barrier AS (\n    SELECT COUNT(*)::INTEGER AS expired_count\n    FROM expired_requests\n),\n\nclinic_context AS (\n    SELECT\n        c.id AS clinic_id,\n        c.name AS clinic_name,\n        c.timezone,\n\n        r.window_start_hours,\n        r.window_end_hours,\n        r.response_deadline_hours,\n        r.channel,\n        r.result_limit\n\n    FROM request_data r\n\n    CROSS JOIN expiry_barrier barrier\n\n    INNER JOIN clinics c\n        ON c.name = r.clinic_name\n       AND c.is_active = TRUE\n\n    ORDER BY c.id\n    LIMIT 1\n),\n\neligible_appointments AS (\n    SELECT\n        a.id AS appointment_id,\n        a.clinic_id,\n        a.doctor_id,\n        a.patient_id,\n        a.service_id,\n        a.starts_at,\n        a.ends_at,\n        a.status AS appointment_status,\n\n        c.clinic_name,\n        c.timezone,\n        c.response_deadline_hours,\n        c.channel,\n\n        p.full_name AS patient_name,\n        p.mobile,\n\n        d.full_name AS doctor_name,\n        s.name AS service_name\n\n    FROM appointments a\n\n    INNER JOIN clinic_context c\n        ON c.clinic_id = a.clinic_id\n\n    INNER JOIN patients p\n        ON p.id = a.patient_id\n\n    INNER JOIN doctors d\n        ON d.id = a.doctor_id\n\n    LEFT JOIN services s\n        ON s.id = a.service_id\n\n    WHERE a.status IN ('pending', 'confirmed')\n\n      AND a.starts_at >=\n            NOW()\n            + MAKE_INTERVAL(\n                hours => c.window_start_hours\n            )\n\n      AND a.starts_at <\n            NOW()\n            + MAKE_INTERVAL(\n                hours => c.window_end_hours\n            )\n\n      AND NOT EXISTS (\n          SELECT 1\n          FROM appointment_confirmation_requests active_request\n\n          WHERE active_request.appointment_id = a.id\n            AND active_request.status = 'pending'\n      )\n\n    ORDER BY a.starts_at, a.id\n\n    LIMIT (\n        SELECT result_limit\n        FROM clinic_context\n    )\n),\n\ninserted_requests AS (\n    INSERT INTO appointment_confirmation_requests (\n        appointment_id,\n        confirmation_token,\n        status,\n        channel,\n        request_created_at,\n        expires_at\n    )\n\n    SELECT\n        eligible.appointment_id,\n\n        MD5(\n            RANDOM()::TEXT\n            || CLOCK_TIMESTAMP()::TEXT\n            || eligible.appointment_id::TEXT\n        ),\n\n        'pending',\n        eligible.channel,\n        NOW(),\n\n        LEAST(\n            eligible.starts_at,\n            NOW()\n            + MAKE_INTERVAL(\n                hours => eligible.response_deadline_hours\n            )\n        )\n\n    FROM eligible_appointments eligible\n\n    ON CONFLICT DO NOTHING\n\n    RETURNING\n        id AS confirmation_request_id,\n        appointment_id,\n        confirmation_token,\n        status AS confirmation_status,\n        channel,\n        request_created_at,\n        expires_at\n),\n\nrequest_details AS (\n    SELECT\n        request.confirmation_request_id,\n        request.confirmation_token,\n        request.confirmation_status,\n        request.channel,\n        request.request_created_at,\n        request.expires_at,\n\n        eligible.appointment_id,\n        eligible.patient_name,\n        eligible.mobile,\n        eligible.doctor_name,\n        eligible.service_name,\n        eligible.timezone,\n        eligible.starts_at,\n        eligible.ends_at,\n        eligible.appointment_status\n\n    FROM inserted_requests request\n\n    INNER JOIN eligible_appointments eligible\n        ON eligible.appointment_id =\n           request.appointment_id\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN FALSE\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN 'clinic_not_found'\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM request_details\n        )\n            THEN 'no_confirmation_requests_needed'\n\n        ELSE 'confirmation_requests_created'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN 'کلینیک مطابق ورودی پیدا نشد.'\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM request_details\n        )\n            THEN 'در بازه زمانی انتخاب‌شده نوبتی برای ایجاد درخواست تأیید وجود ندارد.'\n\n        ELSE 'درخواست‌های تأیید نوبت آماده ارسال شدند.'\n    END AS message,\n\n    r.clinic_name,\n\n    (\n        SELECT COUNT(*)::INTEGER\n        FROM request_details\n    ) AS confirmation_request_count,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'confirmation_request_id',\n                        confirmation_request_id,\n\n                    'confirmation_token',\n                        confirmation_token,\n\n                    'appointment_id',\n                        appointment_id,\n\n                    'patient_name',\n                        patient_name,\n\n                    'mobile',\n                        mobile,\n\n                    'doctor_name',\n                        doctor_name,\n\n                    'service_name',\n                        service_name,\n\n                    'appointment_date',\n                        TO_CHAR(\n                            starts_at\n                            AT TIME ZONE timezone,\n                            'YYYY-MM-DD'\n                        ),\n\n                    'start_time',\n                        TO_CHAR(\n                            starts_at\n                            AT TIME ZONE timezone,\n                            'HH24:MI'\n                        ),\n\n                    'end_time',\n                        TO_CHAR(\n                            ends_at\n                            AT TIME ZONE timezone,\n                            'HH24:MI'\n                        ),\n\n                    'appointment_status',\n                        appointment_status,\n\n                    'channel',\n                        channel,\n\n                    'expires_at',\n                        expires_at,\n\n                    'next_action',\n                        'send_confirmation_request'\n                )\n                ORDER BY starts_at\n            )\n            FROM request_details\n        ),\n        '[]'::JSONB\n    ) AS confirmation_requests\n\nFROM request_data r;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.window_start_hours,\n  $json.window_end_hours,\n  $json.response_deadline_hours,\n  $json.channel,\n  $json.limit\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "8887412f-e5ac-4e6f-bea5-2c3e1b82e84d",
+      "name": "Generate Confirmation Requests"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      result: 'invalid_request',\n      message: 'اطلاعات تولید درخواست‌های تأیید ناقص یا نامعتبر است.',\n      confirmation_request_count: 0,\n      confirmation_requests: [],\n      errors: $json.errors ?? [],\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "b7f5d934-0405-4630-9e29-b04faa0572e5",
+      "name": "Return Confirmation Generation Error"
+    },
+    {
+      "parameters": {
+        "content": "## تولید درخواست تأیید پیش از مراجعه\n\n1. ابتدا Workflow شماره 26 را یک‌بار اجرا کن.\n\n2. این Workflow نوبت‌های بازه آینده را پیدا کرده و برای هرکدام توکن تأیید می‌سازد.\n\n3. در این مرحله پیام واقعاً ارسال نمی‌شود؛ خروجی برای اتصال به WhatsApp، SMS یا تماس آماده است.\n\n4. اجرای دوباره، درخواست pending تکراری برای همان نوبت نمی‌سازد.",
+        "height": 350,
+        "width": 470
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1140,
+        -280
+      ],
+      "id": "254e71af-a5ce-405f-a99f-7ec92d0757d2",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Confirmation Generation Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Confirmation Generation Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Confirmation Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Generate Appointment Confirmations": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Confirmation Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Confirmation Generation": {
+      "main": [
+        [
+          {
+            "node": "Is Confirmation Generation Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Confirmation Generation Valid?": {
+      "main": [
+        [
+          {
+            "node": "Generate Confirmation Requests",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Confirmation Generation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

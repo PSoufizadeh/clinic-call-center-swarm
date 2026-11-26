@@ -1,0 +1,379 @@
+{
+  "name": "112B - API - Normalize Provider Inbound and Status Callback - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "2def8580-3670-4674-9a49-264fe48fe5b6",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "feaf5c91-8f88-4457-997b-13259b6f9252",
+              "name": "callback_type",
+              "value": "inbound_message",
+              "type": "string"
+            },
+            {
+              "id": "30a8b5e9-c479-48ec-8593-06bf8dd895bf",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "e6840864-4eb1-4111-bbda-06c0d9e32f15",
+              "name": "client_name",
+              "value": "webchat-demo",
+              "type": "string"
+            },
+            {
+              "id": "d2d2da5f-3829-4c08-909b-faafa3f85b57",
+              "name": "provider_name",
+              "value": "generic-provider",
+              "type": "string"
+            },
+            {
+              "id": "07b8eb3f-b4d2-43fc-905c-eb343a624155",
+              "name": "channel",
+              "value": "webchat",
+              "type": "string"
+            },
+            {
+              "id": "1598376c-6b48-4cf3-9079-69ff2fb194da",
+              "name": "api_key",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "968a2a36-aac1-4e5e-b1d9-d1d5066b27b7",
+              "name": "signature_verified",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "7cd5faf8-1cf9-4b43-84a7-3794b7add0ff",
+              "name": "verification_reference",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "b7587b43-bc4c-4b2f-bd95-27c9de033ebe",
+              "name": "source_ip",
+              "value": "127.0.0.1",
+              "type": "string"
+            },
+            {
+              "id": "47da3fb0-af21-49a9-8102-a13f7689dd40",
+              "name": "external_event_id",
+              "value": "provider-event-001",
+              "type": "string"
+            },
+            {
+              "id": "082d485b-86d9-4c02-90f1-5778c9ad94be",
+              "name": "external_message_id",
+              "value": "provider-message-001",
+              "type": "string"
+            },
+            {
+              "id": "7d4b5feb-5522-4637-a8e8-659040352344",
+              "name": "external_conversation_id",
+              "value": "provider-conversation-001",
+              "type": "string"
+            },
+            {
+              "id": "ea436765-d9be-43f8-9394-02ba38cfa876",
+              "name": "sender",
+              "value": "09000000000",
+              "type": "string"
+            },
+            {
+              "id": "694ad3f4-db28-4dc0-9f8f-61bd4a9d2d4c",
+              "name": "message_type",
+              "value": "text",
+              "type": "string"
+            },
+            {
+              "id": "12beda23-3dc9-47e1-86bd-950c53eab2ea",
+              "name": "message_text",
+              "value": "سلام",
+              "type": "string"
+            },
+            {
+              "id": "6535f9fe-07a1-4157-8119-40ac6bba5bb9",
+              "name": "attachments",
+              "value": "[]",
+              "type": "string"
+            },
+            {
+              "id": "8deb5a35-728a-406c-ad99-76ca55b57d61",
+              "name": "language",
+              "value": "fa",
+              "type": "string"
+            },
+            {
+              "id": "676a4e68-61e3-4b70-beab-3dde2ef0752e",
+              "name": "outbound_message_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "52599153-48b5-4e8b-9a0a-58bd1175a69e",
+              "name": "provider_message_id",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "8b4b529c-f7d5-494f-817e-2f17c63ecd00",
+              "name": "delivery_status",
+              "value": "delivered",
+              "type": "string"
+            },
+            {
+              "id": "a337256b-74b4-4c90-b505-373f5eda5c5d",
+              "name": "event_at",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "21df9794-7714-43e3-a2b6-be4492bf2862",
+              "name": "error_code",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "a2f26259-8ef2-4414-b754-425d8839da4b",
+              "name": "error_message",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "b73417df-cbf2-49e4-9c14-d7d319f93b85",
+              "name": "raw_payload",
+              "value": "{}",
+              "type": "string"
+            },
+            {
+              "id": "74cd702a-4236-4f6c-ab2e-a8c29f6ffe94",
+              "name": "webhook_base_url",
+              "value": "http://n8n:5678/webhook",
+              "type": "string"
+            },
+            {
+              "id": "1e0039eb-5769-4bca-9093-c649b3f557a4",
+              "name": "confirm_callback",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "3a9ab1df-6766-4728-8399-aabe68a6527e",
+      "name": "Manual Provider Callback"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/gateway/provider/callback",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "6f22470a-58da-48b8-8b49-abfa1454127a",
+      "name": "Webhook - Provider Callback"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst callback_type =\n  text(\n    input.callback_type ||\n    input.gateway_event_type ||\n    'inbound_message'\n  ).toLowerCase();\n\nconst clinic_name = text(input.clinic_name);\nconst client_name = text(input.client_name);\nconst provider_name = text(input.provider_name);\nconst channel = text(input.channel).toLowerCase();\nconst api_key = text(input.api_key);\nconst signature_verified = bool(input.signature_verified);\nconst verification_reference =\n  text(input.verification_reference);\nconst source_ip = text(input.source_ip);\n\nconst external_event_id =\n  text(\n    input.external_event_id ||\n    input.event_id\n  );\n\nconst external_message_id =\n  text(\n    input.external_message_id ||\n    input.message_id\n  );\n\nconst external_conversation_id =\n  text(\n    input.external_conversation_id ||\n    input.conversation_id ||\n    input.thread_id\n  );\n\nconst sender =\n  text(\n    input.sender ||\n    input.from ||\n    input.mobile\n  );\n\nconst message_type =\n  text(input.message_type || 'text').toLowerCase();\n\nconst message_text =\n  text(\n    input.message_text ||\n    input.text ||\n    input.content\n  );\n\nconst language =\n  text(input.language || 'unknown').toLowerCase();\n\nconst outbound_message_id =\n  Number(input.outbound_message_id ?? 0);\n\nconst provider_message_id =\n  text(\n    input.provider_message_id ||\n    input.message_id\n  );\n\nconst delivery_status =\n  text(\n    input.delivery_status ||\n    input.status ||\n    'unknown'\n  ).toLowerCase();\n\nconst event_at =\n  text(\n    input.event_at ||\n    input.timestamp\n  ) ||\n  new Date().toISOString();\n\nconst error_code = text(input.error_code);\nconst error_message = text(input.error_message);\n\nconst webhook_base_url =\n  text(\n    input.webhook_base_url ||\n    'http://n8n:5678/webhook'\n  ).replace(/\\/+$/, '');\n\nconst confirm_callback =\n  bool(input.confirm_callback);\n\nlet attachments = input.attachments ?? [];\nlet raw_payload = input.raw_payload ?? input;\n\ntry {\n  if (typeof attachments === 'string') {\n    attachments =\n      JSON.parse(attachments || '[]');\n  }\n} catch {\n  attachments = [];\n}\n\ntry {\n  if (typeof raw_payload === 'string') {\n    raw_payload =\n      JSON.parse(raw_payload || '{}');\n  }\n} catch {\n  raw_payload = {\n    raw: String(raw_payload),\n  };\n}\n\nif (!Array.isArray(attachments)) {\n  attachments = [];\n}\n\nif (\n  !raw_payload ||\n  Array.isArray(raw_payload) ||\n  typeof raw_payload !== 'object'\n) {\n  raw_payload = {};\n}\n\nconst errors = [];\n\nif (\n  !['inbound_message', 'delivery_status'].includes(\n    callback_type\n  )\n) {\n  errors.push({\n    field: 'callback_type',\n    message: 'نوع Callback معتبر نیست.',\n  });\n}\n\nfor (const [field, value] of [\n  ['clinic_name', clinic_name],\n  ['client_name', client_name],\n  ['provider_name', provider_name],\n  ['channel', channel],\n  ['external_event_id', external_event_id],\n]) {\n  if (!value) {\n    errors.push({\n      field,\n      message: `${field} الزامی است.`,\n    });\n  }\n}\n\nif (\n  callback_type === 'inbound_message' &&\n  !external_message_id\n) {\n  errors.push({\n    field: 'external_message_id',\n    message: 'شناسه پیام ورودی الزامی است.',\n  });\n}\n\nif (\n  callback_type === 'inbound_message' &&\n  !external_conversation_id\n) {\n  errors.push({\n    field: 'external_conversation_id',\n    message: 'شناسه مکالمه ورودی الزامی است.',\n  });\n}\n\nif (\n  callback_type === 'inbound_message' &&\n  !message_text\n) {\n  errors.push({\n    field: 'message_text',\n    message: 'متن یا متن استخراج‌شده پیام الزامی است.',\n  });\n}\n\nif (\n  callback_type === 'delivery_status' &&\n  (\n    (\n      !Number.isInteger(outbound_message_id) ||\n      outbound_message_id < 1\n    ) &&\n    !provider_message_id\n  )\n) {\n  errors.push({\n    field: 'delivery_reference',\n    message: 'شناسه داخلی یا Provider Message ID الزامی است.',\n  });\n}\n\nif (Number.isNaN(Date.parse(event_at))) {\n  errors.push({\n    field: 'event_at',\n    message: 'زمان Callback معتبر نیست.',\n  });\n}\n\nif (!/^https?:\\/\\/.+/i.test(webhook_base_url)) {\n  errors.push({\n    field: 'webhook_base_url',\n    message: 'آدرس Webhook معتبر نیست.',\n  });\n}\n\nif (confirm_callback !== true) {\n  errors.push({\n    field: 'confirm_callback',\n    message: 'پردازش Callback باید تأیید شود.',\n  });\n}\n\nconst normalized_payload = {\n  provider_name,\n  provider_callback_type: callback_type,\n  original_status: delivery_status,\n};\n\nreturn [{\n  json: {\n    callback_type,\n    gateway_url:\n      `${webhook_base_url}/clinic/gateway/events/process`,\n    gateway_payload: {\n      gateway_event_type: callback_type,\n      clinic_name,\n      client_name,\n      provider_name,\n      channel,\n      api_key,\n      signature_verified,\n      verification_reference,\n      source_ip,\n      external_event_id,\n      external_message_id,\n      external_conversation_id,\n      sender,\n      message_type,\n      message_text,\n      attachments,\n      language,\n      request_timestamp: event_at,\n      outbound_message_id,\n      provider_message_id,\n      delivery_event_type: delivery_status,\n      delivery_event_at: event_at,\n      error_code,\n      error_message,\n      normalized_payload,\n      raw_payload,\n      webhook_base_url,\n      confirm_gateway: true,\n    },\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "10cf7f1f-034a-48aa-b2f2-74b26f52cf48",
+      "name": "Normalize and Validate Provider Callback"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "164e022a-35ba-4dd2-8859-c150daf78684",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "07b9e16e-dbef-46b2-a9fd-c9114be03b9c",
+      "name": "Is Provider Callback Valid?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.gateway_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.gateway_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "cddf5898-3e1f-44bc-aef4-a61529d061f5",
+      "name": "Forward Normalized Callback to Gateway",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_provider_callback',message:'اطلاعات Callback Provider نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "0dcf7547-f29e-4f0a-a05a-621d43421e72",
+      "name": "Return Provider Callback Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## Adapter عمومی Callback\n\nاین Workflow یک Envelope عمومی برای دو نوع رویداد می‌سازد:\n- inbound_message\n- delivery_status\n\nProviderهای واقعی ممکن است ساختار متفاوت داشته باشند؛ در مرحله Integration برای هر Provider یک Mapper اختصاصی قبل از این Workflow ساخته می‌شود.",
+        "height": 390,
+        "width": 530
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -300
+      ],
+      "id": "0661aac5-6d6a-4196-ade1-cdadacd8c3e1",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Provider Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Provider Callback": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Provider Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Provider Callback": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Provider Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Provider Callback": {
+      "main": [
+        [
+          {
+            "node": "Is Provider Callback Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Provider Callback Valid?": {
+      "main": [
+        [
+          {
+            "node": "Forward Normalized Callback to Gateway",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Provider Callback Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

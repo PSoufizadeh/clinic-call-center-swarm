@@ -1,0 +1,408 @@
+{
+  "name": "66 - Core - Chunk and Index Knowledge Document - Corrected V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        208
+      ],
+      "id": "90984cd6-a123-4dec-8345-92f8859b0605",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e3a6c35e-8c9b-47e5-bbaa-bf1de9fb72c0",
+              "name": "document_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "b4561b8f-15de-46a0-a5bd-e0f49f659c61",
+              "name": "chunk_size_chars",
+              "value": 1800,
+              "type": "number"
+            },
+            {
+              "id": "b7f314d2-7239-4fbb-9790-f1f8fdac0773",
+              "name": "overlap_chars",
+              "value": 250,
+              "type": "number"
+            },
+            {
+              "id": "14ef4a0d-554e-4ded-afe4-694a11f3376a",
+              "name": "confirm_processing",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -920,
+        208
+      ],
+      "id": "0ae3a6fd-6c4f-46a4-8e3c-00fe88153965",
+      "name": "Manual Document Processing"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/clinical-knowledge/chunk-index",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -920,
+        -80
+      ],
+      "id": "6e7c0321-ba8b-427e-b8bc-31ab3e6cb591",
+      "name": "Webhook - Chunk Knowledge Document"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\nconst text = (v) => v === null || v === undefined ? '' : String(v).trim();\nconst bool = (v) => typeof v === 'boolean' ? v : ['true','1','yes','on'].includes(text(v).toLowerCase());\nconst document_id = Number(input.document_id);\nconst chunk_size_chars = Number(input.chunk_size_chars ?? 1800);\nconst overlap_chars = Number(input.overlap_chars ?? 250);\nconst confirm_processing = bool(input.confirm_processing);\nconst errors = [];\nif (!Number.isInteger(document_id) || document_id < 1) errors.push({field:'document_id',message:'شناسه سند معتبر نیست.'});\nif (!Number.isInteger(chunk_size_chars) || chunk_size_chars < 500 || chunk_size_chars > 10000) errors.push({field:'chunk_size_chars',message:'اندازه Chunk معتبر نیست.'});\nif (!Number.isInteger(overlap_chars) || overlap_chars < 0 || overlap_chars >= chunk_size_chars || overlap_chars > 2000) errors.push({field:'overlap_chars',message:'Overlap معتبر نیست.'});\nif (confirm_processing !== true) errors.push({field:'confirm_processing',message:'پردازش باید تأیید شود.'});\nreturn [{json:{document_id,chunk_size_chars,overlap_chars,confirm_processing,validation_status:errors.length?'invalid':'valid',errors}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -648,
+        64
+      ],
+      "id": "165f1e75-4506-4308-888e-74fc685b64ec",
+      "name": "Normalize and Validate Document Processing"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1c80d1ba-0c64-4a0e-85e3-506ade1b95e6",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -408,
+        64
+      ],
+      "id": "cee5e82f-c904-431a-884f-e2ae5c45b87e",
+      "name": "Is Document Processing Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH r AS (SELECT $1::BIGINT document_id,$2::INTEGER chunk_size_chars,$3::INTEGER overlap_chars),\nd AS (\n  SELECT k.id document_id,k.clinic_id,k.title,k.source_type,k.specialty,k.topic,\n         k.version_label,k.status,k.raw_text,r.chunk_size_chars,r.overlap_chars\n  FROM clinic_knowledge_documents k JOIN r ON r.document_id=k.id\n  WHERE k.source_type<>'qa' AND k.raw_text IS NOT NULL\n    AND LENGTH(TRIM(k.raw_text))>=20 AND k.status IN ('draft','processing','failed','review')\n  LIMIT 1\n),\njob AS (\n  INSERT INTO clinic_knowledge_ingestion_jobs(document_id,status,chunk_size_chars,overlap_chars,started_at,updated_at)\n  SELECT document_id,'processing',chunk_size_chars,overlap_chars,NOW(),NOW() FROM d\n  ON CONFLICT(document_id) DO UPDATE SET status='processing',\n    chunk_size_chars=EXCLUDED.chunk_size_chars,overlap_chars=EXCLUDED.overlap_chars,\n    chunks_created=0,error_message=NULL,started_at=NOW(),completed_at=NULL,updated_at=NOW()\n  RETURNING *\n),\nupd AS (\n  UPDATE clinic_knowledge_documents k SET status='processing',updated_at=NOW()\n  FROM d WHERE k.id=d.document_id RETURNING k.id\n)\nSELECT EXISTS(SELECT 1 FROM d) success,\n       CASE WHEN EXISTS(SELECT 1 FROM d) THEN 'knowledge_document_loaded' ELSE 'knowledge_document_not_processible' END result,\n       (SELECT ROW_TO_JSON(d) FROM d) document_context\nFROM r;",
+        "options": {
+          "queryReplacement": "={{ [ $json.document_id,$json.chunk_size_chars,$json.overlap_chars ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -152,
+        -48
+      ],
+      "id": "606e49bb-18d3-490f-bac5-11d37265098c",
+      "name": "Load Knowledge Document"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "48b5de0a-57f2-4138-8242-a2b9dab4a046",
+              "leftValue": "={{ $json.success === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        104,
+        -48
+      ],
+      "id": "c49499a0-6296-4d65-b288-5ed295372232",
+      "name": "Is Knowledge Document Available?"
+    },
+    {
+      "parameters": {
+        "jsCode": "if ($json.success !== true) return [{json:$json}];\nconst doc = $json.document_context;\nconst raw = String(doc.raw_text || '')\n  .replace(/\\r\\n/g,'\\n').replace(/\\r/g,'\\n')\n  .replace(/[ \\t]+\\n/g,'\\n').replace(/\\n{3,}/g,'\\n\\n').trim();\n\nconst chunkSize = Number(doc.chunk_size_chars);\nconst overlap = Number(doc.overlap_chars);\nconst paragraphs = raw.split(/\\n{2,}/).map(x=>x.trim()).filter(Boolean);\nconst pageOf = (t) => { const m=t.match(/\\[\\[PAGE:(\\d+)\\]\\]/i); return m?Number(m[1]):null; };\nconst clean = (t) => t.replace(/\\[\\[PAGE:\\d+\\]\\]/gi,'').trim();\nconst hash = (s) => {\n  let h = 2166136261;\n  for (let i=0;i<s.length;i++) { h ^= s.charCodeAt(i); h = Math.imul(h,16777619); }\n  return (h>>>0).toString(16).padStart(8,'0');\n};\n\nlet chunks=[],buffer='',section=null,page=null,index=0;\n\nconst emit = () => {\n  const content=clean(buffer);\n  if (!content) return;\n  chunks.push({\n    document_id:Number(doc.document_id),\n    chunk_index:index++,\n    page_start:page,\n    page_end:page,\n    section_title:section,\n    content,\n    content_hash:hash(content),\n    token_estimate:Math.ceil(content.length/4),\n    keywords:[]\n  });\n  buffer = overlap > 0 ? content.slice(-overlap) : '';\n};\n\nfor (const p0 of paragraphs) {\n  const p=clean(p0);\n  const pg=pageOf(p0);\n  if (pg!==null) page=pg;\n  if (!p) continue;\n  const heading=p.length<=120 && !/[.!?؟]$/.test(p) && p.split(/\\s+/).length<=15;\n  if (heading) section=p;\n  if (!buffer) { buffer=p; continue; }\n  if (buffer.length+2+p.length<=chunkSize) buffer += '\\n\\n'+p;\n  else { emit(); buffer += (buffer?'\\n\\n':'')+p; }\n}\nemit();\nif (!chunks.length) throw new Error('No chunks created.');\n\nconst total_chunks = chunks.length;\n\nreturn chunks.map((chunk) => ({\n  json: {\n    ...chunk,\n    total_chunks,\n  },\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        -144
+      ],
+      "id": "4656250b-0a25-4b22-8253-f2a7626c750d",
+      "name": "Split Document into Chunks"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH input_data AS (\n    SELECT\n        $1::BIGINT AS document_id,\n        $2::INTEGER AS chunk_index,\n        NULLIF($3::INTEGER, 0) AS page_start,\n        NULLIF($4::INTEGER, 0) AS page_end,\n        NULLIF($5::TEXT, '') AS section_title,\n        $6::TEXT AS content,\n        $7::TEXT AS content_hash,\n        $8::INTEGER AS token_estimate,\n        $9::JSONB AS keywords,\n        $10::INTEGER AS total_chunks\n),\n\nupserted AS (\n    INSERT INTO clinic_knowledge_chunks (\n        document_id,\n        chunk_index,\n        page_start,\n        page_end,\n        section_title,\n        content,\n        content_hash,\n        token_estimate,\n        keywords,\n        embedding_status,\n        updated_at\n    )\n    SELECT\n        input.document_id,\n        input.chunk_index,\n        input.page_start,\n        input.page_end,\n        input.section_title,\n        input.content,\n        input.content_hash,\n        input.token_estimate,\n        input.keywords,\n        'not_requested',\n        NOW()\n    FROM input_data input\n    ON CONFLICT (\n        document_id,\n        chunk_index\n    )\n    DO UPDATE SET\n        page_start = EXCLUDED.page_start,\n        page_end = EXCLUDED.page_end,\n        section_title = EXCLUDED.section_title,\n        content = EXCLUDED.content,\n        content_hash = EXCLUDED.content_hash,\n        token_estimate = EXCLUDED.token_estimate,\n        keywords = EXCLUDED.keywords,\n        embedding_status = CASE\n            WHEN clinic_knowledge_chunks.content_hash <>\n                 EXCLUDED.content_hash\n                THEN 'pending'\n            ELSE clinic_knowledge_chunks.embedding_status\n        END,\n        updated_at = NOW()\n    RETURNING\n        id,\n        document_id,\n        chunk_index\n)\n\nSELECT\n    upserted.id,\n    upserted.document_id,\n    upserted.chunk_index,\n    input.total_chunks\nFROM upserted\nCROSS JOIN input_data input;",
+        "options": {
+          "queryReplacement": "={{ [ $json.document_id,$json.chunk_index,$json.page_start || 0,$json.page_end || 0,$json.section_title || '',$json.content,$json.content_hash,$json.token_estimate,JSON.stringify($json.keywords || []),$json.total_chunks ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        616,
+        -144
+      ],
+      "id": "bc8fd674-e134-4b8c-a1d4-5c84366ca185",
+      "name": "Upsert Knowledge Chunks"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS document_id,\n        $2::INTEGER AS total_chunks,\n        $3::INTEGER AS upserted_chunk_count\n),\n\ndeleted_stale_chunks AS (\n    DELETE FROM clinic_knowledge_chunks chunk\n    USING request_data request\n    WHERE chunk.document_id =\n          request.document_id\n      AND chunk.chunk_index >=\n          request.total_chunks\n    RETURNING chunk.id\n),\n\nchunk_count AS (\n    SELECT\n        COUNT(*)::INTEGER AS chunks_created\n    FROM clinic_knowledge_chunks chunk\n    INNER JOIN request_data request\n        ON request.document_id =\n           chunk.document_id\n),\n\nupdated_job AS (\n    UPDATE clinic_knowledge_ingestion_jobs job\n    SET\n        status = 'completed',\n        chunks_created = (\n            SELECT chunks_created\n            FROM chunk_count\n        ),\n        completed_at = NOW(),\n        updated_at = NOW()\n    FROM request_data request\n    WHERE job.document_id =\n          request.document_id\n    RETURNING job.*\n),\n\nupdated_document AS (\n    UPDATE clinic_knowledge_documents document\n    SET\n        status = 'review',\n        updated_at = NOW()\n    FROM request_data request\n    WHERE document.id =\n          request.document_id\n    RETURNING document.*\n)\n\nSELECT\n    TRUE AS success,\n    'knowledge_document_chunked' AS result,\n    request.document_id,\n\n    (\n        SELECT chunks_created\n        FROM chunk_count\n    ) AS chunks_created,\n\n    request.upserted_chunk_count,\n\n    (\n        SELECT COUNT(*)::INTEGER\n        FROM deleted_stale_chunks\n    ) AS stale_chunks_deleted,\n\n    (\n        SELECT status\n        FROM updated_document\n    ) AS document_status,\n\n    'review_and_publish_document' AS next_action\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [ $json.document_id,$json.total_chunks,$json.upserted_chunk_count ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        872,
+        -144
+      ],
+      "id": "c562cac1-0280-47f1-b04a-cfed01d59235",
+      "name": "Finalize Knowledge Processing",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات پردازش سند نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -152,
+        176
+      ],
+      "id": "2b5a8835-fdf0-4726-aca1-f5813d69dc33",
+      "name": "Return Document Processing Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:$json.result||'knowledge_document_not_processible',message:'سند قابل پردازش نیست.'}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        48
+      ],
+      "id": "543f99f1-ea1f-46ad-888c-33f0bb1930ac",
+      "name": "Return Knowledge Document Error"
+    },
+    {
+      "parameters": {
+        "content": "## Chunk و Index\n\nمتن سند به بخش‌های هم‌پوشان تقسیم می‌شود.\n\nنشانگر [[PAGE:12]] شماره صفحه Citation را حفظ می‌کند.\n\nاصلاح V2:\n- Finalize فقط یک‌بار بعد از Upsert همه Chunkها اجرا می‌شود.\n- Chunkهای قدیمی خارج از محدوده سند جدید حذف می‌شوند.\n- stale_chunks_deleted در خروجی برگردانده می‌شود.",
+        "height": 330,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1390,
+        -270
+      ],
+      "id": "8a219f4e-48a9-4a6f-8861-b716cf4ddf1d",
+      "name": "How to Use"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const rows = $input.all().map((item) => item.json);\n\nif (!rows.length) {\n  throw new Error('No chunk upsert results were returned.');\n}\n\nconst document_id = Number(rows[0].document_id);\nconst total_chunks = Math.max(\n  ...rows.map((row) => Number(row.total_chunks || 0))\n);\n\nconst chunk_indexes = [\n  ...new Set(\n    rows.map((row) => Number(row.chunk_index))\n  ),\n];\n\nif (\n  !Number.isInteger(document_id) ||\n  document_id < 1 ||\n  !Number.isInteger(total_chunks) ||\n  total_chunks < 1\n) {\n  throw new Error('Invalid chunk aggregation result.');\n}\n\nreturn [{\n  json: {\n    document_id,\n    total_chunks,\n    upserted_chunk_count: chunk_indexes.length,\n    chunk_indexes,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        0
+      ],
+      "id": "d54374b1-a3b5-4ab5-aac5-d7629b92fe18",
+      "name": "Collect Chunk Upsert Results"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Document Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Document Processing": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Document Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Chunk Knowledge Document": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Document Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Document Processing": {
+      "main": [
+        [
+          {
+            "node": "Is Document Processing Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Document Processing Valid?": {
+      "main": [
+        [
+          {
+            "node": "Load Knowledge Document",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Document Processing Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Knowledge Document": {
+      "main": [
+        [
+          {
+            "node": "Is Knowledge Document Available?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Knowledge Document Available?": {
+      "main": [
+        [
+          {
+            "node": "Split Document into Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Knowledge Document Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Document into Chunks": {
+      "main": [
+        [
+          {
+            "node": "Upsert Knowledge Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Knowledge Chunks": {
+      "main": [
+        [
+          {
+            "node": "Collect Chunk Upsert Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Chunk Upsert Results": {
+      "main": [
+        [
+          {
+            "node": "Finalize Knowledge Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

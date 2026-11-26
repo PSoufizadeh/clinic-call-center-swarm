@@ -1,0 +1,835 @@
+{
+  "name": "106E - API - Conversation Orchestrator - Final V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1760,
+        224
+      ],
+      "id": "f000f0c2-1242-45a6-938c-10dd7594feb1",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0502f0e-f6cb-4e8b-9d0c-29512c422912",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "aab169af-fc5a-47e9-8f73-abb80d402b97",
+              "name": "channel",
+              "value": "webchat",
+              "type": "string"
+            },
+            {
+              "id": "197e0c50-370c-41bc-acae-2407a4fd6b8b",
+              "name": "external_conversation_id",
+              "value": "orchestrator-test-001",
+              "type": "string"
+            },
+            {
+              "id": "e8faad6c-d620-4a9e-8d32-c2fe1f44a02a",
+              "name": "mobile",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "c9bfec83-904b-49fd-8e55-41330a07e0b0",
+              "name": "message_text",
+              "value": "برای هفته بعد وقت ویزیت می‌خواهم.",
+              "type": "string"
+            },
+            {
+              "id": "9dfad6e2-1d6f-4dec-8d19-0042deefd8b0",
+              "name": "language",
+              "value": "fa",
+              "type": "string"
+            },
+            {
+              "id": "d0335e4b-3805-49bf-8cbc-27932295a99c",
+              "name": "webhook_base_url",
+              "value": "http://n8n:5678/webhook",
+              "type": "string"
+            },
+            {
+              "id": "b77ea715-91c6-46f8-9e05-7f071924677e",
+              "name": "message_type",
+              "value": "text",
+              "type": "string"
+            },
+            {
+              "id": "ba522747-f187-4e2a-86bb-11532d5cf120",
+              "name": "message_payload",
+              "value": "{}",
+              "type": "string"
+            },
+            {
+              "id": "bfc7a33c-dab2-4e0d-80d9-bdf6df5c0404",
+              "name": "context_message_limit",
+              "value": 20,
+              "type": "number"
+            },
+            {
+              "id": "aae23548-b232-45cb-b852-6d04a69f6de3",
+              "name": "model_provider",
+              "value": "openai",
+              "type": "string"
+            },
+            {
+              "id": "b30e9695-1d65-4b04-9504-a6b192faee38",
+              "name": "model_name",
+              "value": "gpt-5-mini",
+              "type": "string"
+            },
+            {
+              "id": "eee8338d-e0af-42fb-8c66-4dc32e2d50b7",
+              "name": "intent_prompt_version",
+              "value": "intent-router-final-v5",
+              "type": "string"
+            },
+            {
+              "id": "4ec8e062-6cfa-406b-b773-f9e0d2f1efa4",
+              "name": "response_prompt_version",
+              "value": "response-composer-final-v2",
+              "type": "string"
+            },
+            {
+              "id": "f0805975-549b-4b72-8811-749c3ec8e735",
+              "name": "max_retry_attempts",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "36d01694-939a-4e65-bf05-36402e9e14c4",
+              "name": "confirm_message",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1520,
+        224
+      ],
+      "id": "a84e6537-26ac-447e-8c25-df9d6fb38ce4",
+      "name": "Manual Patient Message"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/conversation/process-message",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1520,
+        -80
+      ],
+      "id": "524b6b0a-2b01-4138-9bdc-477d54ae8b8d",
+      "name": "Webhook - Process Patient Message"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(\n    text(value).toLowerCase()\n  );\n};\n\nconst clinic_name = text(input.clinic_name);\nconst channel = text(input.channel || 'webchat').toLowerCase();\nconst external_conversation_id =\n  text(input.external_conversation_id);\nconst mobile = text(input.mobile);\nconst message_type =\n  text(input.message_type || 'text').toLowerCase();\nconst message_text = text(input.message_text);\nconst language =\n  text(input.language || 'fa').toLowerCase();\n\nlet message_payload = input.message_payload ?? {};\n\ntry {\n  if (typeof message_payload === 'string') {\n    message_payload =\n      JSON.parse(message_payload || '{}');\n  }\n} catch {\n  message_payload = null;\n}\n\nconst context_message_limit =\n  Number(input.context_message_limit ?? 20);\n\nconst model_provider =\n  text(input.model_provider || 'openai').toLowerCase();\n\nconst model_name =\n  text(input.model_name || 'gpt-5-mini');\n\nconst intent_prompt_version =\n  text(\n    input.intent_prompt_version ||\n    'intent-router-final-v5'\n  );\n\nconst response_prompt_version =\n  text(\n    input.response_prompt_version ||\n    'response-composer-final-v2'\n  );\n\nconst max_retry_attempts =\n  Number(input.max_retry_attempts ?? 3);\n\nconst webhook_base_url = text(\n  input.webhook_base_url ||\n  'http://n8n:5678/webhook'\n).replace(/\\/+$/, '');\n\nconst confirm_message =\n  toBoolean(input.confirm_message);\n\nconst allowedChannels = [\n  'whatsapp',\n  'sms',\n  'phone',\n  'telegram',\n  'webchat',\n  'manual',\n  'api',\n];\n\nconst allowedMessageTypes = [\n  'text',\n  'audio',\n  'image',\n  'file',\n  'event',\n];\n\nconst allowedLanguages = [\n  'fa',\n  'en',\n  'ar',\n  'unknown',\n];\n\nconst errors = [];\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (!allowedChannels.includes(channel)) {\n  errors.push({\n    field: 'channel',\n    message: 'کانال مکالمه معتبر نیست.',\n  });\n}\n\nif (!external_conversation_id) {\n  errors.push({\n    field: 'external_conversation_id',\n    message: 'شناسه مکالمه الزامی است.',\n  });\n}\n\nif (\n  mobile &&\n  !/^\\+?[0-9]{8,15}$/.test(mobile)\n) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل معتبر نیست.',\n  });\n}\n\nif (!allowedMessageTypes.includes(message_type)) {\n  errors.push({\n    field: 'message_type',\n    message: 'نوع پیام معتبر نیست.',\n  });\n}\n\nif (!message_text) {\n  errors.push({\n    field: 'message_text',\n    message:\n      'متن یا متن استخراج‌شده پیام برای پردازش AI الزامی است.',\n  });\n}\n\nif (message_text.length > 12000) {\n  errors.push({\n    field: 'message_text',\n    message: 'متن پیام بیش از حد طولانی است.',\n  });\n}\n\nif (\n  !message_payload ||\n  Array.isArray(message_payload) ||\n  typeof message_payload !== 'object'\n) {\n  errors.push({\n    field: 'message_payload',\n    message: 'message_payload باید یک شیء JSON باشد.',\n  });\n\n  message_payload = {};\n}\n\nif (!allowedLanguages.includes(language)) {\n  errors.push({\n    field: 'language',\n    message: 'زبان معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(context_message_limit) ||\n  context_message_limit < 1 ||\n  context_message_limit > 100\n) {\n  errors.push({\n    field: 'context_message_limit',\n    message: 'تعداد پیام‌های Context باید بین 1 و 100 باشد.',\n  });\n}\n\nif (!model_provider) {\n  errors.push({\n    field: 'model_provider',\n    message: 'ارائه‌دهنده مدل الزامی است.',\n  });\n}\n\nif (!model_name) {\n  errors.push({\n    field: 'model_name',\n    message: 'نام مدل الزامی است.',\n  });\n}\n\nif (\n  !intent_prompt_version ||\n  !response_prompt_version\n) {\n  errors.push({\n    field: 'prompt_version',\n    message: 'نسخه پرامپت‌ها الزامی است.',\n  });\n}\n\nif (\n  !Number.isInteger(max_retry_attempts) ||\n  max_retry_attempts < 1 ||\n  max_retry_attempts > 10\n) {\n  errors.push({\n    field: 'max_retry_attempts',\n    message: 'حداکثر تلاش Tool باید بین 1 و 10 باشد.',\n  });\n}\n\nif (!/^https?:\\/\\/.+/i.test(webhook_base_url)) {\n  errors.push({\n    field: 'webhook_base_url',\n    message: 'آدرس پایه Webhook معتبر نیست.',\n  });\n}\n\nif (confirm_message !== true) {\n  errors.push({\n    field: 'confirm_message',\n    message: 'پردازش پیام باید صریحاً تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    clinic_name,\n    channel,\n    external_conversation_id,\n    mobile,\n    message_type,\n    message_text,\n    message_payload,\n    language,\n    context_message_limit,\n    model_provider,\n    model_name,\n    intent_prompt_version,\n    response_prompt_version,\n    max_retry_attempts,\n    webhook_base_url,\n    confirm_message,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1248,
+        72
+      ],
+      "id": "88f827d2-ab35-44fa-96ad-1ec9c634ff7b",
+      "name": "Normalize and Validate Patient Message"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "792d8763-f5f5-438d-8884-ad66590c75aa",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1008,
+        72
+      ],
+      "id": "70ae9fc1-e6cd-40e1-87a9-cd9cbea09813",
+      "name": "Is Patient Message Valid?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json;\nconst base = input.webhook_base_url;\n\nreturn [{\n  json: {\n    ...input,\n    store_message_url:\n      `${base}/clinic/conversations/message`,\n    analyze_message_url:\n      `${base}/clinic/ai/analyze-message`,\n    safety_gate_url:\n      `${base}/clinic/ai/safety-gate`,\n    tool_router_url:\n      `${base}/clinic/ai/tool-router`,\n    execute_tool_url:\n      `${base}/clinic/ai/execute-routed-tool`,\n    compose_response_url:\n      `${base}/clinic/ai/compose-response`,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -752,
+        -48
+      ],
+      "id": "3a5036f9-0554-435e-b4aa-2b58baafbd75",
+      "name": "Build Internal Workflow URLs"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.store_message_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  clinic_name: $json.clinic_name,\n  channel: $json.channel,\n  external_conversation_id: $json.external_conversation_id,\n  mobile: $json.mobile,\n  direction: 'inbound',\n  sender_type: 'patient',\n  message_type: $json.message_type,\n  message_text: $json.message_text,\n  message_payload: $json.message_payload,\n  language: $json.language,\n  session_expiry_hours: 24,\n  context_message_limit: $json.context_message_limit,\n  confirm_message: true\n} }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -496,
+        -48
+      ],
+      "id": "c48014c7-8d02-4a72-8df7-bf0528b75dd5",
+      "name": "Call Store Conversation Message",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const stage = $json ?? {};\n\nif (stage.success !== true) {\n  const message =\n    stage.message ||\n    stage.result ||\n    'Internal workflow stage failed.';\n\n  throw new Error(message);\n}\n\nreturn [{ json: stage }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -48
+      ],
+      "id": "05dd8b2b-2305-45c4-8ff5-43be63ad9887",
+      "name": "Require Stored Message"
+    },
+    {
+      "parameters": {
+        "jsCode": "const stored = $json;\nconst config =\n  $('Build Internal Workflow URLs').first().json;\n\nreturn [{\n  json: {\n    session_id: stored.session_id,\n    message_id: stored.message_id,\n    context_message_limit:\n      config.context_message_limit,\n    model_provider:\n      config.model_provider,\n    model_name:\n      config.model_name,\n    prompt_version:\n      config.intent_prompt_version,\n    confirm_analysis: true,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        -48
+      ],
+      "id": "fcef5a96-2a38-4fba-a882-1cf2c62e0239",
+      "name": "Prepare AI Analysis Call"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Build Internal Workflow URLs').first().json.analyze_message_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        272,
+        -48
+      ],
+      "id": "266cef8f-bb87-400f-926e-cac0caa349d2",
+      "name": "Call AI Intent Router",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const stage = $json ?? {};\n\nif (stage.success !== true) {\n  const message =\n    stage.message ||\n    stage.result ||\n    'Internal workflow stage failed.';\n\n  throw new Error(message);\n}\n\nreturn [{ json: stage }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        -48
+      ],
+      "id": "6e7b24fe-2db9-4f3d-b485-e9b75d76d39e",
+      "name": "Require AI Route"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ai = $json;\n\nreturn [{\n  json: {\n    session_id: ai.session_id,\n    message_id: ai.message_id,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        -48
+      ],
+      "id": "de9f7cbf-853e-4ac9-b00f-43233231f0c7",
+      "name": "Prepare Safety Gate Call"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Build Internal Workflow URLs').first().json.safety_gate_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  session_id: $json.session_id,\n  message_id: $json.message_id,\n  confidence_threshold: 0.55,\n  confirm_evaluation: true\n} }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1040,
+        -48
+      ],
+      "id": "0b28f7a5-7976-467d-892c-83d5f91eb98d",
+      "name": "Call Deterministic Safety Gate",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const stage = $json ?? {};\n\nif (stage.success !== true) {\n  const message =\n    stage.message ||\n    stage.result ||\n    'Internal workflow stage failed.';\n\n  throw new Error(message);\n}\n\nreturn [{ json: stage }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        -48
+      ],
+      "id": "af800199-a4a0-4b50-a188-4a17f42dc96c",
+      "name": "Require Safety Decision"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ai = $json;\n\nreturn [{\n  json: {\n    session_id: ai.session_id,\n    message_id: ai.message_id,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        -48
+      ],
+      "id": "4a66cab2-f18f-4000-8c4c-63e9bb6ae3f0",
+      "name": "Prepare Tool Router Call"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Build Internal Workflow URLs').first().json.tool_router_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  session_id: $json.session_id,\n  message_id: $json.message_id,\n  confirm_routing: true\n} }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1808,
+        -48
+      ],
+      "id": "bfe6b9c1-1daf-4f26-a4b6-a12fefcaa80b",
+      "name": "Call Tool Router",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const stage = $json ?? {};\n\nif (stage.success !== true) {\n  const message =\n    stage.message ||\n    stage.result ||\n    'Internal workflow stage failed.';\n\n  throw new Error(message);\n}\n\nreturn [{ json: stage }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        -48
+      ],
+      "id": "0e03e2c0-a2ab-448f-a31e-a37e8ebb7a26",
+      "name": "Require Tool Route"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f2f9be6f-e277-4458-a429-cd662be070e6",
+              "leftValue": "={{ $json.payload_ready === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "94ca7a2c-62dc-46b2-8aa9-912cb09d8b37",
+              "leftValue": "={{ $json.route_status }}",
+              "rightValue": "ready",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2320,
+        -48
+      ],
+      "id": "d0ce41f1-1b72-45a2-a416-a31bf72344db",
+      "name": "Should Execute Routed Tool?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const routing = $json;\nconst config =\n  $('Build Internal Workflow URLs').first().json;\n\nreturn [{\n  json: {\n    session_id: routing.session_id,\n    message_id: routing.message_id,\n    webhook_base_url:\n      config.webhook_base_url,\n    allow_retry: true,\n    max_retry_attempts:\n      config.max_retry_attempts,\n    confirm_execution: true,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2576,
+        -144
+      ],
+      "id": "f7bbf81c-23e2-403e-ab85-d3b28393f21f",
+      "name": "Prepare Routed Tool Executor Call"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Build Internal Workflow URLs').first().json.execute_tool_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2832,
+        -144
+      ],
+      "id": "60f825c5-cc9f-4c94-866e-eba8007de48f",
+      "name": "Call Routed Tool Executor",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $json;\nconst config =\n  $('Build Internal Workflow URLs').first().json;\n\nconst sessionId =\n  source.session_id ??\n  $('Require Tool Route').first().json.session_id;\n\nconst messageId =\n  source.message_id ??\n  $('Require Tool Route').first().json.message_id;\n\nreturn [{\n  json: {\n    session_id: sessionId,\n    message_id: messageId,\n    model_provider:\n      config.model_provider,\n    model_name:\n      config.model_name,\n    prompt_version:\n      config.response_prompt_version,\n    confirm_composition: true,\n    compose_response_url:\n      config.compose_response_url,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3088,
+        -48
+      ],
+      "id": "25faa280-0171-4ac2-961e-b9cbf561dd46",
+      "name": "Prepare Response Composer Call"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.compose_response_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  session_id: $json.session_id,\n  message_id: $json.message_id,\n  model_provider: $json.model_provider,\n  model_name: $json.model_name,\n  prompt_version: $json.prompt_version,\n  confirm_composition: true\n} }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3344,
+        -48
+      ],
+      "id": "6d459c61-97ec-419e-a51a-27bab8ee6ba8",
+      "name": "Call AI Response Composer",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const stage = $json ?? {};\n\nif (stage.success !== true) {\n  const message =\n    stage.message ||\n    stage.result ||\n    'Internal workflow stage failed.';\n\n  throw new Error(message);\n}\n\nreturn [{ json: stage }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3600,
+        -48
+      ],
+      "id": "2f342aae-d111-44d0-99a4-0152e31b0c3e",
+      "name": "Return Final Patient Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_patient_message',message:'پیام ورودی برای Orchestrator نامعتبر است.',errors:$json.errors||[],next_action:'correct_input_and_retry'}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -752,
+        176
+      ],
+      "id": "bb63d9c6-0a14-4b88-b6ce-33cbf0c729b3",
+      "name": "Return Conversation Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## Conversation Orchestrator نهایی\n\nاین نسخه جایگزین Workflow 58 است و زنجیره کامل را اجرا می‌کند:\n1. ذخیره پیام و Context\n2. Intent Router نهایی 106A\n3. Safety Gate قطعی\n4. Tool Router نهایی 106B\n5. Tool Executor نهایی 106C\n6. Response Composer نهایی 106D\n\nورودی‌های قابل تنظیم:\n- مدل و نسخه پرامپت\n- Context Limit\n- Max Retry Attempts\n- Internal Webhook Base URL\n- Message Type و Message Payload\n\nپیش‌فرض Docker برای فراخوانی داخلی:\nhttp://n8n:5678/webhook\n\nبرای Audio، Image و File باید متن استخراج‌شده در message_text قرار گیرد.",
+        "height": 500,
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1960,
+        -380
+      ],
+      "id": "a21dcd67-a3cb-482c-8840-4c6af8f7639d",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Patient Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Patient Message": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Patient Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Process Patient Message": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Patient Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Patient Message": {
+      "main": [
+        [
+          {
+            "node": "Is Patient Message Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Patient Message Valid?": {
+      "main": [
+        [
+          {
+            "node": "Build Internal Workflow URLs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Conversation Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Internal Workflow URLs": {
+      "main": [
+        [
+          {
+            "node": "Call Store Conversation Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Store Conversation Message": {
+      "main": [
+        [
+          {
+            "node": "Require Stored Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Require Stored Message": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Analysis Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Analysis Call": {
+      "main": [
+        [
+          {
+            "node": "Call AI Intent Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call AI Intent Router": {
+      "main": [
+        [
+          {
+            "node": "Require AI Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Require AI Route": {
+      "main": [
+        [
+          {
+            "node": "Prepare Safety Gate Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Safety Gate Call": {
+      "main": [
+        [
+          {
+            "node": "Call Deterministic Safety Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Deterministic Safety Gate": {
+      "main": [
+        [
+          {
+            "node": "Require Safety Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Require Safety Decision": {
+      "main": [
+        [
+          {
+            "node": "Prepare Tool Router Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Tool Router Call": {
+      "main": [
+        [
+          {
+            "node": "Call Tool Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Tool Router": {
+      "main": [
+        [
+          {
+            "node": "Require Tool Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Require Tool Route": {
+      "main": [
+        [
+          {
+            "node": "Should Execute Routed Tool?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Execute Routed Tool?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Routed Tool Executor Call",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Response Composer Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Routed Tool Executor Call": {
+      "main": [
+        [
+          {
+            "node": "Call Routed Tool Executor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Routed Tool Executor": {
+      "main": [
+        [
+          {
+            "node": "Prepare Response Composer Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Response Composer Call": {
+      "main": [
+        [
+          {
+            "node": "Call AI Response Composer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call AI Response Composer": {
+      "main": [
+        [
+          {
+            "node": "Return Final Patient Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

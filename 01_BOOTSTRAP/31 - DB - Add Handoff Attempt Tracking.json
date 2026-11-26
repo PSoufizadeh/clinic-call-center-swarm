@@ -1,0 +1,67 @@
+{
+  "name": "31 - DB - Add Handoff Attempt Tracking",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "9902e001-df0f-4eec-b13a-8e5c12a215ec",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "ALTER TABLE human_handoff_tasks\n    ADD COLUMN IF NOT EXISTS attempt_count INTEGER\n        NOT NULL DEFAULT 0;\n\nALTER TABLE human_handoff_tasks\n    ADD COLUMN IF NOT EXISTS last_attempt_at TIMESTAMPTZ;\n\nALTER TABLE human_handoff_tasks\n    ADD COLUMN IF NOT EXISTS last_contact_channel TEXT\n        CHECK (\n            last_contact_channel IS NULL\n            OR last_contact_channel IN (\n                'phone',\n                'whatsapp',\n                'sms',\n                'telegram',\n                'email',\n                'in_person',\n                'other'\n            )\n        );\n\nALTER TABLE human_handoff_tasks\n    ADD COLUMN IF NOT EXISTS last_contact_outcome TEXT\n        CHECK (\n            last_contact_outcome IS NULL\n            OR last_contact_outcome IN (\n                'connected',\n                'no_answer',\n                'busy',\n                'unreachable',\n                'wrong_number',\n                'callback_requested',\n                'resolved'\n            )\n        );\n\nCREATE INDEX IF NOT EXISTS idx_handoff_due_active\n    ON human_handoff_tasks(due_at, priority, created_at)\n    WHERE status IN ('open', 'in_progress');\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار ثبت تلاش‌های تماس و پیگیری تسک‌های انسانی ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "a29ac0fa-feb9-44a9-b55b-045dea424ca7",
+      "name": "Add Handoff Attempt Tracking"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nاین Workflow تعداد تلاش‌های تماس، آخرین زمان تماس، کانال تماس و نتیجه آخرین تلاش را به صف ارجاع انسانی اضافه می‌کند.\n\nبعد از اجرای موفق، Workflow را غیرفعال نگه دار.",
+        "height": 270,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        -240
+      ],
+      "id": "1d4b5a26-fb76-4dce-8567-0c57ea4be041",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Add Handoff Attempt Tracking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

@@ -1,0 +1,445 @@
+{
+  "name": "14 - API - Cancel Appointment - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        128
+      ],
+      "id": "8fc8de06-2658-47dc-8105-c51eaf4e8530",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "476ecd51-cb72-4dc5-9197-e5e1cc47e251",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "f322d71f-1ade-4a59-84a4-42915ab2f19d",
+              "name": "mobile",
+              "value": "09000000000",
+              "type": "string"
+            },
+            {
+              "id": "5c9eee92-b810-4fef-a436-3d7d12f9bc2b",
+              "name": "appointment_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "6d8eae8b-3d92-4190-8ed1-6bd88116a538",
+              "name": "cancellation_reason",
+              "value": "درخواست بیمار",
+              "type": "string"
+            },
+            {
+              "id": "5b9b4fe1-4a73-4705-b6c7-50350500999f",
+              "name": "confirm_cancel",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        176,
+        128
+      ],
+      "id": "66b2b1ee-8c6e-43c9-8db4-3bcd494b6fa6",
+      "name": "Manual Cancellation Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/appointments/cancel",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        176,
+        320
+      ],
+      "id": "b8c4d37f-6f63-48eb-bcc9-d344310ad0df",
+      "name": "Webhook - Cancel Appointment"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  const normalized = text(value).toLowerCase();\n  return ['true', '1', 'yes', 'on'].includes(normalized);\n};\n\nconst clinic_name = text(input.clinic_name);\nconst mobile = text(input.mobile);\nconst appointment_id = Number(input.appointment_id);\nconst cancellation_reason = text(input.cancellation_reason);\nconst confirm_cancel = toBoolean(input.confirm_cancel);\n\nconst errors = [];\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (!mobile) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل بیمار الزامی است.',\n  });\n}\n\nif (mobile && !/^\\+?[0-9]{8,15}$/.test(mobile)) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل باید فقط شامل اعداد و در صورت نیاز علامت + باشد.',\n  });\n}\n\nif (!Number.isInteger(appointment_id) || appointment_id < 1) {\n  errors.push({\n    field: 'appointment_id',\n    message: 'appointment_id باید یک عدد صحیح بزرگ‌تر از صفر باشد.',\n  });\n}\n\nif (!cancellation_reason) {\n  errors.push({\n    field: 'cancellation_reason',\n    message: 'علت لغو نوبت الزامی است.',\n  });\n}\n\nif (cancellation_reason.length > 500) {\n  errors.push({\n    field: 'cancellation_reason',\n    message: 'علت لغو نباید بیشتر از 500 کاراکتر باشد.',\n  });\n}\n\nif (confirm_cancel !== true) {\n  errors.push({\n    field: 'confirm_cancel',\n    message: 'لغو نوبت باید ابتدا توسط بیمار تأیید شود.',\n  });\n}\n\nreturn [\n  {\n    json: {\n      clinic_name,\n      mobile,\n      appointment_id,\n      cancellation_reason,\n      confirm_cancel,\n      validation_status: errors.length === 0 ? 'valid' : 'invalid',\n      errors,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        224
+      ],
+      "id": "94c6e588-f6c2-4ce5-a9c3-a6b12b368d7e",
+      "name": "Normalize and Validate Cancellation"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5526ccc4-7298-4bf7-a42a-5a01548c1db5",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        224
+      ],
+      "id": "4bcbe24e-ea8c-4506-b08c-77e590186b9e",
+      "name": "Is Cancellation Request Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS appointment_id,\n        $2::TEXT AS clinic_name,\n        $3::TEXT AS mobile\n),\n\nclinic_context AS (\n    SELECT\n        c.id AS clinic_id,\n        c.name AS clinic_name,\n        c.timezone\n    FROM clinics c\n    INNER JOIN request_data r\n        ON c.name = r.clinic_name\n    WHERE c.is_active = TRUE\n    ORDER BY c.id\n    LIMIT 1\n),\n\npatient_context AS (\n    SELECT\n        p.id AS patient_id,\n        p.full_name AS patient_name,\n        p.mobile\n    FROM patients p\n    INNER JOIN clinic_context c\n        ON c.clinic_id = p.clinic_id\n    INNER JOIN request_data r\n        ON p.mobile = r.mobile\n    ORDER BY p.id\n    LIMIT 1\n),\n\nappointment_context AS (\n    SELECT\n        a.id AS appointment_id,\n        a.status,\n        a.starts_at,\n        a.ends_at,\n        a.google_calendar_event_id,\n\n        c.clinic_name,\n        c.timezone,\n\n        p.patient_name,\n        p.mobile,\n\n        d.full_name AS doctor_name,\n        s.name AS service_name\n\n    FROM appointments a\n\n    INNER JOIN clinic_context c\n        ON c.clinic_id = a.clinic_id\n\n    INNER JOIN patient_context p\n        ON p.patient_id = a.patient_id\n\n    INNER JOIN doctors d\n        ON d.id = a.doctor_id\n\n    LEFT JOIN services s\n        ON s.id = a.service_id\n\n    INNER JOIN request_data r\n        ON r.appointment_id = a.id\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM clinic_context) THEN FALSE\n        WHEN NOT EXISTS (SELECT 1 FROM patient_context) THEN FALSE\n        WHEN NOT EXISTS (SELECT 1 FROM appointment_context) THEN FALSE\n        WHEN (SELECT status FROM appointment_context) = 'cancelled' THEN FALSE\n        WHEN (SELECT status FROM appointment_context) NOT IN ('pending', 'confirmed') THEN FALSE\n        WHEN (SELECT ends_at FROM appointment_context) <= NOW() THEN FALSE\n        ELSE TRUE\n    END AS ready_to_cancel,\n\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM clinic_context)\n            THEN 'clinic_not_found'\n        WHEN NOT EXISTS (SELECT 1 FROM patient_context)\n            THEN 'patient_not_found'\n        WHEN NOT EXISTS (SELECT 1 FROM appointment_context)\n            THEN 'appointment_not_found'\n        WHEN (SELECT status FROM appointment_context) = 'cancelled'\n            THEN 'already_cancelled'\n        WHEN (SELECT status FROM appointment_context) NOT IN ('pending', 'confirmed')\n            THEN 'appointment_not_cancellable'\n        WHEN (SELECT ends_at FROM appointment_context) <= NOW()\n            THEN 'appointment_in_past'\n        ELSE 'can_cancel'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM clinic_context)\n            THEN 'کلینیک مطابق ورودی پیدا نشد.'\n        WHEN NOT EXISTS (SELECT 1 FROM patient_context)\n            THEN 'بیماری با این شماره موبایل در کلینیک پیدا نشد.'\n        WHEN NOT EXISTS (SELECT 1 FROM appointment_context)\n            THEN 'این نوبت برای بیمار موردنظر پیدا نشد.'\n        WHEN (SELECT status FROM appointment_context) = 'cancelled'\n            THEN 'این نوبت قبلاً لغو شده است.'\n        WHEN (SELECT status FROM appointment_context) NOT IN ('pending', 'confirmed')\n            THEN 'وضعیت فعلی نوبت اجازه لغو خودکار را نمی‌دهد.'\n        WHEN (SELECT ends_at FROM appointment_context) <= NOW()\n            THEN 'این نوبت مربوط به گذشته است و قابل لغو نیست.'\n        ELSE 'نوبت آماده لغو است.'\n    END AS message,\n\n    (\n        SELECT appointment_id\n        FROM appointment_context\n    ) AS appointment_id,\n\n    (\n        SELECT patient_name\n        FROM appointment_context\n    ) AS patient_name,\n\n    (\n        SELECT doctor_name\n        FROM appointment_context\n    ) AS doctor_name,\n\n    (\n        SELECT service_name\n        FROM appointment_context\n    ) AS service_name,\n\n    (\n        SELECT TO_CHAR(\n            starts_at AT TIME ZONE timezone,\n            'YYYY-MM-DD HH24:MI'\n        )\n        FROM appointment_context\n    ) AS appointment_start,\n\n    (\n        SELECT status\n        FROM appointment_context\n    ) AS current_status,\n\n    (\n        SELECT google_calendar_event_id\n        FROM appointment_context\n    ) AS google_calendar_event_id\n\nFROM request_data;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.appointment_id,\n  $json.clinic_name,\n  $json.mobile\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        848,
+        128
+      ],
+      "id": "d53d38e3-93ee-4a12-b2eb-34e2f96d7fdc",
+      "name": "Check Appointment for Cancellation"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "06dbd1c4-dae1-410e-8a38-9bfbbd2a46b6",
+              "leftValue": "={{ $json.ready_to_cancel }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1072,
+        128
+      ],
+      "id": "2fb5dc37-c911-4e44-a7ea-da67e861f580",
+      "name": "Can Appointment Be Cancelled?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH updated_appointment AS (\n    UPDATE appointments a\n    SET\n        status = 'cancelled',\n        cancellation_reason = $4,\n        cancelled_at = NOW(),\n        updated_at = NOW()\n\n    FROM clinics c, patients p\n\n    WHERE a.id = $1\n      AND c.id = a.clinic_id\n      AND c.name = $2\n      AND p.id = a.patient_id\n      AND p.mobile = $3\n      AND a.status IN ('pending', 'confirmed')\n      AND a.ends_at > NOW()\n\n    RETURNING\n        a.id,\n        a.clinic_id,\n        a.doctor_id,\n        a.patient_id,\n        a.service_id,\n        a.starts_at,\n        a.ends_at,\n        a.status,\n        a.cancellation_reason,\n        a.cancelled_at,\n        a.google_calendar_event_id\n)\n\nSELECT\n    TRUE AS success,\n    'cancelled' AS result,\n    'نوبت با موفقیت لغو شد.' AS message,\n\n    ua.id AS appointment_id,\n    p.full_name AS patient_name,\n    p.mobile,\n    d.full_name AS doctor_name,\n    s.name AS service_name,\n\n    TO_CHAR(\n        ua.starts_at AT TIME ZONE c.timezone,\n        'YYYY-MM-DD HH24:MI'\n    ) AS appointment_start,\n\n    ua.status,\n    ua.cancellation_reason,\n    ua.cancelled_at,\n    ua.google_calendar_event_id\n\nFROM updated_appointment ua\n\nINNER JOIN clinics c\n    ON c.id = ua.clinic_id\n\nINNER JOIN patients p\n    ON p.id = ua.patient_id\n\nINNER JOIN doctors d\n    ON d.id = ua.doctor_id\n\nLEFT JOIN services s\n    ON s.id = ua.service_id\n\nUNION ALL\n\nSELECT\n    FALSE AS success,\n    'cancellation_conflict' AS result,\n    'نوبت در فاصله بررسی تا لغو تغییر کرده است. لطفاً دوباره وضعیت نوبت را بررسی کنید.' AS message,\n\n    NULL::BIGINT AS appointment_id,\n    NULL::TEXT AS patient_name,\n    NULL::TEXT AS mobile,\n    NULL::TEXT AS doctor_name,\n    NULL::TEXT AS service_name,\n    NULL::TEXT AS appointment_start,\n    NULL::TEXT AS status,\n    NULL::TEXT AS cancellation_reason,\n    NULL::TIMESTAMPTZ AS cancelled_at,\n    NULL::TEXT AS google_calendar_event_id\n\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM updated_appointment\n);",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Normalize and Validate Cancellation').first().json.appointment_id,\n  $('Normalize and Validate Cancellation').first().json.clinic_name,\n  $('Normalize and Validate Cancellation').first().json.mobile,\n  $('Normalize and Validate Cancellation').first().json.cancellation_reason\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1296,
+        32
+      ],
+      "id": "04571816-ec82-4ab8-9d71-c292c38db2d9",
+      "name": "Cancel Appointment in Database"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e3144744-2097-4a65-8de3-a21585892b35",
+              "leftValue": "={{ Boolean($json.google_calendar_event_id) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1520,
+        32
+      ],
+      "id": "a3dec8be-8b7b-44dc-9b43-5006764055bc",
+      "name": "Has Google Calendar Event?"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "YOUR_CALENDAR_ID",
+          "mode": "list",
+          "cachedResultName": "Clinic Demo - Dr Test"
+        },
+        "eventId": "={{ $('Cancel Appointment in Database').first().json.google_calendar_event_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        1744,
+        -64
+      ],
+      "id": "78a0354d-7906-41cb-9741-8c76906c18f5",
+      "name": "Delete Calendar Event",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cancelled = $('Cancel Appointment in Database').first().json;\n\nconst hasError =\n  Boolean($json.error) ||\n  Boolean($json.errorMessage) ||\n  $json.success === false;\n\nreturn [\n  {\n    json: {\n      ...cancelled,\n      calendar_sync_status: hasError ? 'delete_failed' : 'deleted',\n      calendar_sync_message: hasError\n        ? 'نوبت در دیتابیس لغو شد، اما حذف رویداد تقویم نیاز به بررسی مجدد دارد.'\n        : 'رویداد Google Calendar نیز حذف شد.',\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1968,
+        -64
+      ],
+      "id": "2f9a82bf-54b8-4608-89e5-e295e2bc2f97",
+      "name": "Return Cancellation with Calendar Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      ...$json,\n      calendar_sync_status: 'not_required',\n      calendar_sync_message: 'برای این نوبت شناسه رویداد تقویم ثبت نشده بود.',\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1744,
+        128
+      ],
+      "id": "d3eb7abd-5f5e-479d-9356-8af08a8cbf0d",
+      "name": "Return Cancellation without Calendar Event"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      result: 'invalid_request',\n      message: 'اطلاعات درخواست ناقص یا نامعتبر است.',\n      errors: $json.errors ?? [],\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        848,
+        320
+      ],
+      "id": "8e469873-411a-4c54-87f9-06ad3e9c6d87",
+      "name": "Return Cancellation Validation Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      result: $json.result,\n      message: $json.message,\n      appointment_id: $json.appointment_id ?? null,\n      patient_name: $json.patient_name ?? null,\n      doctor_name: $json.doctor_name ?? null,\n      service_name: $json.service_name ?? null,\n      appointment_start: $json.appointment_start ?? null,\n      current_status: $json.current_status ?? null,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        224
+      ],
+      "id": "b941b8e4-cc6e-4f34-858d-b7178be4c167",
+      "name": "Return Cancellation Rejection"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Cancellation Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Cancellation Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Cancellation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Cancel Appointment": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Cancellation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Cancellation": {
+      "main": [
+        [
+          {
+            "node": "Is Cancellation Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Cancellation Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Check Appointment for Cancellation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Cancellation Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Appointment for Cancellation": {
+      "main": [
+        [
+          {
+            "node": "Can Appointment Be Cancelled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Can Appointment Be Cancelled?": {
+      "main": [
+        [
+          {
+            "node": "Cancel Appointment in Database",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Cancellation Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel Appointment in Database": {
+      "main": [
+        [
+          {
+            "node": "Has Google Calendar Event?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Google Calendar Event?": {
+      "main": [
+        [
+          {
+            "node": "Delete Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Cancellation without Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Return Cancellation with Calendar Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": [],
+  "id": "I2dgWjG7yrRtbicc"
+}

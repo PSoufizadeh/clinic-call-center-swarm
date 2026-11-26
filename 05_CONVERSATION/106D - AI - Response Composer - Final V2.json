@@ -1,0 +1,475 @@
+{
+  "name": "106D - AI - Response Composer - Final V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1320,
+        208
+      ],
+      "id": "4a7d1bed-1737-475a-b27e-6663baf0d7dc",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9c01587f-6238-421e-afe6-a5696d7a784d",
+              "name": "session_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "276ff11b-e242-48fd-bcc1-fa23a57806b7",
+              "name": "message_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "00d29662-7985-49eb-bff3-cfb3572cb6d0",
+              "name": "model_provider",
+              "value": "openai",
+              "type": "string"
+            },
+            {
+              "id": "0a7e5eb2-aa6c-4a02-b902-1362529c5334",
+              "name": "model_name",
+              "value": "gpt-5-mini",
+              "type": "string"
+            },
+            {
+              "id": "58a316ce-6201-4398-88cd-4dffba3317e5",
+              "name": "prompt_version",
+              "value": "response-composer-final-v2",
+              "type": "string"
+            },
+            {
+              "id": "6734b887-faa8-4465-9464-3a6c5a8e9231",
+              "name": "confirm_composition",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1080,
+        208
+      ],
+      "id": "a6e24b23-2fe1-44f4-b711-7a38c826af62",
+      "name": "Manual Response Composition Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/ai/compose-response",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1080,
+        -80
+      ],
+      "id": "d99137f4-a703-485f-b353-87d5a5c6d09a",
+      "name": "Webhook - Compose Patient Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst session_id = Number(input.session_id);\nconst message_id = Number(input.message_id);\nconst model_provider = text(input.model_provider || 'openai').toLowerCase();\nconst model_name = text(input.model_name || 'gpt-5-mini');\nconst prompt_version = text(input.prompt_version || 'response-composer-final-v2');\nconst confirm_composition = toBoolean(input.confirm_composition);\n\nconst errors = [];\n\nif (!Number.isInteger(session_id) || session_id < 1) {\n  errors.push({\n    field: 'session_id',\n    message: 'session_id باید یک عدد صحیح بزرگ‌تر از صفر باشد.',\n  });\n}\n\nif (!Number.isInteger(message_id) || message_id < 1) {\n  errors.push({\n    field: 'message_id',\n    message: 'message_id باید یک عدد صحیح بزرگ‌تر از صفر باشد.',\n  });\n}\n\nif (!model_provider) {\n  errors.push({\n    field: 'model_provider',\n    message: 'ارائه‌دهنده مدل الزامی است.',\n  });\n}\n\nif (!model_name) {\n  errors.push({\n    field: 'model_name',\n    message: 'نام مدل الزامی است.',\n  });\n}\n\nif (!prompt_version) {\n  errors.push({\n    field: 'prompt_version',\n    message: 'نسخه پرامپت الزامی است.',\n  });\n}\n\nif (confirm_composition !== true) {\n  errors.push({\n    field: 'confirm_composition',\n    message: 'ساخت پاسخ باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    session_id,\n    message_id,\n    model_provider,\n    model_name,\n    prompt_version,\n    response_started_at_ms: Date.now(),\n    confirm_composition,\n    validation_status: errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -808,
+        64
+      ],
+      "id": "a6c2ee5c-0a2c-4c61-a8a5-e2c00080e7dc",
+      "name": "Normalize and Validate Response Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "464cb547-a8d0-4b07-9909-6c41aeac2785",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -568,
+        64
+      ],
+      "id": "5a67c225-132e-43bd-a776-4653ce5e12a7",
+      "name": "Is Response Request Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS session_id,\n        $2::BIGINT AS message_id\n),\n\nresponse_context AS (\n    SELECT\n        session.id AS session_id,\n        session.clinic_id,\n        session.patient_id,\n        session.channel,\n        session.external_conversation_id,\n        session.language,\n        session.status AS session_status,\n        session.last_intent,\n        session.pending_action,\n        session.collected_entities,\n        session.risk_flags AS session_risk_flags,\n        session.context_summary,\n\n        clinic.name AS clinic_name,\n\n        patient.full_name AS patient_name,\n        patient.mobile,\n\n        message.id AS message_id,\n        message.content_text AS patient_message,\n        message.intent,\n        message.intent_confidence,\n        message.extracted_entities,\n        message.risk_flags AS message_risk_flags,\n        message.tool_action,\n        message.tool_result,\n\n        message.tool_result -> 'safety'\n            AS safety_payload,\n\n        message.tool_result -> 'routing'\n            AS routing_payload,\n\n        message.tool_result -> 'execution'\n            AS execution_payload,\n\n        ai_run.parsed_output AS ai_route_output\n\n    FROM request_data request\n\n    INNER JOIN conversation_sessions session\n        ON session.id = request.session_id\n\n    INNER JOIN clinics clinic\n        ON clinic.id = session.clinic_id\n\n    LEFT JOIN patients patient\n        ON patient.id = session.patient_id\n\n    INNER JOIN conversation_messages message\n        ON message.id = request.message_id\n       AND message.session_id = session.id\n       AND message.direction = 'inbound'\n\n    LEFT JOIN LATERAL (\n        SELECT run.parsed_output\n        FROM conversation_ai_runs run\n        WHERE run.session_id = session.id\n          AND run.input_message_id = message.id\n          AND run.status = 'success'\n        ORDER BY\n            run.created_at DESC,\n            run.id DESC\n        LIMIT 1\n    ) ai_run\n        ON TRUE\n\n    LIMIT 1\n),\n\nrecent_rows AS (\n    SELECT *\n    FROM (\n        SELECT\n            message.id AS message_id,\n            message.direction,\n            message.sender_type,\n            message.content_text,\n            message.intent,\n            message.tool_action,\n            message.tool_result,\n            message.created_at\n\n        FROM conversation_messages message\n\n        INNER JOIN response_context context\n            ON context.session_id = message.session_id\n\n        ORDER BY\n            message.created_at DESC,\n            message.id DESC\n\n        LIMIT 12\n    ) recent\n\n    ORDER BY\n        created_at ASC,\n        message_id ASC\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM response_context\n        )\n            THEN FALSE\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM response_context\n            WHERE safety_payload IS NULL\n        )\n            THEN FALSE\n\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM response_context\n        )\n            THEN 'message_or_session_not_found'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM response_context\n            WHERE safety_payload IS NULL\n        )\n            THEN 'safety_decision_not_found'\n\n        ELSE 'response_context_loaded'\n    END AS result,\n\n    (\n        SELECT ROW_TO_JSON(response_context)\n        FROM response_context\n    ) AS response_context,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'message_id', message_id,\n                    'direction', direction,\n                    'sender_type', sender_type,\n                    'content_text', content_text,\n                    'intent', intent,\n                    'tool_action', tool_action,\n                    'tool_result', tool_result,\n                    'created_at', created_at\n                )\n                ORDER BY created_at, message_id\n            )\n            FROM recent_rows\n        ),\n        '[]'::JSONB\n    ) AS recent_messages\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.session_id,\n  $json.message_id\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -312,
+        -48
+      ],
+      "id": "aee75eea-44e0-4f6b-a201-b40d2efcb350",
+      "name": "Load Response Composition Context"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dd6b9008-f8d7-4811-a958-aef16a0661bb",
+              "leftValue": "={{ $json.success === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -56,
+        -48
+      ],
+      "id": "5fe099d2-9e94-42ab-b35a-2662d8af9824",
+      "name": "Is Response Context Available?"
+    },
+    {
+      "parameters": {
+        "jsCode": "if ($json.success !== true) {\n  return [{ json: $json }];\n}\n\nconst input = $('Normalize and Validate Response Request').first().json;\nconst context = $json.response_context || {};\nconst safety = context.safety_payload || {};\nconst routing = context.routing_payload || {};\nconst execution = context.execution_payload || null;\nconst aiRoute = context.ai_route_output || {};\n\nconst deterministicInstruction =\n  safety.patient_facing_instruction || null;\n\nconst responsePrompt = [\n  'PATIENT_MESSAGE:',\n  JSON.stringify(context.patient_message || ''),\n  '',\n  'PATIENT_AND_SESSION:',\n  JSON.stringify({\n    clinic_name: context.clinic_name,\n    patient_name: context.patient_name,\n    language: context.language,\n    session_status: context.session_status,\n    last_intent: context.last_intent,\n    pending_action: context.pending_action,\n    collected_entities: context.collected_entities || {},\n  }),\n  '',\n  'AI_CLASSIFICATION:',\n  JSON.stringify(aiRoute),\n  '',\n  'SAFETY_DECISION:',\n  JSON.stringify(safety),\n  '',\n  'TOOL_ROUTE:',\n  JSON.stringify(routing),\n  '',\n  'TOOL_EXECUTION_RESULT:',\n  JSON.stringify(execution),\n  '',\n  'DETERMINISTIC_INSTRUCTION:',\n  JSON.stringify(deterministicInstruction),\n  '',\n  'RECENT_MESSAGES:',\n  JSON.stringify($json.recent_messages || []),\n  '',\n  'Return only the structured response required by the output schema.',\n].join('\\n');\n\nreturn [{\n  json: {\n    ...$json,\n    deterministic_instruction:\n      deterministicInstruction,\n    model_provider: input.model_provider,\n    model_name: input.model_name,\n    prompt_version: input.prompt_version,\n    response_started_at_ms:\n      input.response_started_at_ms,\n    response_prompt: responsePrompt,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        -144
+      ],
+      "id": "95fc807c-2228-408b-97a5-a4890e1a1c6a",
+      "name": "Prepare Response Composition Context"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.response_prompt }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You compose patient-facing messages for a clinic virtual receptionist.\n\nUse only the supplied data. Never invent:\n- available appointments,\n- appointment confirmation,\n- prices,\n- services,\n- insurance or prescription status,\n- tracking codes,\n- diagnoses,\n- medication advice,\n- actions that were not completed.\n\nPriority rules:\n1. The deterministic safety instruction has highest priority.\n2. If safety requires urgent handoff, clearly say the patient should not wait for an automated reply and should seek immediate local emergency help or in-person assistance. Do not mention a specific emergency number unless supplied.\n3. If information is missing, ask only one concise question that collects the missing information.\n4. If explicit confirmation is required, summarize the proposed action and ask for clear confirmation. Do not say the action is completed.\n5. If routing is ready but execution has not occurred, say the request is ready for processing or ask the needed confirmation; never say it was executed.\n6. If an execution result exists, describe only what that result confirms.\n7. Use the patient's language. Keep the response respectful, short, and operational.\n8. Do not provide medical diagnosis, treatment, dosage modification, or legal advice.\n9. Do not expose internal workflow numbers, JSON, confidence values, safety labels, or system terminology to the patient.\n\nFinal orchestration rules:\n10. When route_status is needs_input or patient_input_required, ask only for the specific missing_for_tool fields or use the supplied next_question.\n11. When tool execution failed, do not imply success. Give a concise operational error message and state that the case is being reviewed or needs human follow-up.\n12. When tool execution succeeded, use only the execution response as evidence of completion.\n13. For post-visit follow-up results, never diagnose. Acknowledge receipt and reflect only the recorded workflow outcome.\n14. For disruption responses, state only whether the selected replacement, cancellation, waitlist action, or request for more options was actually accepted.\n15. If a successful existing idempotent execution is returned, treat it as the prior confirmed result rather than running or describing a second action.\n16. Never expose internal endpoint names, workflow numbers, retry counters, fingerprints, database fields, or orchestration labels.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        456,
+        -144
+      ],
+      "id": "35ca887c-d316-4433-9741-d2d1152fa6d5",
+      "name": "AI Response Composer"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        400,
+        96
+      ],
+      "id": "9c7f54ff-4f32-48b2-8330-868c74c32d83",
+      "name": "OpenAI Chat Model - Select Credential"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\": \"object\", \"additionalProperties\": false, \"properties\": {\"language\": {\"type\": \"string\", \"enum\": [\"fa\", \"en\", \"ar\", \"unknown\"]}, \"response_type\": {\"type\": \"string\", \"enum\": [\"answer\", \"clarification_question\", \"missing_information_question\", \"confirmation_request\", \"processing_acknowledgement\", \"human_handoff_acknowledgement\", \"urgent_safety_message\", \"completed_action_result\", \"error_message\"]}, \"response_text\": {\"type\": \"string\", \"minLength\": 1, \"maxLength\": 2000}, \"should_send\": {\"type\": \"boolean\"}, \"requires_human_review\": {\"type\": \"boolean\"}, \"conversation_status\": {\"type\": \"string\", \"enum\": [\"active\", \"waiting_patient\", \"waiting_human\", \"completed\"]}, \"reason_summary\": {\"type\": \"string\", \"maxLength\": 500}}, \"required\": [\"language\", \"response_type\", \"response_text\", \"should_send\", \"requires_human_review\", \"conversation_status\", \"reason_summary\"]}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        624,
+        96
+      ],
+      "id": "d2638140-f7b5-4a80-a2b4-4ff5f00bdfd8",
+      "name": "Structured Patient Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "const envelope = $json ?? {};\nlet parsed = envelope.output ?? envelope;\n\nif (typeof parsed === 'string') {\n  try {\n    parsed = JSON.parse(parsed);\n  } catch {\n    const match = parsed.match(/\\{[\\s\\S]*\\}/);\n    if (!match) {\n      throw new Error('AI response is not valid JSON.');\n    }\n    parsed = JSON.parse(match[0]);\n  }\n}\n\nif (\n  parsed &&\n  typeof parsed === 'object' &&\n  parsed.output &&\n  typeof parsed.output === 'object'\n) {\n  parsed = parsed.output;\n}\n\nconst context = $('Prepare Response Composition Context').first().json;\nconst source = context.response_context || {};\nconst safety = source.safety_payload || {};\nconst routing = source.routing_payload || {};\nconst execution = source.execution_payload || {};\nconst aiRoute = source.ai_route_output || {};\n\nconst routeStatus = String(\n  routing.route_status || ''\n).trim();\n\nconst executionExists =\n  execution &&\n  typeof execution === 'object' &&\n  Object.keys(execution).length > 0;\n\nconst executionSucceeded =\n  executionExists &&\n  execution.success === true;\n\nconst executionFailed =\n  executionExists &&\n  execution.success === false;\n\nlet responseText = String(\n  parsed.response_text || ''\n).trim();\n\nif (\n  safety.safety_decision === 'urgent_handoff' &&\n  context.deterministic_instruction\n) {\n  responseText = String(\n    context.deterministic_instruction\n  ).trim();\n}\n\nif (!responseText) {\n  responseText =\n    context.deterministic_instruction ||\n    'درخواست شما دریافت شد.';\n}\n\nconst language =\n  parsed.language ||\n  source.language ||\n  'unknown';\n\nlet responseType =\n  parsed.response_type || 'answer';\n\nlet conversationStatus =\n  parsed.conversation_status || 'active';\n\nlet requiresHumanReview =\n  Boolean(parsed.requires_human_review);\n\nif (\n  safety.safety_decision === 'urgent_handoff'\n) {\n  responseType = 'urgent_safety_message';\n  conversationStatus = 'waiting_human';\n  requiresHumanReview = true;\n}\n\nif (\n  [\n    'human_handoff',\n    'allow_with_human_review',\n  ].includes(safety.safety_decision)\n) {\n  responseType =\n    responseType === 'urgent_safety_message'\n      ? responseType\n      : 'human_handoff_acknowledgement';\n  conversationStatus = 'waiting_human';\n  requiresHumanReview = true;\n}\n\nif (\n  [\n    'needs_input',\n    'patient_input_required',\n  ].includes(routeStatus)\n) {\n  responseType =\n    routeStatus === 'patient_input_required'\n      ? 'confirmation_request'\n      : 'missing_information_question';\n  conversationStatus = 'waiting_patient';\n\n  if (!responseText) {\n    responseText = String(\n      aiRoute.next_question ||\n      'برای ادامه، لطفاً اطلاعات خواسته‌شده را ارسال کنید.'\n    ).trim();\n  }\n}\n\nif (routeStatus === 'unsupported_tool') {\n  responseType = 'human_handoff_acknowledgement';\n  conversationStatus = 'waiting_human';\n  requiresHumanReview = true;\n\n  if (!responseText) {\n    responseText =\n      'درخواست شما برای بررسی به اپراتور انسانی ارجاع شد.';\n  }\n}\n\nif (executionSucceeded) {\n  responseType = 'completed_action_result';\n\n  if (\n    conversationStatus !== 'waiting_human' &&\n    conversationStatus !== 'waiting_patient'\n  ) {\n    conversationStatus = 'active';\n  }\n}\n\nif (executionFailed) {\n  responseType = 'error_message';\n  conversationStatus = 'waiting_human';\n  requiresHumanReview = true;\n\n  if (!responseText) {\n    responseText =\n      'در اجرای درخواست مشکلی رخ داد. موضوع برای بررسی انسانی ثبت شد.';\n  }\n}\n\nreturn [{\n  json: {\n    success: true,\n    result: 'patient_response_composed',\n    session_id: Number(source.session_id),\n    input_message_id: Number(source.message_id),\n    language,\n    response_type: responseType,\n    response_text: responseText.slice(0, 2000),\n    should_send:\n      parsed.should_send !== false,\n    requires_human_review:\n      requiresHumanReview,\n    conversation_status: conversationStatus,\n    reason_summary: String(\n      parsed.reason_summary || ''\n    ).slice(0, 500),\n    model_provider: context.model_provider,\n    model_name: context.model_name,\n    prompt_version: context.prompt_version,\n    raw_output_json: JSON.stringify(envelope),\n    latency_ms: Math.max(\n      0,\n      Date.now() -\n        Number(\n          context.response_started_at_ms ||\n          Date.now()\n        )\n    ),\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -144
+      ],
+      "id": "b83c357a-592e-4206-8083-d28d14988a73",
+      "name": "Normalize Composed Response"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS session_id,\n        $2::BIGINT AS input_message_id,\n        $3::TEXT AS language,\n        $4::TEXT AS response_type,\n        $5::TEXT AS response_text,\n        $6::BOOLEAN AS should_send,\n        $7::BOOLEAN AS requires_human_review,\n        $8::TEXT AS conversation_status,\n        NULLIF($9::TEXT, '') AS reason_summary,\n        $10::TEXT AS model_provider,\n        $11::TEXT AS model_name,\n        $12::TEXT AS prompt_version,\n        $13::JSONB AS raw_output,\n        $14::INTEGER AS latency_ms\n),\n\ninserted_message AS (\n    INSERT INTO conversation_messages (\n        session_id,\n        direction,\n        sender_type,\n        message_type,\n        content_text,\n        content_json,\n        model_provider,\n        model_name,\n        tool_action\n    )\n\n    SELECT\n        request.session_id,\n        'outbound',\n        'assistant',\n        'text',\n        request.response_text,\n\n        JSONB_BUILD_OBJECT(\n            'response_type',\n                request.response_type,\n\n            'should_send',\n                request.should_send,\n\n            'requires_human_review',\n                request.requires_human_review,\n\n            'reason_summary',\n                request.reason_summary,\n\n            'reply_to_message_id',\n                request.input_message_id,\n\n            'prompt_version',\n                request.prompt_version,\n\n            'latency_ms',\n                request.latency_ms\n        ),\n\n        request.model_provider,\n        request.model_name,\n        'compose_response'\n\n    FROM request_data request\n\n    WHERE EXISTS (\n        SELECT 1\n        FROM conversation_messages input_message\n        WHERE input_message.id =\n              request.input_message_id\n          AND input_message.session_id =\n              request.session_id\n    )\n\n    RETURNING id AS response_message_id\n),\n\nupdated_session AS (\n    UPDATE conversation_sessions session\n\n    SET\n        language =\n            request.language,\n\n        status =\n            request.conversation_status,\n\n        pending_action = CASE\n            WHEN request.conversation_status IN (\n                'completed',\n                'active'\n            )\n                THEN NULL\n            ELSE session.pending_action\n        END,\n\n        last_message_at = NOW(),\n        updated_at = NOW()\n\n    FROM request_data request\n\n    WHERE session.id = request.session_id\n\n      AND EXISTS (\n          SELECT 1\n          FROM inserted_message\n      )\n\n    RETURNING\n        session.status,\n        session.pending_action\n),\n\ninserted_run AS (\n    INSERT INTO conversation_ai_runs (\n        session_id,\n        input_message_id,\n        model_provider,\n        model_name,\n        prompt_version,\n        status,\n        raw_output,\n        parsed_output,\n        latency_ms\n    )\n\n    SELECT\n        request.session_id,\n        request.input_message_id,\n        request.model_provider,\n        request.model_name,\n        request.prompt_version,\n        'success',\n        request.raw_output,\n\n        JSONB_BUILD_OBJECT(\n            'response_type',\n                request.response_type,\n\n            'response_text',\n                request.response_text,\n\n            'should_send',\n                request.should_send,\n\n            'requires_human_review',\n                request.requires_human_review,\n\n            'conversation_status',\n                request.conversation_status,\n\n            'reason_summary',\n                request.reason_summary\n        ),\n\n        request.latency_ms\n\n    FROM request_data request\n\n    WHERE EXISTS (\n        SELECT 1\n        FROM inserted_message\n    )\n\n    RETURNING id AS ai_run_id\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM inserted_message\n        )\n            THEN FALSE\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM inserted_message\n        )\n            THEN 'input_message_or_session_not_found'\n        ELSE 'patient_response_saved'\n    END AS result,\n\n    request.session_id,\n    request.input_message_id,\n\n    (\n        SELECT response_message_id\n        FROM inserted_message\n    ) AS response_message_id,\n\n    (\n        SELECT ai_run_id\n        FROM inserted_run\n    ) AS ai_run_id,\n\n    request.language,\n    request.response_type,\n    request.response_text,\n    request.should_send,\n    request.requires_human_review,\n\n    (\n        SELECT status\n        FROM updated_session\n    ) AS conversation_status,\n\n    (\n        SELECT pending_action\n        FROM updated_session\n    ) AS pending_action,\n\n    CASE\n        WHEN request.should_send = TRUE\n            THEN 'send_to_channel'\n        ELSE 'hold_for_human_review'\n    END AS next_action\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.session_id,\n  $json.input_message_id,\n  $json.language,\n  $json.response_type,\n  $json.response_text,\n  $json.should_send,\n  $json.requires_human_review,\n  $json.conversation_status,\n  $json.reason_summary || '',\n  $json.model_provider,\n  $json.model_name,\n  $json.prompt_version,\n  $json.raw_output_json,\n  $json.latency_ms\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        976,
+        -144
+      ],
+      "id": "b6632b52-db48-49a1-9910-da856350a5d9",
+      "name": "Save Patient Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: 'invalid_request',\n    message: 'اطلاعات لازم برای ساخت پاسخ ناقص یا نامعتبر است.',\n    errors: $json.errors ?? [],\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -312,
+        176
+      ],
+      "id": "9c6dd29b-f870-4197-8ab5-50718b2fe1b1",
+      "name": "Return Response Validation Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: $json.result || 'response_context_not_available',\n    message:\n      $json.result === 'safety_decision_not_found'\n        ? 'ابتدا Workflow شماره 52 را برای این پیام اجرا کنید.'\n        : 'پیام یا جلسه مکالمه پیدا نشد.',\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        32
+      ],
+      "id": "8d7c46cd-ce30-467a-b517-0d015cf880c6",
+      "name": "Return Response Context Error"
+    },
+    {
+      "parameters": {
+        "content": "## Response Composer نهایی\n\nاین نسخه جایگزین Workflow 54 است.\n\nاولویت پاسخ:\n1. دستور قطعی Safety Gate\n2. نتیجه واقعی اجرای Tool\n3. کمبود اطلاعات یا نیاز به تأیید\n4. متن تولیدشده توسط مدل\n\nکنترل‌های جدید:\n- Tool Failure هرگز به‌عنوان موفقیت بیان نمی‌شود.\n- needs_input به waiting_patient تبدیل می‌شود.\n- Handoff و خطای اجرا به waiting_human تبدیل می‌شوند.\n- پاسخ موفق Idempotent به‌عنوان نتیجه قبلی معتبر پذیرفته می‌شود.",
+        "height": 450,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1530,
+        -340
+      ],
+      "id": "a590f84b-f2eb-4224-bd00-6871d0629ec3",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Response Composition Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Response Composition Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Response Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Compose Patient Response": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Response Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Response Request": {
+      "main": [
+        [
+          {
+            "node": "Is Response Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Response Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Load Response Composition Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Response Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Response Composition Context": {
+      "main": [
+        [
+          {
+            "node": "Is Response Context Available?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Response Context Available?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Response Composition Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Response Context Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Response Composition Context": {
+      "main": [
+        [
+          {
+            "node": "AI Response Composer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Response Composer": {
+      "main": [
+        [
+          {
+            "node": "Normalize Composed Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model - Select Credential": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Response Composer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Patient Response": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Response Composer",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Composed Response": {
+      "main": [
+        [
+          {
+            "node": "Save Patient Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

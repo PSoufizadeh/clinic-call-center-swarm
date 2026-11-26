@@ -1,0 +1,333 @@
+{
+  "name": "78 - API - Manage Patient Consents and Preferences - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "185f00bb-8e66-4320-8a4b-aefe8850bc00",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a5c1bac0-006b-4671-a9a5-86ee92a34093",
+              "name": "action",
+              "value": "get",
+              "type": "string"
+            },
+            {
+              "id": "e7449d6b-6596-4459-a4e7-cc6bfe701c8b",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "16eac0d0-5f92-4906-957e-a1e3de5b07e4",
+              "name": "mobile",
+              "value": "09000000000",
+              "type": "string"
+            },
+            {
+              "id": "3c492276-48a3-4f03-a243-27ee02e0dabc",
+              "name": "consent_type",
+              "value": "contact",
+              "type": "string"
+            },
+            {
+              "id": "2576f887-4d22-4e90-adb6-75628cf0c8b4",
+              "name": "policy_version",
+              "value": "1.0",
+              "type": "string"
+            },
+            {
+              "id": "4517b0bd-d3d4-4770-8d68-8af595e09ac1",
+              "name": "scope_json",
+              "value": "{}",
+              "type": "string"
+            },
+            {
+              "id": "15434c8c-306b-4cc8-b323-83385c2fe52f",
+              "name": "expires_at",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "c556a8ea-57a0-4763-ba81-7e5d5a440106",
+              "name": "channel",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "370a2462-8ad0-4221-9bbf-bf36d5ed3044",
+              "name": "enabled",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "ebfbde20-649a-4b5c-9f01-b72cb79a82ea",
+              "name": "preferred_language",
+              "value": "fa",
+              "type": "string"
+            },
+            {
+              "id": "49d3fcdf-f027-423a-829a-2d161cb89837",
+              "name": "timezone",
+              "value": "Asia/Baghdad",
+              "type": "string"
+            },
+            {
+              "id": "f5a7eee1-096f-418d-abb6-64b3283eb0ca",
+              "name": "quiet_hours_enabled",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "b98edff4-0f50-4cb1-a7b5-f271df5fe244",
+              "name": "quiet_hours_start",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "d5d0cc67-45c9-4e5b-b3e5-4383cf1769e7",
+              "name": "quiet_hours_end",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "1a0ddffb-be20-461b-b48b-12f79610d977",
+              "name": "max_messages_per_week",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "9fae708b-a04f-4c20-a378-f18289b85862",
+              "name": "preferences",
+              "value": "[]",
+              "type": "string"
+            },
+            {
+              "id": "7084be0d-d375-4db7-8c75-6cd0e3dee933",
+              "name": "actor_name",
+              "value": "بیمار",
+              "type": "string"
+            },
+            {
+              "id": "fb35902a-3963-452e-89bc-3468cd4dc0f7",
+              "name": "source_channel",
+              "value": "web",
+              "type": "string"
+            },
+            {
+              "id": "76cad1d2-2ad3-4d17-b53b-a11e39c68414",
+              "name": "reason",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "6fa06936-ccad-44f4-befd-fd82d85c8bfc",
+              "name": "confirm_action",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "b1e2c67c-60c2-4e23-9345-d0dc988d8df3",
+      "name": "Manual Consent Management"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/patients/consents/manage",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "1c17fe81-1123-4f10-b06e-f8b320717e72",
+      "name": "Webhook - Manage Patient Consents"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst action = text(input.action || 'get').toLowerCase();\nconst clinic_name = text(input.clinic_name);\nconst mobile = text(input.mobile);\nconst consent_type = text(input.consent_type).toLowerCase();\nconst policy_version = text(input.policy_version);\nconst expires_at = text(input.expires_at);\nconst channel = text(input.channel).toLowerCase();\nconst enabled = bool(input.enabled);\nconst preferred_language =\n  text(input.preferred_language || 'fa').toLowerCase();\nconst timezone =\n  text(input.timezone || 'Asia/Baghdad');\nconst quiet_hours_enabled =\n  bool(input.quiet_hours_enabled);\nconst quiet_hours_start =\n  text(input.quiet_hours_start);\nconst quiet_hours_end =\n  text(input.quiet_hours_end);\nconst max_messages_per_week =\n  Number(input.max_messages_per_week ?? 0);\nconst actor_name = text(input.actor_name);\nconst source_channel =\n  text(input.source_channel || 'api').toLowerCase();\nconst reason = text(input.reason);\nconst confirm_action = bool(input.confirm_action);\n\nlet scope_json = input.scope_json ?? {};\nlet preferences = input.preferences ?? [];\n\ntry {\n  if (typeof scope_json === 'string') {\n    scope_json = JSON.parse(scope_json || '{}');\n  }\n} catch {\n  scope_json = null;\n}\n\ntry {\n  if (typeof preferences === 'string') {\n    preferences = JSON.parse(preferences || '[]');\n  }\n} catch {\n  preferences = null;\n}\n\nconst actions = [\n  'get',\n  'grant',\n  'revoke',\n  'set_preference',\n  'set_preferences',\n];\n\nconst consentTypes = [\n  'contact',\n  'profile_storage',\n  'document_storage',\n  'appointment_reminders',\n  'followup_messages',\n  'marketing_messages',\n  'satisfaction_surveys',\n  'data_processing',\n];\n\nconst channels = [\n  'whatsapp',\n  'sms',\n  'email',\n  'phone',\n  'web_push',\n  'in_app',\n];\n\nconst sourceChannels = [\n  'web',\n  'whatsapp',\n  'telegram',\n  'sms',\n  'email',\n  'phone',\n  'manual',\n  'api',\n  'system',\n];\n\nconst errors = [];\n\nif (!actions.includes(action)) {\n  errors.push({\n    field: 'action',\n    message: 'اقدام معتبر نیست.',\n  });\n}\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (!/^\\+?[0-9]{8,15}$/.test(mobile)) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل معتبر نیست.',\n  });\n}\n\nif (\n  ['grant', 'revoke'].includes(action) &&\n  !consentTypes.includes(consent_type)\n) {\n  errors.push({\n    field: 'consent_type',\n    message: 'نوع رضایت معتبر نیست.',\n  });\n}\n\nif (\n  action === 'set_preference' &&\n  !channels.includes(channel)\n) {\n  errors.push({\n    field: 'channel',\n    message: 'کانال ارتباطی معتبر نیست.',\n  });\n}\n\nif (\n  !['fa', 'en', 'ar', 'unknown'].includes(\n    preferred_language\n  )\n) {\n  errors.push({\n    field: 'preferred_language',\n    message: 'زبان ترجیحی معتبر نیست.',\n  });\n}\n\ntry {\n  new Intl.DateTimeFormat(\n    'en-US',\n    { timeZone: timezone }\n  ).format(new Date());\n} catch {\n  errors.push({\n    field: 'timezone',\n    message: 'منطقه زمانی معتبر نیست.',\n  });\n}\n\nif (\n  quiet_hours_enabled &&\n  (\n    !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(\n      quiet_hours_start\n    ) ||\n    !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(\n      quiet_hours_end\n    )\n  )\n) {\n  errors.push({\n    field: 'quiet_hours',\n    message: 'ساعت سکوت باید به شکل HH:MM باشد.',\n  });\n}\n\nif (\n  !Number.isInteger(max_messages_per_week) ||\n  max_messages_per_week < 0 ||\n  max_messages_per_week > 100\n) {\n  errors.push({\n    field: 'max_messages_per_week',\n    message: 'حداکثر پیام هفتگی باید بین صفر و 100 باشد.',\n  });\n}\n\nif (\n  !scope_json ||\n  Array.isArray(scope_json) ||\n  typeof scope_json !== 'object'\n) {\n  errors.push({\n    field: 'scope_json',\n    message: 'scope_json باید یک شیء JSON باشد.',\n  });\n  scope_json = {};\n}\n\nif (\n  action === 'set_preferences' &&\n  (\n    !Array.isArray(preferences) ||\n    preferences.length < 1 ||\n    preferences.length > 20\n  )\n) {\n  errors.push({\n    field: 'preferences',\n    message: 'preferences باید آرایه‌ای با 1 تا 20 مورد باشد.',\n  });\n}\n\nif (!Array.isArray(preferences)) {\n  preferences = [];\n}\n\nfor (const item of preferences) {\n  if (\n    !item ||\n    typeof item !== 'object' ||\n    !channels.includes(\n      text(item.channel).toLowerCase()\n    )\n  ) {\n    errors.push({\n      field: 'preferences',\n      message: 'حداقل یک ترجیح کانال نامعتبر است.',\n    });\n    break;\n  }\n}\n\nif (!actor_name && action !== 'get') {\n  errors.push({\n    field: 'actor_name',\n    message: 'نام انجام‌دهنده الزامی است.',\n  });\n}\n\nif (!sourceChannels.includes(source_channel)) {\n  errors.push({\n    field: 'source_channel',\n    message: 'کانال منبع معتبر نیست.',\n  });\n}\n\nif (\n  expires_at &&\n  Number.isNaN(Date.parse(expires_at))\n) {\n  errors.push({\n    field: 'expires_at',\n    message: 'تاریخ انقضا معتبر نیست.',\n  });\n}\n\nif (\n  action !== 'get' &&\n  confirm_action !== true\n) {\n  errors.push({\n    field: 'confirm_action',\n    message: 'تغییر رضایت یا ترجیح باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    action,\n    clinic_name,\n    mobile,\n    consent_type,\n    policy_version,\n    scope_json_text: JSON.stringify(scope_json),\n    expires_at,\n    channel,\n    enabled,\n    preferred_language,\n    timezone,\n    quiet_hours_enabled,\n    quiet_hours_start,\n    quiet_hours_end,\n    max_messages_per_week,\n    preferences_text: JSON.stringify(preferences),\n    actor_name,\n    source_channel,\n    reason,\n    confirm_action,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "a66188d1-400d-47e7-9007-0c70ce908c56",
+      "name": "Normalize and Validate Consent Management"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f52d21bf-b824-4193-a857-b0abf656bee5",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "4e2dbe7b-a721-4cbf-a8fc-fa811edee4f9",
+      "name": "Is Consent Management Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS action,\n        $2::TEXT AS clinic_name,\n        $3::TEXT AS mobile,\n        NULLIF($4::TEXT, '') AS consent_type,\n        NULLIF($5::TEXT, '') AS policy_version,\n        $6::JSONB AS scope_json,\n        NULLIF($7::TEXT, '')::TIMESTAMPTZ AS expires_at,\n        NULLIF($8::TEXT, '') AS channel,\n        $9::BOOLEAN AS enabled,\n        $10::TEXT AS preferred_language,\n        $11::TEXT AS timezone,\n        $12::BOOLEAN AS quiet_hours_enabled,\n        NULLIF($13::TEXT, '')::TIME AS quiet_hours_start,\n        NULLIF($14::TEXT, '')::TIME AS quiet_hours_end,\n        NULLIF($15::INTEGER, 0) AS max_messages_per_week,\n        $16::JSONB AS preferences,\n        NULLIF($17::TEXT, '') AS actor_name,\n        $18::TEXT AS source_channel,\n        NULLIF($19::TEXT, '') AS reason\n),\n\npatient_context AS (\n    SELECT\n        clinic.id AS clinic_id,\n        patient.id AS patient_id,\n        patient.full_name,\n        patient.mobile,\n        request.*\n    FROM request_data request\n    INNER JOIN clinics clinic\n        ON clinic.name = request.clinic_name\n       AND clinic.is_active = TRUE\n    INNER JOIN patients patient\n        ON patient.clinic_id = clinic.id\n       AND patient.mobile = request.mobile\n    LIMIT 1\n),\n\nprevious_consent AS (\n    SELECT\n        consent.id,\n        consent.status\n    FROM patient_consents consent\n    INNER JOIN patient_context context\n        ON consent.clinic_id = context.clinic_id\n       AND consent.patient_id = context.patient_id\n       AND consent.consent_type = context.consent_type\n    WHERE context.action IN ('grant', 'revoke')\n    LIMIT 1\n),\n\nupserted_consent AS (\n    INSERT INTO patient_consents (\n        clinic_id,\n        patient_id,\n        consent_type,\n        status,\n        policy_version,\n        scope_json,\n        source_channel,\n        granted_at,\n        revoked_at,\n        expires_at,\n        last_actor,\n        last_reason,\n        updated_at\n    )\n    SELECT\n        context.clinic_id,\n        context.patient_id,\n        context.consent_type,\n        CASE\n            WHEN context.action = 'grant'\n                THEN 'granted'\n            ELSE 'revoked'\n        END,\n        context.policy_version,\n        context.scope_json,\n        context.source_channel,\n        CASE\n            WHEN context.action = 'grant'\n                THEN NOW()\n            ELSE NULL\n        END,\n        CASE\n            WHEN context.action = 'revoke'\n                THEN NOW()\n            ELSE NULL\n        END,\n        context.expires_at,\n        context.actor_name,\n        context.reason,\n        NOW()\n    FROM patient_context context\n    WHERE context.action IN ('grant', 'revoke')\n    ON CONFLICT (\n        clinic_id,\n        patient_id,\n        consent_type\n    )\n    DO UPDATE SET\n        status = EXCLUDED.status,\n        policy_version = EXCLUDED.policy_version,\n        scope_json = EXCLUDED.scope_json,\n        source_channel = EXCLUDED.source_channel,\n        granted_at = CASE\n            WHEN EXCLUDED.status = 'granted'\n                THEN NOW()\n            ELSE patient_consents.granted_at\n        END,\n        revoked_at = CASE\n            WHEN EXCLUDED.status = 'revoked'\n                THEN NOW()\n            ELSE NULL\n        END,\n        expires_at = EXCLUDED.expires_at,\n        last_actor = EXCLUDED.last_actor,\n        last_reason = EXCLUDED.last_reason,\n        updated_at = NOW()\n    RETURNING *\n),\n\ninserted_consent_event AS (\n    INSERT INTO patient_consent_events (\n        clinic_id,\n        patient_id,\n        consent_id,\n        consent_type,\n        event_type,\n        previous_status,\n        new_status,\n        actor_name,\n        source_channel,\n        policy_version,\n        reason,\n        event_payload\n    )\n    SELECT\n        consent.clinic_id,\n        consent.patient_id,\n        consent.id,\n        consent.consent_type,\n        CASE\n            WHEN consent.status = 'granted'\n                THEN 'granted'\n            ELSE 'revoked'\n        END,\n        (\n            SELECT status\n            FROM previous_consent\n        ),\n        consent.status,\n        context.actor_name,\n        context.source_channel,\n        context.policy_version,\n        context.reason,\n        JSONB_BUILD_OBJECT(\n            'scope',\n                consent.scope_json,\n            'expires_at',\n                consent.expires_at\n        )\n    FROM upserted_consent consent\n    CROSS JOIN patient_context context\n    RETURNING id\n),\n\nensured_profile AS (\n    INSERT INTO patient_profiles (\n        patient_id\n    )\n    SELECT\n        context.patient_id\n    FROM patient_context context\n    WHERE context.action IN ('grant', 'revoke')\n    ON CONFLICT (patient_id)\n    DO NOTHING\n    RETURNING patient_id\n),\n\nsynced_profile AS (\n    UPDATE patient_profiles profile\n    SET\n        consent_to_contact = CASE\n            WHEN context.consent_type = 'contact'\n                THEN context.action = 'grant'\n            ELSE profile.consent_to_contact\n        END,\n\n        consent_to_store_profile = CASE\n            WHEN context.consent_type = 'profile_storage'\n                THEN context.action = 'grant'\n            ELSE profile.consent_to_store_profile\n        END,\n\n        consent_to_store_documents = CASE\n            WHEN context.consent_type = 'document_storage'\n                THEN context.action = 'grant'\n            ELSE profile.consent_to_store_documents\n        END,\n\n        privacy_notice_version = COALESCE(\n            context.policy_version,\n            profile.privacy_notice_version\n        ),\n\n        privacy_notice_accepted_at = CASE\n            WHEN context.action = 'grant'\n                THEN NOW()\n            ELSE profile.privacy_notice_accepted_at\n        END,\n\n        updated_at = NOW()\n\n    FROM patient_context context\n    WHERE profile.patient_id = context.patient_id\n      AND context.action IN ('grant', 'revoke')\n    RETURNING profile.patient_id\n),\n\nsingle_preference AS (\n    SELECT\n        context.clinic_id,\n        context.patient_id,\n        context.channel,\n        context.enabled,\n        context.preferred_language,\n        context.timezone,\n        context.quiet_hours_enabled,\n        context.quiet_hours_start,\n        context.quiet_hours_end,\n        context.max_messages_per_week,\n        '{}'::JSONB AS metadata,\n        context.actor_name AS updated_by\n    FROM patient_context context\n    WHERE context.action = 'set_preference'\n),\n\nbulk_preferences AS (\n    SELECT\n        context.clinic_id,\n        context.patient_id,\n        LOWER(item ->> 'channel') AS channel,\n        COALESCE(\n            (item ->> 'enabled')::BOOLEAN,\n            TRUE\n        ) AS enabled,\n        COALESCE(\n            NULLIF(item ->> 'preferred_language', ''),\n            context.preferred_language\n        ) AS preferred_language,\n        COALESCE(\n            NULLIF(item ->> 'timezone', ''),\n            context.timezone\n        ) AS timezone,\n        COALESCE(\n            (item ->> 'quiet_hours_enabled')::BOOLEAN,\n            FALSE\n        ) AS quiet_hours_enabled,\n        NULLIF(item ->> 'quiet_hours_start', '')::TIME\n            AS quiet_hours_start,\n        NULLIF(item ->> 'quiet_hours_end', '')::TIME\n            AS quiet_hours_end,\n        NULLIF(\n            (item ->> 'max_messages_per_week')::INTEGER,\n            0\n        ) AS max_messages_per_week,\n        COALESCE(\n            item -> 'metadata',\n            '{}'::JSONB\n        ) AS metadata,\n        context.actor_name AS updated_by\n    FROM patient_context context\n    CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(\n        context.preferences\n    ) AS item\n    WHERE context.action = 'set_preferences'\n),\n\npreference_rows AS (\n    SELECT * FROM single_preference\n    UNION ALL\n    SELECT * FROM bulk_preferences\n),\n\nupserted_preferences AS (\n    INSERT INTO patient_communication_preferences (\n        clinic_id,\n        patient_id,\n        channel,\n        enabled,\n        preferred_language,\n        timezone,\n        quiet_hours_enabled,\n        quiet_hours_start,\n        quiet_hours_end,\n        max_messages_per_week,\n        metadata,\n        updated_by,\n        updated_at\n    )\n    SELECT\n        row.clinic_id,\n        row.patient_id,\n        row.channel,\n        row.enabled,\n        row.preferred_language,\n        row.timezone,\n        row.quiet_hours_enabled,\n        row.quiet_hours_start,\n        row.quiet_hours_end,\n        row.max_messages_per_week,\n        row.metadata,\n        row.updated_by,\n        NOW()\n    FROM preference_rows row\n    ON CONFLICT (\n        clinic_id,\n        patient_id,\n        channel\n    )\n    DO UPDATE SET\n        enabled = EXCLUDED.enabled,\n        preferred_language =\n            EXCLUDED.preferred_language,\n        timezone = EXCLUDED.timezone,\n        quiet_hours_enabled =\n            EXCLUDED.quiet_hours_enabled,\n        quiet_hours_start =\n            EXCLUDED.quiet_hours_start,\n        quiet_hours_end =\n            EXCLUDED.quiet_hours_end,\n        max_messages_per_week =\n            EXCLUDED.max_messages_per_week,\n        metadata =\n            patient_communication_preferences.metadata\n            || EXCLUDED.metadata,\n        updated_by = EXCLUDED.updated_by,\n        updated_at = NOW()\n    RETURNING *\n),\n\ninserted_preference_events AS (\n    INSERT INTO patient_consent_events (\n        clinic_id,\n        patient_id,\n        consent_type,\n        event_type,\n        actor_name,\n        source_channel,\n        reason,\n        event_payload\n    )\n    SELECT\n        preference.clinic_id,\n        preference.patient_id,\n        'contact',\n        'preference_changed',\n        context.actor_name,\n        context.source_channel,\n        context.reason,\n        JSONB_BUILD_OBJECT(\n            'channel',\n                preference.channel,\n            'enabled',\n                preference.enabled,\n            'preferred_language',\n                preference.preferred_language,\n            'timezone',\n                preference.timezone,\n            'quiet_hours_enabled',\n                preference.quiet_hours_enabled\n        )\n    FROM upserted_preferences preference\n    CROSS JOIN patient_context context\n    RETURNING id\n),\n\nconsent_list AS (\n    SELECT\n        consent.id,\n        consent.consent_type,\n        consent.status,\n        consent.policy_version,\n        consent.scope_json,\n        consent.source_channel,\n        consent.granted_at,\n        consent.revoked_at,\n        consent.expires_at,\n        consent.last_actor,\n        consent.last_reason,\n        consent.updated_at\n    FROM patient_consents consent\n    INNER JOIN patient_context context\n        ON consent.clinic_id = context.clinic_id\n       AND consent.patient_id = context.patient_id\n    ORDER BY consent.consent_type\n),\n\npreference_list AS (\n    SELECT\n        preference.id,\n        preference.channel,\n        preference.enabled,\n        preference.preferred_language,\n        preference.timezone,\n        preference.quiet_hours_enabled,\n        preference.quiet_hours_start,\n        preference.quiet_hours_end,\n        preference.max_messages_per_week,\n        preference.metadata,\n        preference.updated_by,\n        preference.updated_at\n    FROM patient_communication_preferences preference\n    INNER JOIN patient_context context\n        ON preference.clinic_id = context.clinic_id\n       AND preference.patient_id = context.patient_id\n    ORDER BY preference.channel\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM patient_context\n        )\n            THEN FALSE\n\n        WHEN request.action IN ('grant', 'revoke')\n         AND NOT EXISTS (\n            SELECT 1\n            FROM upserted_consent\n         )\n            THEN FALSE\n\n        WHEN request.action IN (\n            'set_preference',\n            'set_preferences'\n        )\n         AND NOT EXISTS (\n            SELECT 1\n            FROM upserted_preferences\n         )\n            THEN FALSE\n\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM patient_context\n        )\n            THEN 'patient_not_found'\n\n        WHEN request.action = 'grant'\n            THEN 'patient_consent_granted'\n\n        WHEN request.action = 'revoke'\n            THEN 'patient_consent_revoked'\n\n        WHEN request.action = 'set_preference'\n            THEN 'communication_preference_updated'\n\n        WHEN request.action = 'set_preferences'\n            THEN 'communication_preferences_updated'\n\n        ELSE 'patient_consents_and_preferences_loaded'\n    END AS result,\n\n    (\n        SELECT patient_id\n        FROM patient_context\n    ) AS patient_id,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                TO_JSONB(consent)\n            )\n            FROM consent_list consent\n        ),\n        '[]'::JSONB\n    ) AS consents,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                TO_JSONB(preference)\n            )\n            FROM preference_list preference\n        ),\n        '[]'::JSONB\n    ) AS preferences,\n\n    COALESCE(\n        (\n            SELECT COUNT(*)\n            FROM upserted_preferences\n        ),\n        0\n    ) AS preferences_affected,\n\n    (\n        SELECT id\n        FROM inserted_consent_event\n        LIMIT 1\n    ) AS consent_event_id\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.action,\n  $json.clinic_name,\n  $json.mobile,\n  $json.consent_type,\n  $json.policy_version,\n  $json.scope_json_text,\n  $json.expires_at,\n  $json.channel,\n  $json.enabled,\n  $json.preferred_language,\n  $json.timezone,\n  $json.quiet_hours_enabled,\n  $json.quiet_hours_start,\n  $json.quiet_hours_end,\n  $json.max_messages_per_week,\n  $json.preferences_text,\n  $json.actor_name,\n  $json.source_channel,\n  $json.reason\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "c7ff5632-40c3-4856-b381-d06fde6b70eb",
+      "name": "Manage Patient Consents and Preferences"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات رضایت یا ترجیحات ارتباطی نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "4f8ebeac-3247-489e-b323-347625489d33",
+      "name": "Return Consent Management Error"
+    },
+    {
+      "parameters": {
+        "content": "## مدیریت متمرکز رضایت\n\nاقدام‌ها:\n- get\n- grant\n- revoke\n- set_preference\n- set_preferences\n\nتغییرات رضایت و ترجیح کانال به‌صورت رویداد قابل‌ممیزی ثبت می‌شوند.",
+        "height": 370,
+        "width": 510
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -290
+      ],
+      "id": "89a25641-4b5c-4de6-9a0e-00966cbdd2c9",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Consent Management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Consent Management": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Consent Management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Manage Patient Consents": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Consent Management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Consent Management": {
+      "main": [
+        [
+          {
+            "node": "Is Consent Management Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Consent Management Valid?": {
+      "main": [
+        [
+          {
+            "node": "Manage Patient Consents and Preferences",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Consent Management Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

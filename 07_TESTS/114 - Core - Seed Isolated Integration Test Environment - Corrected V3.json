@@ -1,0 +1,261 @@
+{
+  "name": "114 - Core - Seed Isolated Integration Test Environment - Corrected V3",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -940,
+        170
+      ],
+      "id": "cf281c50-260d-424e-8fb2-211faf75bb22",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "04531090-8668-4256-b27a-c24b77449106",
+              "name": "clinic_name",
+              "value": "کلینیک تست یکپارچه",
+              "type": "string"
+            },
+            {
+              "id": "b813b8b2-1d6f-43ae-9d27-4182600daa76",
+              "name": "doctor_name",
+              "value": "دکتر تست",
+              "type": "string"
+            },
+            {
+              "id": "46db87a6-a515-4144-84cd-7e54f7634734",
+              "name": "service_name",
+              "value": "ویزیت تست",
+              "type": "string"
+            },
+            {
+              "id": "46f3c58f-927c-460d-bbce-9355c7bde879",
+              "name": "patient_name",
+              "value": "بیمار تست",
+              "type": "string"
+            },
+            {
+              "id": "724875ce-8ddc-43cf-a5d6-2150cece039f",
+              "name": "mobile",
+              "value": "989120000001",
+              "type": "string"
+            },
+            {
+              "id": "b9dfb93d-64cb-45f8-99ad-d899fd395b7c",
+              "name": "webhook_base_url",
+              "value": "http://n8n:5678/webhook",
+              "type": "string"
+            },
+            {
+              "id": "f1ff0493-21a1-44f6-a7e2-42930050bfcb",
+              "name": "reset_test_data",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "3b57d71d-e2a7-459d-bf9e-e43a82729da1",
+              "name": "confirm_seed",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -700,
+        170
+      ],
+      "id": "3b736e9e-ab08-4216-aeeb-7c7c7644612c",
+      "name": "Manual Seed Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/tests/seed-environment",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -700,
+        -80
+      ],
+      "id": "b662b217-02f7-45d8-a4f2-c7e8c14a5f59",
+      "name": "Webhook - Seed Test Environment"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst clinic_name = text(input.clinic_name);\nconst doctor_name = text(input.doctor_name);\nconst service_name = text(input.service_name);\nconst patient_name = text(input.patient_name);\nconst mobile = text(input.mobile);\nconst webhook_base_url = text(\n  input.webhook_base_url ||\n  'http://n8n:5678/webhook'\n).replace(/\\/+$/, '');\nconst reset_test_data = bool(input.reset_test_data);\nconst confirm_seed = bool(input.confirm_seed);\n\nconst errors = [];\n\nfor (const [field, value] of [\n  ['clinic_name', clinic_name],\n  ['doctor_name', doctor_name],\n  ['service_name', service_name],\n  ['patient_name', patient_name],\n]) {\n  if (!value) {\n    errors.push({\n      field,\n      message: `${field} الزامی است.`,\n    });\n  }\n}\n\nif (!/^\\+?[0-9]{8,15}$/.test(mobile)) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل تست معتبر نیست.',\n  });\n}\n\nif (!/^https?:\\/\\/.+/i.test(webhook_base_url)) {\n  errors.push({\n    field: 'webhook_base_url',\n    message: 'آدرس Webhook معتبر نیست.',\n  });\n}\n\nif (confirm_seed !== true) {\n  errors.push({\n    field: 'confirm_seed',\n    message: 'ساخت داده تست باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    clinic_name,\n    doctor_name,\n    service_name,\n    patient_name,\n    mobile,\n    webhook_base_url,\n    reset_test_data,\n    confirm_seed,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -430,
+        40
+      ],
+      "id": "e7af06c6-1b72-40b3-8872-cef91bc35209",
+      "name": "Normalize and Validate Seed Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e1019b06-e27b-48cc-ac02-39cf35b8416a",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -180,
+        40
+      ],
+      "id": "df8cce8c-47d7-4ce5-b002-9315b0fc4f55",
+      "name": "Is Seed Request Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        $2::TEXT AS doctor_name,\n        $3::TEXT AS service_name,\n        $4::TEXT AS patient_name,\n        $5::TEXT AS mobile,\n        $6::TEXT AS webhook_base_url,\n        $7::BOOLEAN AS reset_test_data\n),\n\nupdated_existing_clinic AS (\n    UPDATE clinics clinic\n    SET\n        timezone = 'Asia/Baghdad',\n        is_active = TRUE,\n        description =\n            'محیط ایزوله تست یکپارچه',\n        metadata =\n            COALESCE(\n                clinic.metadata,\n                '{}'::JSONB\n            )\n            || JSONB_BUILD_OBJECT(\n                'integration_test',\n                TRUE\n            ),\n        updated_at = NOW()\n    FROM request_data request\n    WHERE clinic.name =\n          request.clinic_name\n    RETURNING clinic.*\n),\n\ninserted_clinic AS (\n    INSERT INTO clinics (\n        name,\n        timezone,\n        is_active,\n        description,\n        metadata,\n        updated_at\n    )\n    SELECT\n        request.clinic_name,\n        'Asia/Baghdad',\n        TRUE,\n        'محیط ایزوله تست یکپارچه',\n        JSONB_BUILD_OBJECT(\n            'integration_test',\n            TRUE\n        ),\n        NOW()\n    FROM request_data request\n    WHERE NOT EXISTS (\n        SELECT 1\n        FROM updated_existing_clinic\n    )\n    RETURNING *\n),\n\nclinic_context AS (\n    SELECT *\n    FROM updated_existing_clinic\n\n    UNION ALL\n\n    SELECT *\n    FROM inserted_clinic\n\n    LIMIT 1\n),\n\ndeleted_test_appointments AS (\n    DELETE FROM appointments appointment\n    USING clinic_context clinic,\n          request_data request\n    WHERE appointment.clinic_id = clinic.id\n      AND request.reset_test_data = TRUE\n      AND appointment.visit_reason =\n          'integration_test_seed'\n    RETURNING appointment.id\n),\n\nupdated_existing_doctor AS (\n    UPDATE doctors doctor\n    SET\n        is_active = TRUE,\n        buffer_minutes = 5,\n        title = COALESCE(\n            doctor.title,\n            'دکتر'\n        ),\n        specialty = COALESCE(\n            doctor.specialty,\n            'تخصص تست'\n        ),\n        metadata =\n            COALESCE(\n                doctor.metadata,\n                '{}'::JSONB\n            )\n            || JSONB_BUILD_OBJECT(\n                'integration_test',\n                TRUE\n            ),\n        updated_at = NOW()\n    FROM clinic_context clinic\n    CROSS JOIN request_data request\n    WHERE doctor.clinic_id =\n          clinic.id\n      AND doctor.full_name =\n          request.doctor_name\n    RETURNING doctor.*\n),\n\ninserted_doctor AS (\n    INSERT INTO doctors (\n        clinic_id,\n        full_name,\n        buffer_minutes,\n        is_active,\n        title,\n        specialty,\n        metadata,\n        updated_at\n    )\n    SELECT\n        clinic.id,\n        request.doctor_name,\n        5,\n        TRUE,\n        'دکتر',\n        'تخصص تست',\n        JSONB_BUILD_OBJECT(\n            'integration_test',\n            TRUE\n        ),\n        NOW()\n    FROM clinic_context clinic\n    CROSS JOIN request_data request\n    WHERE NOT EXISTS (\n        SELECT 1\n        FROM updated_existing_doctor\n    )\n    RETURNING *\n),\n\ndoctor_context AS (\n    SELECT *\n    FROM updated_existing_doctor\n\n    UNION ALL\n\n    SELECT *\n    FROM inserted_doctor\n\n    LIMIT 1\n),\n\nupdated_existing_service AS (\n    UPDATE services service\n    SET\n        duration_minutes = 20,\n        is_active = TRUE,\n        description =\n            'خدمت تست برای سناریوهای خودکار',\n        price_amount = 10000,\n        currency = 'IQD',\n        metadata =\n            COALESCE(\n                service.metadata,\n                '{}'::JSONB\n            )\n            || JSONB_BUILD_OBJECT(\n                'integration_test',\n                TRUE\n            ),\n        updated_at = NOW()\n    FROM clinic_context clinic\n    CROSS JOIN request_data request\n    WHERE service.clinic_id =\n          clinic.id\n      AND service.name =\n          request.service_name\n    RETURNING service.*\n),\n\ninserted_service AS (\n    INSERT INTO services (\n        clinic_id,\n        name,\n        duration_minutes,\n        is_active,\n        description,\n        price_amount,\n        currency,\n        metadata,\n        updated_at\n    )\n    SELECT\n        clinic.id,\n        request.service_name,\n        20,\n        TRUE,\n        'خدمت تست برای سناریوهای خودکار',\n        10000,\n        'IQD',\n        JSONB_BUILD_OBJECT(\n            'integration_test',\n            TRUE\n        ),\n        NOW()\n    FROM clinic_context clinic\n    CROSS JOIN request_data request\n    WHERE NOT EXISTS (\n        SELECT 1\n        FROM updated_existing_service\n    )\n    RETURNING *\n),\n\nservice_context AS (\n    SELECT *\n    FROM updated_existing_service\n\n    UNION ALL\n\n    SELECT *\n    FROM inserted_service\n\n    LIMIT 1\n),\n\nupsert_doctor_service AS (\n    INSERT INTO doctor_services (\n        clinic_id,\n        doctor_id,\n        service_id,\n        is_active,\n        metadata,\n        updated_at\n    )\n    SELECT\n        clinic.id,\n        doctor.id,\n        service.id,\n        TRUE,\n        JSONB_BUILD_OBJECT(\n            'integration_test',\n            TRUE\n        ),\n        NOW()\n    FROM clinic_context clinic\n    CROSS JOIN doctor_context doctor\n    CROSS JOIN service_context service\n    ON CONFLICT (\n        doctor_id,\n        service_id\n    )\n    DO UPDATE SET\n        is_active = TRUE,\n        metadata =\n            COALESCE(\n                doctor_services.metadata,\n                '{}'::JSONB\n            )\n            || EXCLUDED.metadata,\n        updated_at = NOW()\n    RETURNING *\n),\n\ninserted_schedules AS (\n    INSERT INTO doctor_schedules (\n        doctor_id,\n        weekday,\n        start_time,\n        end_time,\n        is_active,\n        valid_from,\n        valid_to\n    )\n    SELECT\n        doctor.id,\n        weekday.value,\n        TIME '09:00',\n        TIME '17:00',\n        TRUE,\n        CURRENT_DATE,\n        NULL\n    FROM doctor_context doctor\n    CROSS JOIN GENERATE_SERIES(\n        1,\n        7\n    ) AS weekday(value)\n    WHERE NOT EXISTS (\n        SELECT 1\n        FROM doctor_schedules schedule\n        WHERE schedule.doctor_id =\n              doctor.id\n          AND schedule.weekday =\n              weekday.value\n          AND schedule.start_time =\n              TIME '09:00'\n          AND schedule.end_time =\n              TIME '17:00'\n          AND schedule.is_active = TRUE\n    )\n    RETURNING id\n),\n\ntarget_patient AS (\n    SELECT patient.*\n    FROM patients patient\n    INNER JOIN clinic_context clinic\n        ON patient.clinic_id =\n           clinic.id\n    CROSS JOIN request_data request\n    WHERE patient.mobile =\n          request.mobile\n    ORDER BY patient.id\n    LIMIT 1\n),\n\nupdated_existing_patient AS (\n    UPDATE patients patient\n    SET\n        full_name =\n            request.patient_name,\n        is_active = TRUE,\n        updated_at = NOW()\n    FROM target_patient target\n    CROSS JOIN request_data request\n    WHERE patient.id =\n          target.id\n    RETURNING patient.*\n),\n\ninserted_patient AS (\n    INSERT INTO patients (\n        clinic_id,\n        full_name,\n        mobile,\n        is_active,\n        updated_at\n    )\n    SELECT\n        clinic.id,\n        request.patient_name,\n        request.mobile,\n        TRUE,\n        NOW()\n    FROM clinic_context clinic\n    CROSS JOIN request_data request\n    WHERE NOT EXISTS (\n        SELECT 1\n        FROM target_patient\n    )\n    RETURNING *\n),\n\npatient_context AS (\n    SELECT *\n    FROM updated_existing_patient\n\n    UNION ALL\n\n    SELECT *\n    FROM inserted_patient\n\n    LIMIT 1\n),\n\ninserted_appointment AS (\n    INSERT INTO appointments (\n        clinic_id,\n        doctor_id,\n        patient_id,\n        service_id,\n        starts_at,\n        ends_at,\n        status,\n        booking_source,\n        visit_reason\n    )\n    SELECT\n        clinic.id,\n        doctor.id,\n        patient.id,\n        service.id,\n\n        (\n            CURRENT_DATE + 1 +\n            TIME '10:00'\n        ) AT TIME ZONE clinic.timezone,\n\n        (\n            CURRENT_DATE + 1 +\n            TIME '10:20'\n        ) AT TIME ZONE clinic.timezone,\n\n        'confirmed',\n        'assistant',\n        'integration_test_seed'\n\n    FROM clinic_context clinic\n    CROSS JOIN doctor_context doctor\n    CROSS JOIN patient_context patient\n    CROSS JOIN service_context service\n    CROSS JOIN (\n        SELECT COUNT(*) AS deleted_count\n        FROM deleted_test_appointments\n    ) appointment_cleanup\n    RETURNING *\n),\n\ndeleted_test_knowledge AS (\n    DELETE FROM clinic_knowledge_entries entry\n    USING clinic_context clinic,\n          request_data request\n    WHERE entry.clinic_id = clinic.id\n      AND request.reset_test_data = TRUE\n      AND entry.source_note =\n          'integration_test_seed'\n    RETURNING entry.id\n),\n\ninserted_knowledge AS (\n    INSERT INTO clinic_knowledge_entries (\n        clinic_id,\n        category,\n        title,\n        answer_text,\n        keywords,\n        source_note,\n        status,\n        created_by,\n        updated_by\n    )\n    SELECT\n        clinic.id,\n        item.category,\n        item.title,\n        item.answer_text,\n        item.keywords,\n        'integration_test_seed',\n        'published',\n        'integration-test-seed',\n        'integration-test-seed'\n    FROM clinic_context clinic\n    CROSS JOIN (\n        SELECT COUNT(*) AS deleted_count\n        FROM deleted_test_knowledge\n    ) knowledge_cleanup\n    CROSS JOIN (\n        VALUES\n        (\n            'working_hours',\n            'ساعت کاری کلینیک',\n            'کلینیک تست هر روز از ساعت ۹ تا ۱۷ فعال است.',\n            ARRAY[\n                'ساعت کاری',\n                'زمان کاری',\n                'working hours'\n            ]::TEXT[]\n        ),\n        (\n            'location',\n            'آدرس کلینیک',\n            'آدرس این محیط آزمایشی: Test Clinic Address.',\n            ARRAY[\n                'آدرس',\n                'موقعیت',\n                'location'\n            ]::TEXT[]\n        )\n    ) AS item(\n        category,\n        title,\n        answer_text,\n        keywords\n    )\n    RETURNING id\n),\n\nupsert_consents AS (\n    INSERT INTO patient_consents (\n        clinic_id,\n        patient_id,\n        consent_type,\n        status,\n        policy_version,\n        scope_json,\n        source_channel,\n        granted_at,\n        last_actor,\n        last_reason,\n        updated_at\n    )\n    SELECT\n        clinic.id,\n        patient.id,\n        consent_type.value,\n        'granted',\n        'integration-test-v1',\n        '{}'::JSONB,\n        'system',\n        NOW(),\n        'integration-test-seed',\n        'automated_test_environment',\n        NOW()\n    FROM clinic_context clinic\n    CROSS JOIN patient_context patient\n    CROSS JOIN (\n        VALUES\n        ('contact'),\n        ('appointment_reminders'),\n        ('followup_messages')\n    ) AS consent_type(value)\n    ON CONFLICT (\n        clinic_id,\n        patient_id,\n        consent_type\n    )\n    DO UPDATE SET\n        status = 'granted',\n        granted_at = NOW(),\n        revoked_at = NULL,\n        expires_at = NULL,\n        last_actor =\n            'integration-test-seed',\n        last_reason =\n            'automated_test_environment',\n        updated_at = NOW()\n    RETURNING id\n),\n\nupsert_preference AS (\n    INSERT INTO patient_communication_preferences (\n        clinic_id,\n        patient_id,\n        channel,\n        enabled,\n        preferred_language,\n        timezone,\n        quiet_hours_enabled,\n        max_messages_per_week,\n        metadata,\n        updated_by,\n        updated_at\n    )\n    SELECT\n        clinic.id,\n        patient.id,\n        'sms',\n        TRUE,\n        'fa',\n        clinic.timezone,\n        FALSE,\n        100,\n        JSONB_BUILD_OBJECT(\n            'integration_test',\n            TRUE\n        ),\n        'integration-test-seed',\n        NOW()\n    FROM clinic_context clinic\n    CROSS JOIN patient_context patient\n    ON CONFLICT (\n        clinic_id,\n        patient_id,\n        channel\n    )\n    DO UPDATE SET\n        enabled = TRUE,\n        preferred_language = 'fa',\n        quiet_hours_enabled = FALSE,\n        max_messages_per_week = 100,\n        metadata =\n            COALESCE(\n                patient_communication_preferences.metadata,\n                '{}'::JSONB\n            )\n            || EXCLUDED.metadata,\n        updated_by =\n            'integration-test-seed',\n        updated_at = NOW()\n    RETURNING *\n),\n\nupsert_gateway_client AS (\n    INSERT INTO channel_gateway_clients (\n        clinic_id,\n        client_name,\n        channel,\n        provider_name,\n        auth_mode,\n        allowed_ip_addresses,\n        rate_limit_requests,\n        rate_limit_window_seconds,\n        replay_window_seconds,\n        enabled,\n        metadata,\n        updated_at\n    )\n    SELECT\n        clinic.id,\n        'integration-webchat',\n        'webchat',\n        'mock-provider',\n        'development_none',\n        ARRAY[]::TEXT[],\n        120,\n        60,\n        86400,\n        TRUE,\n        JSONB_BUILD_OBJECT(\n            'integration_test',\n            TRUE\n        ),\n        NOW()\n    FROM clinic_context clinic\n    ON CONFLICT (\n        clinic_id,\n        client_name,\n        channel\n    )\n    DO UPDATE SET\n        provider_name =\n            EXCLUDED.provider_name,\n        auth_mode =\n            EXCLUDED.auth_mode,\n        rate_limit_requests =\n            EXCLUDED.rate_limit_requests,\n        rate_limit_window_seconds =\n            EXCLUDED.rate_limit_window_seconds,\n        replay_window_seconds =\n            EXCLUDED.replay_window_seconds,\n        enabled = TRUE,\n        metadata =\n            COALESCE(\n                channel_gateway_clients.metadata,\n                '{}'::JSONB\n            )\n            || EXCLUDED.metadata,\n        updated_at = NOW()\n    RETURNING *\n),\n\nupsert_rate_limit_client AS (\n    INSERT INTO channel_gateway_clients (\n        clinic_id,\n        client_name,\n        channel,\n        provider_name,\n        auth_mode,\n        allowed_ip_addresses,\n        rate_limit_requests,\n        rate_limit_window_seconds,\n        replay_window_seconds,\n        enabled,\n        metadata,\n        updated_at\n    )\n    SELECT\n        clinic.id,\n        'integration-rate-limit',\n        'api',\n        'mock-provider',\n        'development_none',\n        ARRAY[]::TEXT[],\n        1,\n        60,\n        86400,\n        TRUE,\n        JSONB_BUILD_OBJECT(\n            'integration_test',\n            TRUE\n        ),\n        NOW()\n    FROM clinic_context clinic\n    ON CONFLICT (\n        clinic_id,\n        client_name,\n        channel\n    )\n    DO UPDATE SET\n        rate_limit_requests = 1,\n        rate_limit_window_seconds = 60,\n        replay_window_seconds = 86400,\n        enabled = TRUE,\n        updated_at = NOW()\n    RETURNING *\n),\n\nupsert_adapter AS (\n    INSERT INTO communication_channel_adapters (\n        clinic_id,\n        channel,\n        adapter_name,\n        adapter_url,\n        credential_reference,\n        enabled,\n        request_timeout_seconds,\n        metadata,\n        updated_at\n    )\n    SELECT\n        clinic.id,\n        'sms',\n        'mock-sms-adapter',\n        request.webhook_base_url ||\n          '/clinic/mock/channel/send',\n        NULL,\n        TRUE,\n        30,\n        JSONB_BUILD_OBJECT(\n            'integration_test',\n            TRUE\n        ),\n        NOW()\n    FROM clinic_context clinic\n    CROSS JOIN request_data request\n    ON CONFLICT (\n        clinic_id,\n        channel\n    )\n    DO UPDATE SET\n        adapter_name =\n            EXCLUDED.adapter_name,\n        adapter_url =\n            EXCLUDED.adapter_url,\n        enabled = TRUE,\n        request_timeout_seconds = 30,\n        metadata =\n            COALESCE(\n                communication_channel_adapters.metadata,\n                '{}'::JSONB\n            )\n            || EXCLUDED.metadata,\n        updated_at = NOW()\n    RETURNING *\n),\n\nupsert_cases AS (\n    INSERT INTO integration_test_cases (\n        suite_code,\n        case_code,\n        title,\n        category,\n        enabled,\n        sort_order,\n        request_template,\n        expected_assertions,\n        metadata,\n        updated_at\n    )\n    VALUES\n    (\n        'mocked_e2e',\n        'conversation_clinic_hours',\n        'پرسش ساعت کاری از مسیر کامل مکالمه',\n        'conversation',\n        TRUE,\n        10,\n        JSONB_BUILD_OBJECT(\n            'message_text',\n                'ساعت کاری کلینیک چیست؟',\n            'channel',\n                'webchat'\n        ),\n        JSONB_BUILD_OBJECT(\n            'success',\n                TRUE,\n            'response_contains',\n                '۹ تا ۱۷'\n        ),\n        JSONB_BUILD_OBJECT(\n            'requires_mock_ai',\n            TRUE\n        ),\n        NOW()\n    ),\n    (\n        'mocked_e2e',\n        'conversation_patient_appointments',\n        'دریافت فهرست نوبت‌های بیمار',\n        'conversation',\n        TRUE,\n        20,\n        JSONB_BUILD_OBJECT(\n            'message_text',\n                'نوبت‌های من را نشان بده',\n            'channel',\n                'webchat'\n        ),\n        JSONB_BUILD_OBJECT(\n            'success',\n                TRUE,\n            'response_contains',\n                'نوبت'\n        ),\n        JSONB_BUILD_OBJECT(\n            'requires_mock_ai',\n            TRUE\n        ),\n        NOW()\n    ),\n    (\n        'mocked_e2e',\n        'conversation_missing_information',\n        'درخواست وقت بدون اطلاعات کافی',\n        'conversation',\n        TRUE,\n        30,\n        JSONB_BUILD_OBJECT(\n            'message_text',\n                'برای من یک وقت آزاد پیدا کن',\n            'channel',\n                'webchat'\n        ),\n        JSONB_BUILD_OBJECT(\n            'success',\n                TRUE,\n            'conversation_status',\n                'waiting_patient'\n        ),\n        JSONB_BUILD_OBJECT(\n            'requires_mock_ai',\n            TRUE\n        ),\n        NOW()\n    )\n    ON CONFLICT (\n        suite_code,\n        case_code\n    )\n    DO UPDATE SET\n        title =\n            EXCLUDED.title,\n        category =\n            EXCLUDED.category,\n        enabled =\n            EXCLUDED.enabled,\n        sort_order =\n            EXCLUDED.sort_order,\n        request_template =\n            EXCLUDED.request_template,\n        expected_assertions =\n            EXCLUDED.expected_assertions,\n        metadata =\n            EXCLUDED.metadata,\n        updated_at = NOW()\n    RETURNING id\n)\n\nSELECT\n    TRUE AS success,\n    'integration_test_environment_seeded' AS result,\n\n    clinic.id AS clinic_id,\n    clinic.name AS clinic_name,\n    doctor.id AS doctor_id,\n    doctor.full_name AS doctor_name,\n    service.id AS service_id,\n    service.name AS service_name,\n    patient.id AS patient_id,\n    patient.full_name AS patient_name,\n    patient.mobile,\n\n    appointment.id AS appointment_id,\n    appointment.starts_at AS appointment_starts_at,\n\n    (\n        SELECT id\n        FROM upsert_gateway_client\n        LIMIT 1\n    ) AS gateway_client_id,\n\n    (\n        SELECT id\n        FROM upsert_rate_limit_client\n        LIMIT 1\n    ) AS rate_limit_client_id,\n\n    (\n        SELECT id\n        FROM upsert_adapter\n        LIMIT 1\n    ) AS adapter_id,\n\n    (\n        SELECT COUNT(*)::INTEGER\n        FROM upsert_cases\n    ) AS test_cases_upserted\n\nFROM clinic_context clinic\nCROSS JOIN doctor_context doctor\nCROSS JOIN service_context service\nCROSS JOIN patient_context patient\nCROSS JOIN inserted_appointment appointment;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.doctor_name,\n  $json.service_name,\n  $json.patient_name,\n  $json.mobile,\n  $json.webhook_base_url,\n  $json.reset_test_data\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        80,
+        -40
+      ],
+      "id": "1d545760-90dd-4aa4-9dd4-1872f6b48505",
+      "name": "Seed Integration Test Environment"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_seed_request',message:'اطلاعات ساخت محیط تست نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        150
+      ],
+      "id": "4828fe97-05bf-4169-bf31-4b289abbc1bd",
+      "name": "Return Seed Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## محیط تست ایزوله\n\nاین Workflow یک کلینیک تست، پزشک، خدمت، بیمار، نوبت آینده، پایگاه دانش، Consent، Gateway Client و Mock SMS Adapter می‌سازد.\n\nنام پیش‌فرض کلینیک:\nکلینیک تست یکپارچه\n\nاین داده‌ها با metadata.integration_test=true مشخص می‌شوند.\n\nاصلاح V2:\n- ON CONFLICT مربوط به clinics(name) حذف شد؛ چون Unique Constraint تضمین‌شده‌ای برای آن وجود نداشت.\n- ON CONFLICT مربوط به patients(clinic_id,mobile) حذف شد.\n- ساخت یا به‌روزرسانی Clinic، Doctor، Service و Patient به روش UPDATE-or-INSERT انجام می‌شود.\n- CTEهای Doctor و Service اکنون رکورد تازه Insert‌شده را مستقیماً از RETURNING دریافت می‌کنند.\n- درج Appointment و Knowledge بعد از Cleanup به‌صورت صریح اجرا می‌شود.\n\nاصلاح V3:\n- چهار ویرگول جاافتاده بین CTEها اضافه شد.\n- محل‌های اصلاح‌شده: clinic_context، doctor_context، service_context و patient_context.\n- خطای Syntax نزدیک deleted_test_appointments برطرف شد.",
+        "height": 430,
+        "width": 540
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1180,
+        -320
+      ],
+      "id": "e01132d9-0b51-4f23-9db1-ea794a09a84a",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Seed Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Seed Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Seed Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Seed Test Environment": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Seed Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Seed Request": {
+      "main": [
+        [
+          {
+            "node": "Is Seed Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Seed Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Seed Integration Test Environment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Seed Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

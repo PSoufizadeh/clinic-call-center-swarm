@@ -1,0 +1,321 @@
+{
+  "name": "104 - API - Manage Services and Doctor Assignments - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "4eed6b1c-4b72-40d8-913a-234d40b5a993",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b7326962-58e0-4226-95e9-6c65879fc80f",
+              "name": "action",
+              "value": "get",
+              "type": "string"
+            },
+            {
+              "id": "02b9dea1-405b-465e-ad73-4f5ebf126ee8",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "2ba126af-1d22-4b92-a256-58b0f4089fd5",
+              "name": "service_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "23175639-5f92-43aa-9b0f-e345bf5cb6bd",
+              "name": "service_name",
+              "value": "ویزیت عمومی",
+              "type": "string"
+            },
+            {
+              "id": "f7079e44-c15d-4a00-acd8-f1a84d4abc9a",
+              "name": "description",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "1ab16d02-a0c5-4bfb-a1f3-d0095b338b3f",
+              "name": "duration_minutes",
+              "value": 20,
+              "type": "number"
+            },
+            {
+              "id": "44f7575e-19a0-4834-871c-1895ec20138e",
+              "name": "price_amount",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "602cce76-f919-4db7-9afc-2fee7939e04c",
+              "name": "currency",
+              "value": "IQD",
+              "type": "string"
+            },
+            {
+              "id": "cbc1e14d-218c-4c1e-9443-724f4641d3f1",
+              "name": "requires_previsit_guidance",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "68f6808d-188c-4a76-ba94-6522cf52272e",
+              "name": "doctor_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "498bf99d-0a8e-4329-802f-8470cf9fd78b",
+              "name": "doctor_name",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "435d338a-3c2c-4252-8ce2-1dfe6868c3ce",
+              "name": "custom_duration_minutes",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "7e642922-b5e4-494e-afdc-d310339794d2",
+              "name": "custom_price_amount",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "98d38f2a-c69b-4a0b-aa33-fc737bd7bd10",
+              "name": "metadata",
+              "value": "{}",
+              "type": "string"
+            },
+            {
+              "id": "83211f9f-5964-4e54-b870-92d46c422a69",
+              "name": "actor_name",
+              "value": "مدیر سیستم",
+              "type": "string"
+            },
+            {
+              "id": "be087231-01c4-463f-9486-9a3a8f8efc95",
+              "name": "source_channel",
+              "value": "api",
+              "type": "string"
+            },
+            {
+              "id": "c375d105-33c3-4f14-8303-3f1a7b56dd71",
+              "name": "limit",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "de3cac33-535a-45a2-a8a4-e88833280ca5",
+              "name": "confirm_action",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "e921dbae-2a2c-427b-9131-1ec517368cd2",
+      "name": "Manual Manage Service"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/admin/services/manage",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "062cbe52-918f-4986-bc00-84a532220717",
+      "name": "Webhook - Manage Service"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input=$json.body??$json;\nconst text=v=>v===null||v===undefined?'':String(v).trim();\nconst bool=v=>typeof v==='boolean'?v:['true','1','yes','on'].includes(text(v).toLowerCase());\n\nconst action=text(input.action||'get').toLowerCase();\nconst clinic_name=text(input.clinic_name);\nconst service_id=Number(input.service_id??0);\nconst service_name=text(input.service_name);\nconst description=text(input.description);\nconst duration_minutes=Number(input.duration_minutes??20);\nconst price_amount=Number(input.price_amount??0);\nconst currency=text(input.currency||'IQD').toUpperCase();\nconst requires_previsit_guidance=bool(input.requires_previsit_guidance);\nconst doctor_id=Number(input.doctor_id??0);\nconst doctor_name=text(input.doctor_name);\nconst custom_duration_minutes=Number(input.custom_duration_minutes??0);\nconst custom_price_amount=Number(input.custom_price_amount??0);\nconst actor_name=text(input.actor_name);\nconst source_channel=text(input.source_channel||'api').toLowerCase();\nconst limit=Number(input.limit??100);\nconst confirm_action=bool(input.confirm_action);\n\nlet metadata=input.metadata??{};\ntry{if(typeof metadata==='string')metadata=JSON.parse(metadata||'{}');}catch{metadata=null;}\n\nconst actions=[\n 'create','update','activate','deactivate','get','list',\n 'assign_doctor','unassign_doctor','list_doctors'\n];\nconst errors=[];\n\nif(!actions.includes(action))errors.push({field:'action',message:'اقدام معتبر نیست.'});\nif(!clinic_name)errors.push({field:'clinic_name',message:'نام کلینیک الزامی است.'});\nif(!Number.isInteger(service_id)||service_id<0)errors.push({field:'service_id',message:'شناسه خدمت معتبر نیست.'});\nif(['create','update','activate','deactivate','get','assign_doctor','unassign_doctor','list_doctors'].includes(action)&&service_id<1&&!service_name){\n errors.push({field:'service_reference',message:'شناسه یا نام خدمت الزامی است.'});\n}\nif(action==='create'&&!service_name)errors.push({field:'service_name',message:'نام خدمت الزامی است.'});\nif(!Number.isInteger(duration_minutes)||duration_minutes<5||duration_minutes>480){\n errors.push({field:'duration_minutes',message:'مدت خدمت باید بین 5 و 480 دقیقه باشد.'});\n}\nif(!Number.isFinite(price_amount)||price_amount<0)errors.push({field:'price_amount',message:'قیمت معتبر نیست.'});\nif(!/^[A-Z]{3}$/.test(currency))errors.push({field:'currency',message:'Currency باید کد سه‌حرفی باشد.'});\nif(!Number.isInteger(doctor_id)||doctor_id<0)errors.push({field:'doctor_id',message:'شناسه پزشک معتبر نیست.'});\nif(['assign_doctor','unassign_doctor'].includes(action)&&doctor_id<1&&!doctor_name){\n errors.push({field:'doctor_reference',message:'شناسه یا نام پزشک الزامی است.'});\n}\nif(!Number.isInteger(custom_duration_minutes)||custom_duration_minutes<0||custom_duration_minutes>480){\n errors.push({field:'custom_duration_minutes',message:'مدت اختصاصی معتبر نیست.'});\n}\nif(!Number.isFinite(custom_price_amount)||custom_price_amount<0)errors.push({field:'custom_price_amount',message:'قیمت اختصاصی معتبر نیست.'});\nif(!metadata||Array.isArray(metadata)||typeof metadata!=='object'){\n errors.push({field:'metadata',message:'metadata باید شیء JSON باشد.'});metadata={};\n}\nif(!['api','manual','import','system'].includes(source_channel))errors.push({field:'source_channel',message:'کانال منبع معتبر نیست.'});\nif(!Number.isInteger(limit)||limit<1||limit>500)errors.push({field:'limit',message:'Limit معتبر نیست.'});\nif(!['get','list','list_doctors'].includes(action)&&!actor_name)errors.push({field:'actor_name',message:'نام انجام‌دهنده الزامی است.'});\nif(!['get','list','list_doctors'].includes(action)&&confirm_action!==true)errors.push({field:'confirm_action',message:'اقدام باید تأیید شود.'});\n\nreturn [{json:{\n action,clinic_name,service_id,service_name,description,duration_minutes,\n price_amount,currency,requires_previsit_guidance,doctor_id,doctor_name,\n custom_duration_minutes,custom_price_amount,metadata_text:JSON.stringify(metadata),\n actor_name,source_channel,limit,confirm_action,\n validation_status:errors.length?'invalid':'valid',errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "12f9b22b-759a-4971-9215-df69860d994b",
+      "name": "Normalize and Validate Manage Service"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f7565634-406b-4b77-8564-a007cd1eadd8",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "a72919f5-7e02-4ce1-935b-27a7098246fe",
+      "name": "Is Manage Service Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH r AS (\n SELECT $1::TEXT action,$2::TEXT clinic_name,NULLIF($3::BIGINT,0) service_id,\n        NULLIF($4::TEXT,'') service_name,NULLIF($5::TEXT,'') description,\n        $6::INTEGER duration_minutes,$7::NUMERIC price_amount,$8::TEXT currency,\n        $9::BOOLEAN requires_previsit_guidance,NULLIF($10::BIGINT,0) doctor_id,\n        NULLIF($11::TEXT,'') doctor_name,NULLIF($12::INTEGER,0) custom_duration_minutes,\n        NULLIF($13::NUMERIC,0) custom_price_amount,$14::JSONB metadata,\n        NULLIF($15::TEXT,'') actor_name,$16::TEXT source_channel,$17::INTEGER result_limit\n),\nc AS (\n SELECT clinics.id clinic_id,r.*\n FROM clinics,r WHERE clinics.name=r.clinic_name LIMIT 1\n),\nservice_target AS (\n SELECT s.*\n FROM services s,c\n WHERE s.clinic_id=c.clinic_id\n   AND ((c.service_id IS NOT NULL AND s.id=c.service_id)\n     OR (c.service_id IS NULL AND c.service_name IS NOT NULL AND s.name=c.service_name))\n ORDER BY s.id LIMIT 1\n),\ndoctor_target AS (\n SELECT d.*\n FROM doctors d,c\n WHERE d.clinic_id=c.clinic_id\n   AND ((c.doctor_id IS NOT NULL AND d.id=c.doctor_id)\n     OR (c.doctor_id IS NULL AND c.doctor_name IS NOT NULL AND d.full_name=c.doctor_name))\n ORDER BY d.id LIMIT 1\n),\ninserted_service AS (\n INSERT INTO services(\n   clinic_id,name,description,duration_minutes,price_amount,currency,\n   requires_previsit_guidance,is_active,metadata,updated_at\n )\n SELECT c.clinic_id,c.service_name,c.description,c.duration_minutes,c.price_amount,\n        c.currency,c.requires_previsit_guidance,TRUE,c.metadata,NOW()\n FROM c\n WHERE c.action='create' AND NOT EXISTS(SELECT 1 FROM service_target)\n RETURNING *\n),\nupdated_service AS (\n UPDATE services s\n SET name=CASE WHEN c.action='update' AND c.service_name IS NOT NULL THEN c.service_name ELSE s.name END,\n     description=CASE WHEN c.action='update' THEN COALESCE(c.description,s.description) ELSE s.description END,\n     duration_minutes=CASE WHEN c.action='update' THEN c.duration_minutes ELSE s.duration_minutes END,\n     price_amount=CASE WHEN c.action='update' THEN c.price_amount ELSE s.price_amount END,\n     currency=CASE WHEN c.action='update' THEN c.currency ELSE s.currency END,\n     requires_previsit_guidance=CASE WHEN c.action='update' THEN c.requires_previsit_guidance ELSE s.requires_previsit_guidance END,\n     metadata=CASE WHEN c.action='update' THEN s.metadata||c.metadata ELSE s.metadata END,\n     is_active=CASE WHEN c.action='activate' THEN TRUE WHEN c.action='deactivate' THEN FALSE ELSE s.is_active END,\n     updated_at=NOW()\n FROM c\n WHERE s.id=(SELECT id FROM service_target)\n   AND c.action IN ('update','activate','deactivate')\n RETURNING s.*\n),\neffective_service AS (\n SELECT inserted_service.* FROM inserted_service\n UNION ALL SELECT updated_service.* FROM updated_service\n UNION ALL SELECT service_target.* FROM service_target,c WHERE c.action IN ('get','assign_doctor','unassign_doctor','list_doctors')\n LIMIT 1\n),\nassignment AS (\n INSERT INTO doctor_services(\n   clinic_id,doctor_id,service_id,is_active,custom_duration_minutes,\n   custom_price_amount,metadata,updated_at\n )\n SELECT c.clinic_id,d.id,s.id,TRUE,c.custom_duration_minutes,\n        c.custom_price_amount,c.metadata,NOW()\n FROM c\n CROSS JOIN doctor_target d\n CROSS JOIN effective_service s\n WHERE c.action='assign_doctor'\n ON CONFLICT(doctor_id,service_id) DO UPDATE SET\n   is_active=TRUE,\n   custom_duration_minutes=EXCLUDED.custom_duration_minutes,\n   custom_price_amount=EXCLUDED.custom_price_amount,\n   metadata=doctor_services.metadata||EXCLUDED.metadata,\n   updated_at=NOW()\n RETURNING *\n),\nunassigned AS (\n UPDATE doctor_services ds\n SET is_active=FALSE,updated_at=NOW()\n FROM c,doctor_target d,effective_service s\n WHERE c.action='unassign_doctor'\n   AND ds.doctor_id=d.id\n   AND ds.service_id=s.id\n RETURNING ds.*\n),\nadmin_event AS (\n INSERT INTO clinic_admin_events(\n   clinic_id,entity_type,entity_id,action,actor_name,source_channel,before_data,after_data\n )\n SELECT\n   c.clinic_id,\n   CASE WHEN c.action IN ('assign_doctor','unassign_doctor') THEN 'doctor_service' ELSE 'service' END,\n   CASE WHEN c.action='assign_doctor' THEN (SELECT id FROM assignment)\n        WHEN c.action='unassign_doctor' THEN (SELECT id FROM unassigned)\n        ELSE COALESCE((SELECT id FROM effective_service),(SELECT id FROM service_target)) END,\n   c.action,c.actor_name,c.source_channel,\n   CASE WHEN c.action IN ('assign_doctor','unassign_doctor') THEN '{}'::JSONB\n        ELSE COALESCE((SELECT TO_JSONB(service_target) FROM service_target),'{}'::JSONB) END,\n   CASE WHEN c.action='assign_doctor' THEN COALESCE((SELECT TO_JSONB(assignment) FROM assignment),'{}'::JSONB)\n        WHEN c.action='unassign_doctor' THEN COALESCE((SELECT TO_JSONB(unassigned) FROM unassigned),'{}'::JSONB)\n        ELSE COALESCE((SELECT TO_JSONB(effective_service) FROM effective_service),'{}'::JSONB) END\n FROM c\n WHERE c.action IN ('create','update','activate','deactivate','assign_doctor','unassign_doctor')\n   AND (\n     EXISTS(SELECT 1 FROM effective_service)\n     OR EXISTS(SELECT 1 FROM assignment)\n     OR EXISTS(SELECT 1 FROM unassigned)\n   )\n RETURNING id\n),\nlisted AS (\n SELECT s.id,s.name,s.description,s.duration_minutes,s.price_amount,s.currency,\n        s.requires_previsit_guidance,s.is_active,s.metadata,s.created_at,s.updated_at,\n        COALESCE((SELECT COUNT(*) FROM doctor_services ds WHERE ds.service_id=s.id AND ds.is_active=TRUE),0) active_doctor_count\n FROM services s,c\n WHERE c.action='list' AND s.clinic_id=c.clinic_id\n ORDER BY s.name,s.id\n LIMIT (SELECT result_limit FROM c)\n),\nassigned_doctors AS (\n SELECT d.id doctor_id,d.full_name doctor_name,d.specialty,d.is_active doctor_active,\n        ds.id assignment_id,ds.is_active assignment_active,\n        COALESCE(ds.custom_duration_minutes,s.duration_minutes) effective_duration_minutes,\n        COALESCE(ds.custom_price_amount,s.price_amount) effective_price_amount\n FROM effective_service s\n JOIN doctor_services ds ON ds.service_id=s.id\n JOIN doctors d ON d.id=ds.doctor_id\n CROSS JOIN c\n WHERE c.action='list_doctors'\n ORDER BY d.full_name,d.id\n)\nSELECT\n CASE WHEN NOT EXISTS(SELECT 1 FROM c) THEN FALSE\n      WHEN c.action='create' AND EXISTS(SELECT 1 FROM service_target) THEN FALSE\n      WHEN c.action IN ('update','activate','deactivate','get','assign_doctor','unassign_doctor','list_doctors') AND NOT EXISTS(SELECT 1 FROM service_target) THEN FALSE\n      WHEN c.action IN ('assign_doctor','unassign_doctor') AND NOT EXISTS(SELECT 1 FROM doctor_target) THEN FALSE\n      WHEN c.action='unassign_doctor' AND NOT EXISTS(SELECT 1 FROM unassigned) THEN FALSE\n      ELSE TRUE END success,\n CASE WHEN NOT EXISTS(SELECT 1 FROM c) THEN 'clinic_not_found'\n      WHEN c.action='create' AND EXISTS(SELECT 1 FROM service_target) THEN 'service_already_exists'\n      WHEN c.action IN ('update','activate','deactivate','get','assign_doctor','unassign_doctor','list_doctors') AND NOT EXISTS(SELECT 1 FROM service_target) THEN 'service_not_found'\n      WHEN c.action IN ('assign_doctor','unassign_doctor') AND NOT EXISTS(SELECT 1 FROM doctor_target) THEN 'doctor_not_found'\n      WHEN c.action='unassign_doctor' AND NOT EXISTS(SELECT 1 FROM unassigned) THEN 'doctor_service_assignment_not_found'\n      WHEN c.action='create' THEN 'service_created'\n      WHEN c.action='update' THEN 'service_updated'\n      WHEN c.action='activate' THEN 'service_activated'\n      WHEN c.action='deactivate' THEN 'service_deactivated'\n      WHEN c.action='assign_doctor' THEN 'doctor_assigned_to_service'\n      WHEN c.action='unassign_doctor' THEN 'doctor_unassigned_from_service'\n      WHEN c.action='list_doctors' THEN 'service_doctors_listed'\n      WHEN c.action='get' THEN 'service_loaded'\n      ELSE 'services_listed' END result,\n (SELECT TO_JSONB(effective_service) FROM effective_service) service,\n (SELECT TO_JSONB(assignment) FROM assignment) doctor_service_assignment,\n (SELECT TO_JSONB(unassigned) FROM unassigned) removed_assignment,\n COALESCE((SELECT JSONB_AGG(TO_JSONB(listed)) FROM listed),'[]'::JSONB) services,\n COALESCE((SELECT JSONB_AGG(TO_JSONB(assigned_doctors)) FROM assigned_doctors),'[]'::JSONB) doctors,\n (SELECT id FROM admin_event) admin_event_id\nFROM c\nUNION ALL\nSELECT FALSE,'clinic_not_found',NULL::JSONB,NULL::JSONB,NULL::JSONB,'[]'::JSONB,'[]'::JSONB,NULL::BIGINT\nFROM r WHERE NOT EXISTS(SELECT 1 FROM c);",
+        "options": {
+          "queryReplacement": "={{ [ $json.action,$json.clinic_name,$json.service_id,$json.service_name,$json.description,$json.duration_minutes,$json.price_amount,$json.currency,$json.requires_previsit_guidance,$json.doctor_id,$json.doctor_name,$json.custom_duration_minutes,$json.custom_price_amount,$json.metadata_text,$json.actor_name,$json.source_channel,$json.limit ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "ec82d537-4322-46ab-afb0-3efde07eaf67",
+      "name": "Manage Service"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات Manage Service نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "ad421b78-4c2e-4a27-9052-879d8d546d0b",
+      "name": "Return Manage Service Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## مدیریت خدمات و تخصیص پزشک\n\nاقدام‌ها: create, update, activate, deactivate, get, list, assign_doctor, unassign_doctor, list_doctors",
+        "height": 360,
+        "width": 510
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -280
+      ],
+      "id": "5340a7f4-4dcd-4697-9caa-e140cdd0531f",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Manage Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Manage Service": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Manage Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Manage Service": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Manage Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Manage Service": {
+      "main": [
+        [
+          {
+            "node": "Is Manage Service Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Manage Service Valid?": {
+      "main": [
+        [
+          {
+            "node": "Manage Service",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Manage Service Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

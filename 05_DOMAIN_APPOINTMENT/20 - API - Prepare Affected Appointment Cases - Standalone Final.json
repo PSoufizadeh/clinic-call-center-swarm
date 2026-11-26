@@ -1,0 +1,237 @@
+{
+  "name": "20 - API - Prepare Affected Appointment Cases - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "adcb83c7-0f3c-442a-9bb0-62a73a57bac4",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "12945745-a9da-4df4-9453-22d8a5fa154a",
+              "name": "exception_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "2ff7b430-be5d-45e6-ae71-6135c7494c5e",
+              "name": "options_per_patient",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "d43ec40c-6a00-4591-a5fd-e5200b63a2ea",
+              "name": "search_days",
+              "value": 14,
+              "type": "number"
+            },
+            {
+              "id": "722c7d9f-6f4a-4a32-a851-2731f39936b0",
+              "name": "confirm_prepare",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "19f6ab24-220a-4fee-8802-64f73b92b918",
+      "name": "Manual Affected Cases Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/schedule-exceptions/prepare-affected-cases",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "871fa54d-5c8c-4a22-8e23-252264c3715f",
+      "name": "Webhook - Prepare Affected Cases"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst exception_id = Number(input.exception_id);\nconst options_per_patient = Number(input.options_per_patient ?? 3);\nconst search_days = Number(input.search_days ?? 14);\nconst confirm_prepare = toBoolean(input.confirm_prepare);\n\nconst errors = [];\n\nif (!Number.isInteger(exception_id) || exception_id < 1) {\n  errors.push({\n    field: 'exception_id',\n    message: 'exception_id باید یک عدد صحیح بزرگ‌تر از صفر باشد.',\n  });\n}\n\nif (\n  !Number.isInteger(options_per_patient) ||\n  options_per_patient < 1 ||\n  options_per_patient > 5\n) {\n  errors.push({\n    field: 'options_per_patient',\n    message: 'options_per_patient باید یک عدد صحیح بین 1 و 5 باشد.',\n  });\n}\n\nif (\n  !Number.isInteger(search_days) ||\n  search_days < 1 ||\n  search_days > 60\n) {\n  errors.push({\n    field: 'search_days',\n    message: 'search_days باید یک عدد صحیح بین 1 و 60 باشد.',\n  });\n}\n\nif (confirm_prepare !== true) {\n  errors.push({\n    field: 'confirm_prepare',\n    message: 'آماده‌سازی پرونده‌های تغییر باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [\n  {\n    json: {\n      exception_id,\n      options_per_patient,\n      search_days,\n      confirm_prepare,\n      validation_status: errors.length === 0 ? 'valid' : 'invalid',\n      errors,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "d132fce4-d850-461f-9f3e-104f26655535",
+      "name": "Normalize and Validate Affected Cases Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "144cffa9-22a1-4ef7-91e0-616294850fc8",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "8bdaec39-53ac-4089-a845-34353264efb1",
+      "name": "Is Affected Cases Request Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS exception_id,\n        LEAST(GREATEST($2::INTEGER, 1), 5)\n            AS options_per_patient,\n        LEAST(GREATEST($3::INTEGER, 1), 60)\n            AS search_days\n),\n\nexception_context AS (\n    SELECT\n        se.id AS exception_id,\n        se.clinic_id,\n        se.doctor_id,\n        se.starts_at AS exception_starts_at,\n        se.ends_at AS exception_ends_at,\n        se.reason AS exception_reason,\n        se.source AS exception_source,\n\n        c.name AS clinic_name,\n        c.timezone,\n\n        d.full_name AS doctor_name,\n\n        r.options_per_patient,\n        r.search_days\n\n    FROM schedule_exceptions se\n\n    INNER JOIN request_data r\n        ON r.exception_id = se.id\n\n    INNER JOIN clinics c\n        ON c.id = se.clinic_id\n       AND c.is_active = TRUE\n\n    INNER JOIN doctors d\n        ON d.id = se.doctor_id\n       AND d.is_active = TRUE\n\n    WHERE se.is_active = TRUE\n      AND se.exception_type = 'unavailable'\n\n    LIMIT 1\n),\n\naffected_appointments AS (\n    SELECT\n        a.id AS appointment_id,\n        a.clinic_id,\n        a.doctor_id,\n        a.patient_id,\n        a.service_id,\n        a.starts_at AS original_starts_at,\n        a.ends_at AS original_ends_at,\n        a.status AS appointment_status,\n        a.visit_reason,\n        a.google_calendar_event_id,\n\n        ec.exception_id,\n        ec.exception_starts_at,\n        ec.exception_ends_at,\n        ec.exception_reason,\n        ec.clinic_name,\n        ec.timezone,\n        ec.doctor_name,\n        ec.options_per_patient,\n        ec.search_days,\n\n        p.full_name AS patient_name,\n        p.mobile,\n\n        s.name AS service_name,\n        s.duration_minutes,\n\n        d.buffer_minutes\n\n    FROM appointments a\n\n    INNER JOIN exception_context ec\n        ON ec.clinic_id = a.clinic_id\n       AND ec.doctor_id = a.doctor_id\n\n    INNER JOIN patients p\n        ON p.id = a.patient_id\n\n    INNER JOIN services s\n        ON s.id = a.service_id\n       AND s.is_active = TRUE\n\n    INNER JOIN doctors d\n        ON d.id = a.doctor_id\n\n    WHERE a.status IN ('pending', 'confirmed')\n      AND a.starts_at < ec.exception_ends_at\n      AND a.ends_at > ec.exception_starts_at\n),\n\ncandidate_dates AS (\n    SELECT\n        aa.*,\n        generated_day::DATE AS candidate_date\n\n    FROM affected_appointments aa\n\n    CROSS JOIN LATERAL generate_series(\n        GREATEST(\n            (\n                aa.exception_ends_at\n                AT TIME ZONE aa.timezone\n            )::DATE,\n            (\n                NOW()\n                AT TIME ZONE aa.timezone\n            )::DATE\n        ),\n\n        GREATEST(\n            (\n                aa.exception_ends_at\n                AT TIME ZONE aa.timezone\n            )::DATE,\n            (\n                NOW()\n                AT TIME ZONE aa.timezone\n            )::DATE\n        )\n        + aa.search_days,\n\n        INTERVAL '1 day'\n    ) AS generated_day\n),\n\ngenerated_slots AS (\n    SELECT\n        cd.*,\n\n        slot.slot_start_local,\n\n        slot.slot_start_local\n            AT TIME ZONE cd.timezone\n            AS candidate_starts_at,\n\n        (\n            slot.slot_start_local\n            + make_interval(mins => cd.duration_minutes)\n        ) AT TIME ZONE cd.timezone\n            AS candidate_ends_at\n\n    FROM candidate_dates cd\n\n    INNER JOIN doctor_schedules ds\n        ON ds.doctor_id = cd.doctor_id\n       AND ds.is_active = TRUE\n       AND ds.weekday =\n            EXTRACT(ISODOW FROM cd.candidate_date)::INTEGER\n       AND (\n            ds.valid_from IS NULL\n            OR ds.valid_from <= cd.candidate_date\n       )\n       AND (\n            ds.valid_to IS NULL\n            OR ds.valid_to >= cd.candidate_date\n       )\n\n    CROSS JOIN LATERAL generate_series(\n        cd.candidate_date + ds.start_time,\n\n        cd.candidate_date\n            + ds.end_time\n            - make_interval(mins => cd.duration_minutes),\n\n        make_interval(\n            mins => cd.duration_minutes + cd.buffer_minutes\n        )\n    ) AS slot(slot_start_local)\n),\n\navailable_slots AS (\n    SELECT\n        gs.*\n\n    FROM generated_slots gs\n\n    WHERE gs.candidate_starts_at > NOW()\n      AND gs.candidate_starts_at >= gs.exception_ends_at\n\n      AND NOT EXISTS (\n          SELECT 1\n          FROM schedule_exceptions se\n\n          WHERE se.doctor_id = gs.doctor_id\n            AND se.is_active = TRUE\n            AND se.exception_type = 'unavailable'\n\n            AND se.starts_at < gs.candidate_ends_at\n            AND se.ends_at > gs.candidate_starts_at\n      )\n\n      AND NOT EXISTS (\n          SELECT 1\n          FROM appointments existing\n\n          WHERE existing.doctor_id = gs.doctor_id\n            AND existing.id <> gs.appointment_id\n            AND existing.status IN ('pending', 'confirmed')\n\n            AND existing.starts_at < gs.candidate_ends_at\n            AND existing.ends_at > gs.candidate_starts_at\n      )\n),\n\nranked_slots AS (\n    SELECT\n        available.*,\n\n        ROW_NUMBER() OVER (\n            PARTITION BY available.appointment_id\n            ORDER BY available.candidate_starts_at\n        ) AS slot_rank\n\n    FROM available_slots available\n),\n\nlimited_slots AS (\n    SELECT *\n    FROM ranked_slots\n    WHERE slot_rank <= options_per_patient\n),\n\nslot_summary AS (\n    SELECT\n        appointment_id,\n\n        COUNT(*)::INTEGER AS proposed_slot_count,\n\n        JSONB_AGG(\n            JSONB_BUILD_OBJECT(\n                'option_number', slot_rank,\n                'appointment_date',\n                    TO_CHAR(\n                        candidate_starts_at AT TIME ZONE timezone,\n                        'YYYY-MM-DD'\n                    ),\n                'start_time',\n                    TO_CHAR(\n                        candidate_starts_at AT TIME ZONE timezone,\n                        'HH24:MI'\n                    ),\n                'end_time',\n                    TO_CHAR(\n                        candidate_ends_at AT TIME ZONE timezone,\n                        'HH24:MI'\n                    ),\n                'starts_at', candidate_starts_at,\n                'ends_at', candidate_ends_at\n            )\n            ORDER BY candidate_starts_at\n        ) AS proposed_slots\n\n    FROM limited_slots\n\n    GROUP BY appointment_id\n),\n\nprepared_cases AS (\n    INSERT INTO appointment_disruption_cases (\n        exception_id,\n        appointment_id,\n        status,\n        proposed_slots,\n        updated_at\n    )\n\n    SELECT\n        aa.exception_id,\n        aa.appointment_id,\n\n        CASE\n            WHEN COALESCE(ss.proposed_slot_count, 0) > 0\n                THEN 'awaiting_reschedule_consent'\n            ELSE 'awaiting_waitlist_consent'\n        END,\n\n        COALESCE(\n            ss.proposed_slots,\n            '[]'::JSONB\n        ),\n\n        NOW()\n\n    FROM affected_appointments aa\n\n    LEFT JOIN slot_summary ss\n        ON ss.appointment_id = aa.appointment_id\n\n    ON CONFLICT (exception_id, appointment_id)\n    DO UPDATE SET\n        status = CASE\n            WHEN appointment_disruption_cases.status IN (\n                'rescheduled',\n                'cancelled',\n                'waitlisted',\n                'declined',\n                'closed'\n            )\n                THEN appointment_disruption_cases.status\n            ELSE EXCLUDED.status\n        END,\n\n        proposed_slots = CASE\n            WHEN appointment_disruption_cases.status IN (\n                'rescheduled',\n                'cancelled',\n                'waitlisted',\n                'declined',\n                'closed'\n            )\n                THEN appointment_disruption_cases.proposed_slots\n            ELSE EXCLUDED.proposed_slots\n        END,\n\n        updated_at = NOW()\n\n    RETURNING\n        id AS disruption_case_id,\n        exception_id,\n        appointment_id,\n        status AS case_status,\n        proposed_slots,\n        patient_decision,\n        created_at,\n        updated_at\n),\n\ncase_details AS (\n    SELECT\n        pc.disruption_case_id,\n        pc.exception_id,\n        pc.appointment_id,\n        pc.case_status,\n        pc.proposed_slots,\n        JSONB_ARRAY_LENGTH(pc.proposed_slots)\n            AS proposed_slot_count,\n\n        aa.patient_name,\n        aa.mobile,\n        aa.doctor_name,\n        aa.service_name,\n        aa.appointment_status,\n        aa.visit_reason,\n        aa.google_calendar_event_id,\n        aa.timezone,\n\n        aa.original_starts_at,\n        aa.original_ends_at,\n\n        CASE\n            WHEN JSONB_ARRAY_LENGTH(pc.proposed_slots) > 0\n                THEN 'offer_reschedule_options'\n            ELSE 'request_waitlist_consent'\n        END AS next_action\n\n    FROM prepared_cases pc\n\n    INNER JOIN affected_appointments aa\n        ON aa.appointment_id = pc.appointment_id\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM exception_context)\n            THEN FALSE\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM exception_context)\n            THEN 'schedule_exception_not_found'\n        WHEN NOT EXISTS (SELECT 1 FROM affected_appointments)\n            THEN 'no_affected_appointments'\n        ELSE 'affected_cases_prepared'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM exception_context)\n            THEN 'بازه مسدود فعال مطابق شناسه واردشده پیدا نشد.'\n        WHEN NOT EXISTS (SELECT 1 FROM affected_appointments)\n            THEN 'هیچ نوبت فعال تحت‌تأثیر این تغییر برنامه قرار ندارد.'\n        ELSE 'پرونده‌های نوبت‌های تحت‌تأثیر و گزینه‌های جایگزین آماده شدند.'\n    END AS message,\n\n    r.exception_id,\n\n    (\n        SELECT clinic_name\n        FROM exception_context\n    ) AS clinic_name,\n\n    (\n        SELECT doctor_name\n        FROM exception_context\n    ) AS doctor_name,\n\n    (\n        SELECT exception_reason\n        FROM exception_context\n    ) AS exception_reason,\n\n    (\n        SELECT TO_CHAR(\n            exception_starts_at AT TIME ZONE timezone,\n            'YYYY-MM-DD HH24:MI'\n        )\n        FROM exception_context\n    ) AS blocked_start,\n\n    (\n        SELECT TO_CHAR(\n            exception_ends_at AT TIME ZONE timezone,\n            'YYYY-MM-DD HH24:MI'\n        )\n        FROM exception_context\n    ) AS blocked_end,\n\n    (\n        SELECT COUNT(*)::INTEGER\n        FROM case_details\n    ) AS disruption_case_count,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'disruption_case_id',\n                        disruption_case_id,\n                    'appointment_id',\n                        appointment_id,\n                    'patient_name',\n                        patient_name,\n                    'mobile',\n                        mobile,\n                    'doctor_name',\n                        doctor_name,\n                    'service_name',\n                        service_name,\n                    'original_appointment_date',\n                        TO_CHAR(\n                            original_starts_at\n                            AT TIME ZONE timezone,\n                            'YYYY-MM-DD'\n                        ),\n                    'original_start_time',\n                        TO_CHAR(\n                            original_starts_at\n                            AT TIME ZONE timezone,\n                            'HH24:MI'\n                        ),\n                    'original_end_time',\n                        TO_CHAR(\n                            original_ends_at\n                            AT TIME ZONE timezone,\n                            'HH24:MI'\n                        ),\n                    'appointment_status',\n                        appointment_status,\n                    'case_status',\n                        case_status,\n                    'proposed_slot_count',\n                        proposed_slot_count,\n                    'proposed_slots',\n                        proposed_slots,\n                    'next_action',\n                        next_action\n                )\n                ORDER BY original_starts_at\n            )\n            FROM case_details\n        ),\n        '[]'::JSONB\n    ) AS disruption_cases\n\nFROM request_data r;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.exception_id,\n  $json.options_per_patient,\n  $json.search_days\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "624792fc-9751-4bc7-aa22-075ca7690590",
+      "name": "Prepare Affected Appointment Cases"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      result: 'invalid_request',\n      message: 'اطلاعات درخواست ناقص یا نامعتبر است.',\n      disruption_case_count: 0,\n      disruption_cases: [],\n      errors: $json.errors ?? [],\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "0fb1755a-3926-459d-ae5e-9871fdea8139",
+      "name": "Return Affected Cases Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## آماده‌سازی نوبت‌های تحت‌تأثیر\n\n1. ابتدا Workflow شماره 19 را فقط یک‌بار اجرا کن.\n\n2. `exception_id` را از خروجی Workflow شماره 18 بردار.\n\n3. این Workflow برای هر نوبت تحت‌تأثیر، حداکثر چند زمان جایگزین پیدا می‌کند.\n\n4. هیچ نوبتی در این مرحله خودکار جابه‌جا یا لغو نمی‌شود.\n\n5. اگر زمان جایگزین پیدا نشود، پرونده در وضعیت انتظار برای رضایت ورود به لیست انتظار قرار می‌گیرد.",
+        "height": 370,
+        "width": 470
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1140,
+        -280
+      ],
+      "id": "a99bf3a0-5d7b-45c7-a4e8-39401281a0cb",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Affected Cases Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Affected Cases Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Affected Cases Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Prepare Affected Cases": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Affected Cases Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Affected Cases Request": {
+      "main": [
+        [
+          {
+            "node": "Is Affected Cases Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Affected Cases Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Affected Appointment Cases",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Affected Cases Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

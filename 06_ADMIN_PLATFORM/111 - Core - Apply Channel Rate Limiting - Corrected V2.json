@@ -1,0 +1,237 @@
+{
+  "name": "111 - Core - Apply Channel Rate Limiting - Corrected V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "4eaa42d3-01c0-4207-8f5c-10cfd64020f0",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "85602ef4-9a7b-44d7-8bad-6544d1b725ad",
+              "name": "client_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "ea3b48ca-27d0-46b1-ac75-1e472c91a0fe",
+              "name": "max_requests",
+              "value": 120,
+              "type": "number"
+            },
+            {
+              "id": "319a2a39-801e-44d6-aba0-01aa00e6eb6c",
+              "name": "window_seconds",
+              "value": 60,
+              "type": "number"
+            },
+            {
+              "id": "73b1b521-c8dd-486f-a2e5-299b4669b747",
+              "name": "confirm_check",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "0d02cb95-d4c3-410f-8a91-631779ff9d1f",
+      "name": "Manual Rate Limit Check"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/gateway/security/rate-limit",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "970f71c0-aef6-411d-9e30-6fe0a961fbe2",
+      "name": "Webhook - Apply Rate Limit"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst client_id = Number(input.client_id ?? 0);\nconst max_requests = Number(input.max_requests ?? 120);\nconst window_seconds = Number(input.window_seconds ?? 60);\nconst confirm_check = bool(input.confirm_check);\n\nconst errors = [];\n\nif (\n  !Number.isInteger(client_id) ||\n  client_id < 1\n) {\n  errors.push({\n    field: 'client_id',\n    message: 'شناسه Gateway Client معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(max_requests) ||\n  max_requests < 1 ||\n  max_requests > 100000\n) {\n  errors.push({\n    field: 'max_requests',\n    message: 'حداکثر تعداد درخواست معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(window_seconds) ||\n  window_seconds < 1 ||\n  window_seconds > 86400\n) {\n  errors.push({\n    field: 'window_seconds',\n    message: 'بازه Rate Limit معتبر نیست.',\n  });\n}\n\nif (confirm_check !== true) {\n  errors.push({\n    field: 'confirm_check',\n    message: 'بررسی Rate Limit باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    client_id,\n    max_requests,\n    window_seconds,\n    confirm_check,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "10b92cac-d56d-4382-a7c3-12c1a7e69236",
+      "name": "Normalize and Validate Rate Limit"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "89942c32-a46d-4567-b5b3-205ee6943f6b",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "485f50e7-2893-4856-b17d-d7ee713be06f",
+      "name": "Is Rate Limit Check Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS client_id,\n        $2::INTEGER AS max_requests,\n        $3::INTEGER AS window_seconds\n),\n\nclient_context AS (\n    SELECT\n        request.*,\n\n        client.id AS registered_client_id,\n        client.enabled AS client_enabled,\n\n        CASE\n            WHEN client.id IS NULL\n                THEN FALSE\n            ELSE TRUE\n        END AS client_exists\n\n    FROM request_data request\n    LEFT JOIN channel_gateway_clients client\n        ON client.id = request.client_id\n),\n\nwindow_context AS (\n    SELECT\n        context.*,\n\n        TO_TIMESTAMP(\n            FLOOR(\n                EXTRACT(\n                    EPOCH FROM NOW()\n                ) /\n                context.window_seconds\n            ) *\n            context.window_seconds\n        ) AS window_start\n\n    FROM client_context context\n),\n\nupdated_counter AS (\n    INSERT INTO channel_rate_limit_counters (\n        client_id,\n        window_start,\n        window_seconds,\n        request_count,\n        updated_at\n    )\n    SELECT\n        context.client_id,\n        context.window_start,\n        context.window_seconds,\n        1,\n        NOW()\n    FROM window_context context\n    WHERE context.client_exists = TRUE\n      AND context.client_enabled = TRUE\n    ON CONFLICT (\n        client_id,\n        window_start,\n        window_seconds\n    )\n    DO UPDATE SET\n        request_count =\n            channel_rate_limit_counters.request_count + 1,\n        updated_at = NOW()\n    RETURNING *\n)\n\nSELECT\n    CASE\n        WHEN context.client_exists = FALSE\n            THEN FALSE\n\n        WHEN context.client_enabled = FALSE\n            THEN FALSE\n\n        WHEN counter.id IS NULL\n            THEN FALSE\n\n        WHEN counter.request_count <=\n             context.max_requests\n            THEN TRUE\n\n        ELSE FALSE\n    END AS allowed,\n\n    CASE\n        WHEN context.client_exists = FALSE\n            THEN 'gateway_client_not_found'\n\n        WHEN context.client_enabled = FALSE\n            THEN 'gateway_client_disabled'\n\n        WHEN counter.id IS NULL\n            THEN 'rate_limit_counter_not_created'\n\n        WHEN counter.request_count <=\n             context.max_requests\n            THEN 'rate_limit_allowed'\n\n        ELSE 'rate_limit_exceeded'\n    END AS result,\n\n    context.client_id,\n\n    COALESCE(\n        counter.request_count,\n        0\n    ) AS request_count,\n\n    context.max_requests,\n    context.window_start,\n\n    context.window_start +\n      MAKE_INTERVAL(\n          secs => context.window_seconds\n      ) AS window_end,\n\n    CASE\n        WHEN counter.id IS NULL\n            THEN 0\n        ELSE GREATEST(\n            context.max_requests -\n            counter.request_count,\n            0\n        )\n    END AS remaining_requests,\n\n    CASE\n        WHEN counter.id IS NULL\n            THEN 0\n        ELSE GREATEST(\n            CEIL(\n                EXTRACT(\n                    EPOCH FROM (\n                        context.window_start +\n                        MAKE_INTERVAL(\n                            secs =>\n                              context.window_seconds\n                        ) -\n                        NOW()\n                    )\n                )\n            )::INTEGER,\n            0\n        )\n    END AS retry_after_seconds,\n\n    context.client_exists,\n\n    COALESCE(\n        context.client_enabled,\n        FALSE\n    ) AS client_enabled\n\nFROM window_context context\nLEFT JOIN updated_counter counter\n    ON counter.client_id =\n       context.client_id;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.client_id,\n  $json.max_requests,\n  $json.window_seconds\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "d1f236c7-2fce-481a-b8a2-ca0f8d24e225",
+      "name": "Increment Gateway Rate Counter"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{allowed:false,result:'invalid_request',message:'اطلاعات Rate Limit نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "e5b96d47-d8f9-4d6e-adbb-4e9ffb4b2342",
+      "name": "Return Rate Limit Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## Rate Limiting — Corrected V2\n\nپیش از ساخت Counter، وجود و فعال‌بودن Gateway Client بررسی می‌شود.\n\nدر صورت نامعتبر بودن client_id، Workflow به‌جای خطای Foreign Key یکی از پاسخ‌های زیر را برمی‌گرداند:\n- gateway_client_not_found\n- gateway_client_disabled\n\nبرای تست دستی از شناسه واقعی خروجی Workflow 112A استفاده کن.",
+        "height": 370,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -290
+      ],
+      "id": "d1955b66-8d62-413f-9c4f-a823b560a384",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Rate Limit Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Rate Limit Check": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Rate Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Apply Rate Limit": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Rate Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Rate Limit": {
+      "main": [
+        [
+          {
+            "node": "Is Rate Limit Check Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Rate Limit Check Valid?": {
+      "main": [
+        [
+          {
+            "node": "Increment Gateway Rate Counter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Rate Limit Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

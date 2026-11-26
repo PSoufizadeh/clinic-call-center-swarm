@@ -1,0 +1,347 @@
+{
+  "name": "95 - API - System Health Check - Corrected V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1180,
+        208
+      ],
+      "id": "c2aff8ca-c596-4764-88a2-28d38c1b0390",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "76997353-8b19-44c2-8e0b-fe34b039c9b9",
+              "name": "clinic_name",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "69a83cf6-2648-4e38-a12d-bbce60bad999",
+              "name": "warning_queue_threshold",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "a1a968be-1c0e-4b87-ab8e-91afc512b5be",
+              "name": "critical_queue_threshold",
+              "value": 500,
+              "type": "number"
+            },
+            {
+              "id": "46210e83-7519-4f23-be7b-bbe7d762196f",
+              "name": "stale_processing_minutes",
+              "value": 15,
+              "type": "number"
+            },
+            {
+              "id": "df78d547-1a29-4667-bcac-22e6f309e43b",
+              "name": "error_window_hours",
+              "value": 24,
+              "type": "number"
+            },
+            {
+              "id": "c9419cec-4e06-4a4d-8513-06089be0aac6",
+              "name": "confirm_check",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -940,
+        208
+      ],
+      "id": "c903a54b-dbce-45a7-8c20-c18cb3792012",
+      "name": "Manual Health Check"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/operations/health/check",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -940,
+        -80
+      ],
+      "id": "0e7cc2c2-4fd1-483e-9fc4-c240ae656319",
+      "name": "Webhook - System Health Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst clinic_name = text(input.clinic_name);\nconst warning_queue_threshold =\n  Number(input.warning_queue_threshold ?? 100);\nconst critical_queue_threshold =\n  Number(input.critical_queue_threshold ?? 500);\nconst stale_processing_minutes =\n  Number(input.stale_processing_minutes ?? 15);\nconst error_window_hours =\n  Number(input.error_window_hours ?? 24);\nconst confirm_check = bool(input.confirm_check);\n\nconst errors = [];\n\nif (\n  !Number.isInteger(warning_queue_threshold) ||\n  warning_queue_threshold < 1 ||\n  warning_queue_threshold > 100000\n) {\n  errors.push({\n    field: 'warning_queue_threshold',\n    message: 'آستانه هشدار صف معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(critical_queue_threshold) ||\n  critical_queue_threshold <= warning_queue_threshold ||\n  critical_queue_threshold > 1000000\n) {\n  errors.push({\n    field: 'critical_queue_threshold',\n    message: 'آستانه بحرانی باید از آستانه هشدار بزرگ‌تر باشد.',\n  });\n}\n\nif (\n  !Number.isInteger(stale_processing_minutes) ||\n  stale_processing_minutes < 5 ||\n  stale_processing_minutes > 1440\n) {\n  errors.push({\n    field: 'stale_processing_minutes',\n    message: 'بازه پیام‌های Stale معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(error_window_hours) ||\n  error_window_hours < 1 ||\n  error_window_hours > 720\n) {\n  errors.push({\n    field: 'error_window_hours',\n    message: 'بازه بررسی خطا معتبر نیست.',\n  });\n}\n\nif (confirm_check !== true) {\n  errors.push({\n    field: 'confirm_check',\n    message: 'بررسی سلامت باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    clinic_name,\n    warning_queue_threshold,\n    critical_queue_threshold,\n    stale_processing_minutes,\n    error_window_hours,\n    confirm_check,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -668,
+        64
+      ],
+      "id": "7e8bc8fb-1008-4915-8259-9bc5d7f4e366",
+      "name": "Normalize and Validate Health Check"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "80d8e728-f203-410f-9dbc-da599678fe94",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -428,
+        64
+      ],
+      "id": "5a3203d1-d3b5-4865-a54b-4b680cf03948",
+      "name": "Is Health Check Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        NULLIF($1::TEXT, '') AS clinic_name,\n        $2::INTEGER AS stale_processing_minutes,\n        $3::INTEGER AS error_window_hours\n),\n\nscope AS (\n    SELECT\n        request.*,\n        clinic.id AS clinic_id\n    FROM request_data request\n    LEFT JOIN clinics clinic\n        ON clinic.name = request.clinic_name\n       AND clinic.is_active = TRUE\n),\n\ntable_checks AS (\n    SELECT JSONB_BUILD_OBJECT(\n        'clinics',\n            TO_REGCLASS('public.clinics') IS NOT NULL,\n        'patients',\n            TO_REGCLASS('public.patients') IS NOT NULL,\n        'appointments',\n            TO_REGCLASS('public.appointments') IS NOT NULL,\n        'outbound_messages',\n            TO_REGCLASS('public.outbound_messages') IS NOT NULL,\n        'human_handoff_tasks',\n            TO_REGCLASS('public.human_handoff_tasks') IS NOT NULL,\n        'workflow_error_events',\n            TO_REGCLASS('public.workflow_error_events') IS NOT NULL,\n        'system_health_snapshots',\n            TO_REGCLASS('public.system_health_snapshots') IS NOT NULL\n    ) AS checks\n),\n\nmetrics AS (\n    SELECT JSONB_BUILD_OBJECT(\n        'active_clinic_count',\n            (\n                SELECT COUNT(*)\n                FROM clinics clinic\n                CROSS JOIN scope scope_row\n                WHERE clinic.is_active = TRUE\n                  AND (\n                        scope_row.clinic_name IS NULL\n                        OR clinic.id =\n                           scope_row.clinic_id\n                      )\n            ),\n\n        'queued_due_count',\n            (\n                SELECT COUNT(*)\n                FROM outbound_messages message\n                CROSS JOIN scope scope_row\n                WHERE message.status IN (\n                        'queued',\n                        'scheduled',\n                        'failed'\n                      )\n                  AND (\n                        message.next_attempt_at IS NULL\n                        OR message.next_attempt_at <= NOW()\n                      )\n                  AND (\n                        scope_row.clinic_name IS NULL\n                        OR message.clinic_id =\n                           scope_row.clinic_id\n                      )\n            ),\n\n        'processing_count',\n            (\n                SELECT COUNT(*)\n                FROM outbound_messages message\n                CROSS JOIN scope scope_row\n                WHERE message.status = 'processing'\n                  AND (\n                        scope_row.clinic_name IS NULL\n                        OR message.clinic_id =\n                           scope_row.clinic_id\n                      )\n            ),\n\n        'stale_processing_count',\n            (\n                SELECT COUNT(*)\n                FROM outbound_messages message\n                CROSS JOIN scope scope_row\n                WHERE message.status = 'processing'\n                  AND message.updated_at <\n                      NOW() -\n                      MAKE_INTERVAL(\n                          mins =>\n                            scope_row.stale_processing_minutes\n                      )\n                  AND (\n                        scope_row.clinic_name IS NULL\n                        OR message.clinic_id =\n                           scope_row.clinic_id\n                      )\n            ),\n\n        'failed_retryable_count',\n            (\n                SELECT COUNT(*)\n                FROM outbound_messages message\n                CROSS JOIN scope scope_row\n                WHERE message.status = 'failed'\n                  AND message.attempt_count <\n                      message.max_attempts\n                  AND (\n                        scope_row.clinic_name IS NULL\n                        OR message.clinic_id =\n                           scope_row.clinic_id\n                      )\n            ),\n\n        'unresolved_dead_letter_count',\n            (\n                SELECT COUNT(*)\n                FROM outbound_message_dead_letters dead_letter\n                INNER JOIN outbound_messages message\n                    ON message.id =\n                       dead_letter.outbound_message_id\n                CROSS JOIN scope scope_row\n                WHERE dead_letter.resolved = FALSE\n                  AND (\n                        scope_row.clinic_name IS NULL\n                        OR message.clinic_id =\n                           scope_row.clinic_id\n                      )\n            ),\n\n        'open_workflow_error_count',\n            (\n                SELECT COUNT(*)\n                FROM workflow_error_events error_event\n                CROSS JOIN scope scope_row\n                WHERE error_event.status IN (\n                        'open',\n                        'acknowledged'\n                      )\n                  AND error_event.last_occurred_at >=\n                      NOW() -\n                      MAKE_INTERVAL(\n                          hours =>\n                            scope_row.error_window_hours\n                      )\n                  AND (\n                        scope_row.clinic_name IS NULL\n                        OR error_event.clinic_id =\n                           scope_row.clinic_id\n                      )\n            ),\n\n        'critical_workflow_error_count',\n            (\n                SELECT COUNT(*)\n                FROM workflow_error_events error_event\n                CROSS JOIN scope scope_row\n                WHERE error_event.status IN (\n                        'open',\n                        'acknowledged'\n                      )\n                  AND error_event.severity = 'critical'\n                  AND error_event.last_occurred_at >=\n                      NOW() -\n                      MAKE_INTERVAL(\n                          hours =>\n                            scope_row.error_window_hours\n                      )\n                  AND (\n                        scope_row.clinic_name IS NULL\n                        OR error_event.clinic_id =\n                           scope_row.clinic_id\n                      )\n            ),\n\n        'open_handoff_count',\n            (\n                SELECT COUNT(*)\n                FROM human_handoff_tasks handoff\n                CROSS JOIN scope scope_row\n                WHERE handoff.status NOT IN (\n                        'completed',\n                        'resolved',\n                        'cancelled',\n                        'closed'\n                      )\n                  AND (\n                        scope_row.clinic_name IS NULL\n                        OR handoff.clinic_id =\n                           scope_row.clinic_id\n                      )\n            ),\n\n        'permission_blocked_last_24h',\n            (\n                SELECT COUNT(*)\n                FROM communication_permission_checks permission\n                CROSS JOIN scope scope_row\n                WHERE permission.decision = 'blocked'\n                  AND permission.checked_at >=\n                      NOW() - INTERVAL '24 hours'\n                  AND (\n                        scope_row.clinic_name IS NULL\n                        OR permission.clinic_id =\n                           scope_row.clinic_id\n                      )\n            )\n    ) AS metrics\n)\n\nSELECT\n    CASE\n        WHEN scope_row.clinic_name IS NOT NULL\n         AND scope_row.clinic_id IS NULL\n            THEN FALSE\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN scope_row.clinic_name IS NOT NULL\n         AND scope_row.clinic_id IS NULL\n            THEN 'clinic_not_found'\n        ELSE 'health_context_loaded'\n    END AS result,\n\n    scope_row.clinic_id,\n    scope_row.clinic_name,\n\n    CURRENT_SETTING('server_version') AS postgres_version,\n    NOW() AS checked_at,\n\n    table_checks.checks,\n    metrics.metrics\n\nFROM scope scope_row\nCROSS JOIN table_checks\nCROSS JOIN metrics;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.stale_processing_minutes,\n  $json.error_window_hours\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -172,
+        -48
+      ],
+      "id": "88d0004c-4496-492b-856d-a383bc69e39a",
+      "name": "Load System Health Metrics"
+    },
+    {
+      "parameters": {
+        "jsCode": "if ($json.success !== true) {\n  return [{\n    json: {\n      success: false,\n      result: $json.result || 'health_context_failed',\n      overall_status: 'unhealthy',\n      checks: $json.checks || {},\n      metrics: $json.metrics || {},\n    },\n  }];\n}\n\nconst config =\n  $('Normalize and Validate Health Check')\n    .first().json;\n\nconst checks =\n  $json.checks &&\n  typeof $json.checks === 'object'\n    ? $json.checks\n    : {};\n\nconst metrics =\n  $json.metrics &&\n  typeof $json.metrics === 'object'\n    ? $json.metrics\n    : {};\n\nconst missingTables = Object.entries(checks)\n  .filter(([, value]) => value !== true)\n  .map(([key]) => key);\n\nconst queuedDue =\n  Number(metrics.queued_due_count || 0);\n\nconst staleProcessing =\n  Number(metrics.stale_processing_count || 0);\n\nconst deadLetters =\n  Number(metrics.unresolved_dead_letter_count || 0);\n\nconst openErrors =\n  Number(metrics.open_workflow_error_count || 0);\n\nconst criticalErrors =\n  Number(metrics.critical_workflow_error_count || 0);\n\nlet overallStatus = 'healthy';\nconst reasons = [];\n\nif (missingTables.length > 0) {\n  overallStatus = 'unhealthy';\n  reasons.push(\n    `missing_tables:${missingTables.join(',')}`\n  );\n}\n\nif (criticalErrors > 0) {\n  overallStatus = 'unhealthy';\n  reasons.push('critical_workflow_errors');\n}\n\nif (\n  staleProcessing >\n  config.critical_queue_threshold\n) {\n  overallStatus = 'unhealthy';\n  reasons.push('stale_processing_critical');\n}\n\nif (\n  deadLetters >\n  config.critical_queue_threshold\n) {\n  overallStatus = 'unhealthy';\n  reasons.push('dead_letter_critical');\n}\n\nif (\n  queuedDue >\n  config.critical_queue_threshold\n) {\n  overallStatus = 'unhealthy';\n  reasons.push('queue_backlog_critical');\n}\n\nif (\n  overallStatus === 'healthy' &&\n  (\n    queuedDue >\n      config.warning_queue_threshold ||\n    staleProcessing > 0 ||\n    deadLetters > 0 ||\n    openErrors > 0\n  )\n) {\n  overallStatus = 'degraded';\n\n  if (\n    queuedDue >\n    config.warning_queue_threshold\n  ) {\n    reasons.push('queue_backlog_warning');\n  }\n\n  if (staleProcessing > 0) {\n    reasons.push('stale_processing_detected');\n  }\n\n  if (deadLetters > 0) {\n    reasons.push('unresolved_dead_letters');\n  }\n\n  if (openErrors > 0) {\n    reasons.push('open_workflow_errors');\n  }\n}\n\nif (reasons.length === 0) {\n  reasons.push('all_checks_passed');\n}\n\nreturn [{\n  json: {\n    success: true,\n    result: 'system_health_evaluated',\n    clinic_id:\n      Number($json.clinic_id || 0),\n    clinic_name:\n      $json.clinic_name || '',\n    postgres_version:\n      $json.postgres_version,\n    checked_at:\n      $json.checked_at,\n    overall_status: overallStatus,\n    health_reasons: reasons,\n    checks,\n    checks_text:\n      JSON.stringify(checks),\n    metrics,\n    metrics_text:\n      JSON.stringify({\n        ...metrics,\n        health_reasons: reasons,\n      }),\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        84,
+        -48
+      ],
+      "id": "8c977f6c-e8d3-4356-b5dc-5eb157362ba8",
+      "name": "Evaluate System Health"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e9a8260b-91a6-4358-89e6-e0c910489647",
+              "leftValue": "={{ $json.success === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        340,
+        -48
+      ],
+      "id": "a8e9971e-ca6b-4152-a1d7-975dd34bdcb6",
+      "name": "Can Health Snapshot Be Saved?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        NULLIF($1::BIGINT, 0) AS clinic_id,\n        $2::TEXT AS overall_status,\n        $3::JSONB AS checks,\n        $4::JSONB AS metrics\n),\n\ninserted_snapshot AS (\n    INSERT INTO system_health_snapshots (\n        clinic_id,\n        overall_status,\n        checks,\n        metrics,\n        checked_at\n    )\n    SELECT\n        request.clinic_id,\n        request.overall_status,\n        request.checks,\n        request.metrics,\n        NOW()\n    FROM request_data request\n    RETURNING *\n)\n\nSELECT\n    TRUE AS success,\n    'system_health_checked' AS result,\n\n    (\n        SELECT id\n        FROM inserted_snapshot\n    ) AS health_snapshot_id,\n\n    (\n        SELECT overall_status\n        FROM inserted_snapshot\n    ) AS overall_status,\n\n    (\n        SELECT checks\n        FROM inserted_snapshot\n    ) AS checks,\n\n    (\n        SELECT metrics\n        FROM inserted_snapshot\n    ) AS metrics,\n\n    (\n        SELECT checked_at\n        FROM inserted_snapshot\n    ) AS checked_at\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_id,\n  $json.overall_status,\n  $json.checks_text,\n  $json.metrics_text\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        596,
+        -144
+      ],
+      "id": "3bb5f224-039b-4614-8315-9b04be2c22a5",
+      "name": "Save Health Snapshot"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'تنظیمات بررسی سلامت نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -172,
+        176
+      ],
+      "id": "ccb7caea-2712-4f8d-827a-3a4c99f4a14b",
+      "name": "Return Health Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## Health Check فنی\n\nکنترل‌ها:\n- وجود جداول اصلی\n- Backlog صف پیام\n- پیام‌های Processing گیرکرده\n- Dead Letterهای باز\n- خطاهای Workflow\n- Handoffهای باز\n\nخروجی healthy، degraded یا unhealthy است.\n\nاصلاح V2:\n- نام کلینیک نامعتبر دیگر Metrics کل سیستم را نمایش نمی‌دهد.\n- در حالت clinic_not_found شمارنده‌های کلینیکی صفر می‌مانند.\n- پیام Queue شده با next_attempt_at خالی نیز در queued_due_count محاسبه می‌شود.",
+        "height": 390,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1420,
+        -300
+      ],
+      "id": "9eb5b351-f769-494b-b892-e296d6916f33",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Health Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Health Check": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Health Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - System Health Check": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Health Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Health Check": {
+      "main": [
+        [
+          {
+            "node": "Is Health Check Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Health Check Valid?": {
+      "main": [
+        [
+          {
+            "node": "Load System Health Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Health Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load System Health Metrics": {
+      "main": [
+        [
+          {
+            "node": "Evaluate System Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate System Health": {
+      "main": [
+        [
+          {
+            "node": "Can Health Snapshot Be Saved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Can Health Snapshot Be Saved?": {
+      "main": [
+        [
+          {
+            "node": "Save Health Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

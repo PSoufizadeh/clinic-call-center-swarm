@@ -1,0 +1,918 @@
+{
+  "name": "68 - AI - Clinical Grounded Answer and Safety - Corrected V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1640,
+        240
+      ],
+      "id": "af371568-bced-4003-896c-d60f1baef7bf",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "85fdf60a-1e05-4214-8445-b04e9f2fe20a",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "8cc1c648-5308-4b39-8906-3a93a0aeaf97",
+              "name": "question",
+              "value": "بعد از کشیدن دندان چه مراقبت‌هایی لازم است؟",
+              "type": "string"
+            },
+            {
+              "id": "41f8034d-383f-4c04-aecc-1e43770291c1",
+              "name": "mobile",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "68769536-cd2f-49a3-a54a-4dd35b9a8e30",
+              "name": "specialty_hint",
+              "value": "dental",
+              "type": "string"
+            },
+            {
+              "id": "f9dc553c-276b-4518-b715-8fcdcd63d6e8",
+              "name": "service_name",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "d07f5e25-2d79-46ae-9b37-5789ce187e08",
+              "name": "session_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "984b5cb5-447e-45e7-9722-f328f939f33f",
+              "name": "message_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "8ccd3ef1-509e-4703-a402-341dbcf7f5ad",
+              "name": "clinical_intake_case_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "49bf2ad0-5cc9-4dc9-890d-9d4b1e9d2637",
+              "name": "webhook_base_url",
+              "value": "http://localhost:5678/webhook",
+              "type": "string"
+            },
+            {
+              "id": "50314201-6373-4edc-a4ca-4e8756a12c19",
+              "name": "model_provider",
+              "value": "openai",
+              "type": "string"
+            },
+            {
+              "id": "b2c27f89-df4e-4135-8fdb-337a53a32e9d",
+              "name": "model_name",
+              "value": "gpt-5-mini",
+              "type": "string"
+            },
+            {
+              "id": "cfdbb488-f851-441c-bfd3-d9b9a1c7cc02",
+              "name": "confirm_answer",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1400,
+        240
+      ],
+      "id": "239e70da-d7b6-4cad-a251-5f4c7278fb1e",
+      "name": "Manual Clinical Question"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/clinical-knowledge/answer",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1400,
+        -80
+      ],
+      "id": "60c5b75b-723c-45f3-8b01-c4f018c6d176",
+      "name": "Webhook - Answer Clinical Question"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\nconst text = (v) => v === null || v === undefined ? '' : String(v).trim();\nconst bool = (v) => typeof v === 'boolean' ? v : ['true','1','yes','on'].includes(text(v).toLowerCase());\n\nconst clinic_name=text(input.clinic_name);\nconst question=text(input.question);\nconst mobile=text(input.mobile);\nconst specialty_hint=text(input.specialty_hint||'general').toLowerCase();\nconst service_name=text(input.service_name);\nconst session_id=Number(input.session_id??0);\nconst message_id=Number(input.message_id??0);\nconst clinical_intake_case_id=Number(input.clinical_intake_case_id??0);\nconst webhook_base_url=text(input.webhook_base_url||'http://n8n:5678/webhook').replace(/\\/+$/,'');\nconst model_provider=text(input.model_provider||'openai').toLowerCase();\nconst model_name=text(input.model_name||'gpt-5-mini');\nconst confirm_answer=bool(input.confirm_answer);\nconst errors=[];\n\nif(!clinic_name) errors.push({field:'clinic_name',message:'نام کلینیک الزامی است.'});\nif(!question) errors.push({field:'question',message:'سؤال الزامی است.'});\nif(question.length>8000) errors.push({field:'question',message:'سؤال بیش از حد طولانی است.'});\nif(mobile&&!/^\\+?[0-9]{8,15}$/.test(mobile)) errors.push({field:'mobile',message:'شماره موبایل معتبر نیست.'});\nfor(const [f,v] of Object.entries({session_id,message_id,clinical_intake_case_id})){\n  if(!Number.isInteger(v)||v<0) errors.push({field:f,message:`${f} معتبر نیست.`});\n}\nif(!/^https?:\\/\\/.+/i.test(webhook_base_url)) errors.push({field:'webhook_base_url',message:'آدرس Webhook معتبر نیست.'});\nif(!model_provider||!model_name) errors.push({field:'model',message:'مدل الزامی است.'});\nif(confirm_answer!==true) errors.push({field:'confirm_answer',message:'پردازش باید تأیید شود.'});\n\nreturn [{json:{\n  clinic_name,question,mobile,specialty_hint,service_name,session_id,message_id,\n  clinical_intake_case_id,webhook_base_url,model_provider,model_name,\n  analyzer_prompt_version:'clinical-query-analyzer-v1',\n  answer_prompt_version:'clinical-grounded-answer-v1',\n  confirm_answer,validation_status:errors.length?'invalid':'valid',errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1128,
+        80
+      ],
+      "id": "8897a182-dada-4e9c-9d7e-c5f85bf7c08c",
+      "name": "Normalize and Validate Clinical Question"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "56344afa-cc21-4a27-858f-bea0f181cce6",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -888,
+        80
+      ],
+      "id": "b353b070-a6fb-4905-aaf7-a55aaa8421f6",
+      "name": "Is Clinical Question Valid?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const i=$json;\nreturn [{json:{...i,analyzer_prompt:[\n  'PATIENT_QUESTION:',i.question,'',\n  'HINTS:',JSON.stringify({\n    clinic_name:i.clinic_name,\n    specialty_hint:i.specialty_hint,\n    service_name:i.service_name||null,\n    clinical_intake_case_id:i.clinical_intake_case_id||null\n  }),'',\n  'Return only the structured output required by the schema.'\n].join('\\n')}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -632,
+        -48
+      ],
+      "id": "c99a189c-ead3-4227-b0e0-b8db43e12665",
+      "name": "Build Clinical Query Analyzer Prompt"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.analyzer_prompt }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You analyze a patient's clinic question.\n\nReturn a normalized search query, likely specialty, topic, useful keywords, and possible red flags.\n\nThis is not diagnosis. Do not answer the patient, prescribe, recommend changing medication, or invent facts.\n\nMark urgent when the wording indicates severe breathing difficulty, loss of consciousness, seizure, severe chest pain, uncontrolled severe bleeding, possible overdose, immediate self-harm or violence risk, severe pregnancy-related bleeding or pain, or sudden one-sided weakness/new speech difficulty.\n\nWhen uncertain, use medical_uncertainty."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -376,
+        -48
+      ],
+      "id": "98cc5a21-b63d-4ca5-aea3-49f950454bfe",
+      "name": "AI Clinical Query Analyzer"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -432,
+        192
+      ],
+      "id": "57b6f971-b126-4018-9572-cdd7e59a718b",
+      "name": "OpenAI Clinical Analyzer Model - Select Credential"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\": \"object\", \"additionalProperties\": false, \"properties\": {\"normalized_query\": {\"type\": \"string\"}, \"specialty\": {\"type\": \"string\"}, \"topic\": {\"type\": [\"string\", \"null\"]}, \"keywords\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}, \"maxItems\": 12}, \"risk_flags\": {\"type\": \"array\", \"items\": {\"type\": \"string\", \"enum\": [\"breathing_difficulty\", \"loss_of_consciousness\", \"seizure\", \"chest_pain\", \"possible_overdose\", \"severe_bleeding\", \"self_harm_or_violence\", \"pregnancy_emergency_concern\", \"new_neurological_deficit\", \"medical_uncertainty\", \"none\"]}}, \"urgent\": {\"type\": \"boolean\"}, \"requires_human\": {\"type\": \"boolean\"}, \"retrieval_allowed\": {\"type\": \"boolean\"}, \"analysis_summary\": {\"type\": \"string\"}}, \"required\": [\"normalized_query\", \"specialty\", \"topic\", \"keywords\", \"risk_flags\", \"urgent\", \"requires_human\", \"retrieval_allowed\", \"analysis_summary\"]}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -208,
+        192
+      ],
+      "id": "d25f1434-ea3b-4bdd-be7c-167922f750a3",
+      "name": "Structured Clinical Analysis"
+    },
+    {
+      "parameters": {
+        "jsCode": "const envelope=$json??{};\nlet p=envelope.output??envelope;\nif(typeof p==='string'){const m=p.match(/\\{[\\s\\S]*\\}/);p=JSON.parse(m?m[0]:p);}\nif(p&&typeof p==='object'&&p.output&&typeof p.output==='object') p=p.output;\nconst i=$('Build Clinical Query Analyzer Prompt').first().json;\nlet flags=Array.isArray(p.risk_flags)?[...new Set(p.risk_flags.map(x=>String(x||'').trim()).filter(Boolean))]:[];\nif(flags.length>1) flags=flags.filter(x=>x!=='none');\nconst urgentFlags=['breathing_difficulty','loss_of_consciousness','seizure','chest_pain','possible_overdose','severe_bleeding','self_harm_or_violence','pregnancy_emergency_concern','new_neurological_deficit'];\nconst deterministicUrgent=flags.some(x=>urgentFlags.includes(x));\nreturn [{json:{\n  ...i,\n  normalized_query:String(p.normalized_query||i.question).trim(),\n  specialty:String(p.specialty||i.specialty_hint||'general').trim().toLowerCase(),\n  topic:p.topic==null?null:String(p.topic).trim()||null,\n  keywords:Array.isArray(p.keywords)?p.keywords.map(x=>String(x||'').trim()).filter(Boolean).slice(0,12):[],\n  risk_flags:flags,\n  urgent:Boolean(p.urgent||deterministicUrgent),\n  requires_human:Boolean(p.requires_human||deterministicUrgent),\n  retrieval_allowed:Boolean(p.retrieval_allowed!==false&&!deterministicUrgent),\n  analysis_summary:String(p.analysis_summary||'').slice(0,1000)\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        -48
+      ],
+      "id": "b7844aa5-248b-4256-91a8-f585f95078c6",
+      "name": "Normalize Clinical Query Analysis"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8f7bbd10-18b0-41a6-b691-d2ac77e4c4fc",
+              "leftValue": "={{ $json.urgent === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        144,
+        -48
+      ],
+      "id": "fe383d77-a3fc-442c-bb97-88b13a309bf6",
+      "name": "Is Clinical Question Urgent?"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{\n  success:true,\n  result:'urgent_clinical_question_detected',\n  clinic_name:$json.clinic_name,\n  session_id:$json.session_id,\n  message_id:$json.message_id,\n  clinical_intake_case_id:$json.clinical_intake_case_id,\n  risk_flags:$json.risk_flags,\n  requires_human:true,\n  urgent:true,\n  answer_status:'urgent_handoff',\n  answer_text:'پیام شما می‌تواند نشان‌دهنده وضعیت فوری باشد. منتظر پاسخ خودکار نمانید و فوراً از خدمات اورژانسی محلی یا کمک حضوری استفاده کنید.',\n  citations:[],\n  next_action:'urgent_human_handoff'\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -144
+      ],
+      "id": "eabe6547-5f21-4b00-a076-7f75cebdeb19",
+      "name": "Return Urgent Clinical Safety Message"
+    },
+    {
+      "parameters": {
+        "jsCode": "const i=$json;\nreturn [{json:{\n  clinic_name:i.clinic_name,\n  question:i.question,\n  normalized_query:i.normalized_query,\n  specialty:i.specialty,\n  service_name:i.service_name,\n  keywords:i.keywords,\n  top_k:10,\n  min_score:0.16,\n  session_id:i.session_id,\n  message_id:i.message_id,\n  clinical_intake_case_id:i.clinical_intake_case_id,\n  confirm_query:true,\n  retrieve_url:`${i.webhook_base_url}/clinic/clinical-knowledge/retrieve`\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        48
+      ],
+      "id": "dd342cec-2e47-4fdf-8718-adb5dea97f2b",
+      "name": "Prepare Clinical Knowledge Retrieval"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.retrieve_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { clinic_name:$json.clinic_name,question:$json.question,normalized_query:$json.normalized_query,specialty:$json.specialty,service_name:$json.service_name,keywords:$json.keywords,top_k:$json.top_k,min_score:$json.min_score,session_id:$json.session_id,message_id:$json.message_id,clinical_intake_case_id:$json.clinical_intake_case_id,confirm_query:true } }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        656,
+        48
+      ],
+      "id": "4bc57963-ce4f-4061-a273-e3911c2aa748",
+      "name": "Call Clinical Knowledge Retrieval",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3e257d49-7791-4149-9f10-81b0d51adbd5",
+              "leftValue": "={{ $json.success === true && Array.isArray($json.retrieved_context) && $json.retrieved_context.length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        912,
+        48
+      ],
+      "id": "750eae90-bfe0-4aa6-9b20-cca897c83a11",
+      "name": "Was Reliable Knowledge Retrieved?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const retrieval=$json;\nconst analysis=$('Normalize Clinical Query Analysis').first().json;\nconst context=Array.isArray(retrieval.retrieved_context)?retrieval.retrieved_context:[];\nconst available=context.map(x=>({\n  result_type:x.result_type,result_id:x.result_id,document_id:x.document_id,\n  title:x.title,page_start:x.page_start,page_end:x.page_end,score:x.score,\n  requires_human_confirmation:x.requires_human_confirmation,\n  safety_category:x.safety_category\n}));\nconst prompt=[\n  'PATIENT_QUESTION:',analysis.question,'',\n  'RISK_ANALYSIS:',JSON.stringify({risk_flags:analysis.risk_flags,analysis_summary:analysis.analysis_summary}),'',\n  'RETRIEVED_SOURCES:',JSON.stringify(context),'',\n  'Answer only from retrieved sources. If sources are absent, weak, conflicting, human-only, or require confirmation, do not invent an answer.',\n  'Do not diagnose, prescribe, or change medication dosage.',\n  'Return only the structured output required by the schema.'\n].join('\\n');\nreturn [{json:{\n  ...analysis,\n  clinical_knowledge_query_id:retrieval.clinical_knowledge_query_id??null,\n  retrieved_context:context,\n  available_citations:available,\n  top_score:Number(retrieval.top_score??0),\n  answer_prompt:prompt\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        -48
+      ],
+      "id": "650c33e8-f58d-4037-b9a3-166def92c5e1",
+      "name": "Prepare Grounded Answer Prompt"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.answer_prompt }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Compose a patient-facing answer only from the supplied approved clinic sources.\n\nNever use unstated general medical knowledge. Never invent a diagnosis, treatment, dosage change, service, price, appointment, or clinic policy.\n\nIf no reliable source supports the answer, set no_reliable_answer.\nIf any used source requires human confirmation, is human_only, or conflicts with another source, set requires_human=true.\nCite only result IDs present in the retrieved context.\nKeep the answer concise and in the patient's language."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1424,
+        -48
+      ],
+      "id": "c91692c2-3c7a-4828-85b5-0cd9f64fd31c",
+      "name": "AI Grounded Clinical Answer"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1368,
+        192
+      ],
+      "id": "83e953f2-e552-48f3-b5a5-ae5ac637aba1",
+      "name": "OpenAI Grounded Answer Model - Select Credential"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\": \"object\", \"additionalProperties\": false, \"properties\": {\"answer_text\": {\"type\": \"string\", \"minLength\": 1, \"maxLength\": 2500}, \"answer_status\": {\"type\": \"string\", \"enum\": [\"answered\", \"no_reliable_answer\", \"human_review\"]}, \"used_result_ids\": {\"type\": \"array\", \"items\": {\"type\": \"integer\"}}, \"requires_human\": {\"type\": \"boolean\"}, \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1}, \"reason_summary\": {\"type\": \"string\", \"maxLength\": 700}}, \"required\": [\"answer_text\", \"answer_status\", \"used_result_ids\", \"requires_human\", \"confidence\", \"reason_summary\"]}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1592,
+        192
+      ],
+      "id": "ec7c6de9-7da6-4bcc-878b-7791991028f3",
+      "name": "Structured Grounded Answer"
+    },
+    {
+      "parameters": {
+        "jsCode": "const envelope=$json??{};\nlet p=envelope.output??envelope;\nif(typeof p==='string'){const m=p.match(/\\{[\\s\\S]*\\}/);p=JSON.parse(m?m[0]:p);}\nif(p&&typeof p==='object'&&p.output&&typeof p.output==='object') p=p.output;\nconst c=$('Prepare Grounded Answer Prompt').first().json;\nconst available=new Map((c.available_citations||[]).map(x=>[Number(x.result_id),x]));\nconst used=Array.isArray(p.used_result_ids)?[...new Set(p.used_result_ids.map(Number).filter(x=>Number.isInteger(x)&&available.has(x)))]:[];\nconst citations=used.map(x=>available.get(x)).filter(Boolean);\nconst forced=citations.some(x=>x.requires_human_confirmation===true||x.safety_category==='human_only');\nconst hasContext=Array.isArray(c.retrieved_context)&&c.retrieved_context.length>0;\nlet status=p.answer_status||'no_reliable_answer';\nlet text=String(p.answer_text||'').trim();\nlet human=Boolean(p.requires_human||forced);\nif(!hasContext||used.length===0){\n  status='no_reliable_answer';human=true;\n  text='برای پاسخ دقیق، منبع تأییدشده کافی در پایگاه دانش کلینیک پیدا نشد و این موضوع باید توسط مسئول یا پزشک کلینیک بررسی شود.';\n}\nif(forced) status='human_review';\nreturn [{json:{\n  success:true,\n  result:status==='answered'?'grounded_clinical_answer_created':status==='human_review'?'clinical_answer_requires_human_review':'no_reliable_clinical_answer',\n  clinic_name:c.clinic_name,session_id:c.session_id,message_id:c.message_id,\n  clinical_intake_case_id:c.clinical_intake_case_id,\n  clinical_knowledge_query_id:c.clinical_knowledge_query_id,\n  question:c.question,normalized_query:c.normalized_query,specialty:c.specialty,\n  risk_flags:c.risk_flags,urgent:false,answer_status:status,answer_text:text.slice(0,2500),\n  used_result_ids:used,citations,citations_json:JSON.stringify(citations),\n  requires_human:human,confidence:Math.max(0,Math.min(1,Number(p.confidence??0))),\n  reason_summary:String(p.reason_summary||'').slice(0,700),\n  model_provider:c.model_provider,model_name:c.model_name,prompt_version:c.answer_prompt_version,\n  next_action:human?'human_review':'return_grounded_answer'\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1688,
+        -48
+      ],
+      "id": "15760acb-a5bc-4aed-bbce-b924e5fa722d",
+      "name": "Normalize Grounded Clinical Answer"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH r AS (\n  SELECT $1::BIGINT query_id,$2::TEXT answer_text,$3::JSONB citations,\n         $4::TEXT answer_status,$5::JSONB risk_flags,$6::TEXT model_provider,\n         $7::TEXT model_name,$8::TEXT prompt_version\n),\nu AS (\n  UPDATE clinical_knowledge_queries q\n  SET answer_text=r.answer_text,citations=r.citations,answer_status=r.answer_status,\n      risk_flags=r.risk_flags,model_provider=r.model_provider,model_name=r.model_name,\n      prompt_version=r.prompt_version,updated_at=NOW()\n  FROM r WHERE q.id=r.query_id RETURNING q.*\n)\nSELECT EXISTS(SELECT 1 FROM u) success,\n       CASE WHEN EXISTS(SELECT 1 FROM u) THEN 'clinical_grounded_answer_saved' ELSE 'clinical_knowledge_query_not_found' END result,\n       (SELECT id FROM u) clinical_knowledge_query_id,\n       (SELECT answer_status FROM u) answer_status,\n       (SELECT answer_text FROM u) answer_text,\n       (SELECT citations FROM u) citations\nFROM r;",
+        "options": {
+          "queryReplacement": "={{ [ $json.clinical_knowledge_query_id,$json.answer_text,$json.citations_json,$json.answer_status,JSON.stringify($json.risk_flags||[]),$json.model_provider,$json.model_name,$json.prompt_version ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1944,
+        -48
+      ],
+      "id": "bbea5cce-fa08-4dc7-b4a3-088a7e50feca",
+      "name": "Save Grounded Clinical Answer"
+    },
+    {
+      "parameters": {
+        "jsCode": "const a=$('Normalize Clinical Query Analysis').first().json;\nreturn [{json:{\n  success:false,\n  result:$json.result||'clinical_knowledge_retrieval_failed',\n  message:'منبع تأییدشده کافی برای پاسخ پیدا نشد.',\n  clinic_name:a.clinic_name,session_id:a.session_id,message_id:a.message_id,\n  clinical_intake_case_id:a.clinical_intake_case_id,risk_flags:a.risk_flags,\n  requires_human:true,urgent:false,answer_status:'no_reliable_answer',\n  answer_text:'برای پاسخ دقیق، این موضوع باید توسط مسئول یا پزشک کلینیک بررسی شود.',\n  citations:[],next_action:'human_review'\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        144
+      ],
+      "id": "edc917a1-cbd3-46ab-820a-7c6be216e94b",
+      "name": "Return No Reliable Clinical Answer"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات سؤال تخصصی نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -632,
+        176
+      ],
+      "id": "2683dc50-12a3-4082-881f-166ca3629f56",
+      "name": "Return Clinical Question Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## هوش + RAG + ایمنی\n\nمدل اول ریسک و Search Query را استخراج می‌کند. مدل دوم فقط از منابع published پاسخ می‌دهد.\n\nدر ریسک فوری، Retrieval متوقف می‌شود.\n\nاصلاح V2:\n- خروجی کامل پاسخ Grounded پس از ذخیره دیتابیس حفظ می‌شود.\n- سؤال Urgent در صورت وجود session_id و message_id به Workflow 57 ارجاع می‌شود.\n- پیش‌فرض داخلی Docker برابر http://n8n:5678/webhook است.",
+        "height": 390,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1860,
+        -300
+      ],
+      "id": "70308838-73f9-4e84-91d1-970ed7762a20",
+      "name": "How to Use"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "919e9490-e1fe-484c-baf1-e43a0f78b9e8",
+              "leftValue": "={{ Number($json.session_id) > 0 && Number($json.message_id) > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        600,
+        -420
+      ],
+      "id": "6f3fc76a-5cae-4998-85fa-e5e211de5c02",
+      "name": "Can Create Urgent Clinical Handoff?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const urgent = $json;\nconst source =\n  $('Normalize Clinical Query Analysis').first().json;\n\nreturn [{\n  json: {\n    urgent_response: urgent,\n    handoff_url:\n      `${source.webhook_base_url}/clinic/handoff/create`,\n    handoff_payload: {\n      clinic_name: source.clinic_name,\n      session_id: source.session_id,\n      message_id: source.message_id,\n      mobile: source.mobile || '',\n      urgency: 'urgent',\n      reason:\n        'سؤال تخصصی دارای نشانه‌های خطر فوری شناسایی شد.',\n      patient_message: source.question,\n      risk_flags: source.risk_flags || [],\n      confirm_handoff: true,\n    },\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        -500
+      ],
+      "id": "d904c3dc-aec5-4228-9769-a2737350e6d6",
+      "name": "Prepare Urgent Clinical Handoff"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.handoff_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.handoff_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1080,
+        -500
+      ],
+      "id": "011afb2d-ab0d-41b0-bee0-8be3e907734f",
+      "name": "Call Urgent Clinical Handoff",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const urgent =\n  $('Return Urgent Clinical Safety Message').first().json;\nconst handoff = $json || {};\n\nconst handoffCreated =\n  handoff.success === true;\n\nreturn [{\n  json: {\n    ...urgent,\n    handoff_created: handoffCreated,\n    handoff_result:\n      handoff.result ||\n      (\n        handoffCreated\n          ? 'human_handoff_created'\n          : 'human_handoff_creation_failed'\n      ),\n    handoff_task_id:\n      handoff.handoff_task_id ||\n      handoff.task_id ||\n      null,\n    next_action:\n      handoffCreated\n        ? 'urgent_human_handoff_created'\n        : 'urgent_human_handoff_requires_review',\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        -500
+      ],
+      "id": "23894b0d-a2c4-47b0-95a4-a78b078f68ec",
+      "name": "Return Urgent Clinical Handoff Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$json,\n    handoff_created: false,\n    handoff_result:\n      'conversation_reference_missing',\n    next_action:\n      'urgent_human_handoff_requires_conversation_reference',\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        -330
+      ],
+      "id": "d1f5b5aa-9737-4359-b6d7-5abeae6797aa",
+      "name": "Return Urgent Without Conversation Reference"
+    },
+    {
+      "parameters": {
+        "jsCode": "const answer =\n  $('Normalize Grounded Clinical Answer').first().json;\nconst saved = $json || {};\n\nif (saved.success !== true) {\n  return [{\n    json: {\n      ...answer,\n      success: false,\n      result:\n        saved.result ||\n        'clinical_grounded_answer_save_failed',\n      save_success: false,\n      answer_delivery_allowed: false,\n      requires_human: true,\n      next_action: 'human_review',\n    },\n  }];\n}\n\nreturn [{\n  json: {\n    ...answer,\n    success: true,\n    save_success: true,\n    save_result: saved.result,\n    clinical_knowledge_query_id:\n      saved.clinical_knowledge_query_id ||\n      answer.clinical_knowledge_query_id,\n    answer_status:\n      saved.answer_status ||\n      answer.answer_status,\n    answer_text:\n      saved.answer_text ||\n      answer.answer_text,\n    citations:\n      saved.citations ||\n      answer.citations,\n    answer_delivery_allowed: true,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1480,
+        220
+      ],
+      "id": "3efc0d0c-ee27-4396-ba1e-53653189bd75",
+      "name": "Return Saved Grounded Clinical Answer"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Clinical Question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Clinical Question": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Clinical Question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Answer Clinical Question": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Clinical Question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Clinical Question": {
+      "main": [
+        [
+          {
+            "node": "Is Clinical Question Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Clinical Question Valid?": {
+      "main": [
+        [
+          {
+            "node": "Build Clinical Query Analyzer Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Clinical Question Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Clinical Query Analyzer Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Clinical Query Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Clinical Query Analyzer": {
+      "main": [
+        [
+          {
+            "node": "Normalize Clinical Query Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Clinical Analyzer Model - Select Credential": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Clinical Query Analyzer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Clinical Analysis": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Clinical Query Analyzer",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Clinical Query Analysis": {
+      "main": [
+        [
+          {
+            "node": "Is Clinical Question Urgent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Clinical Question Urgent?": {
+      "main": [
+        [
+          {
+            "node": "Return Urgent Clinical Safety Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Clinical Knowledge Retrieval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Clinical Knowledge Retrieval": {
+      "main": [
+        [
+          {
+            "node": "Call Clinical Knowledge Retrieval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Clinical Knowledge Retrieval": {
+      "main": [
+        [
+          {
+            "node": "Was Reliable Knowledge Retrieved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Was Reliable Knowledge Retrieved?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Grounded Answer Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return No Reliable Clinical Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Grounded Answer Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Grounded Clinical Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Grounded Clinical Answer": {
+      "main": [
+        [
+          {
+            "node": "Normalize Grounded Clinical Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Grounded Answer Model - Select Credential": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Grounded Clinical Answer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Grounded Answer": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Grounded Clinical Answer",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Grounded Clinical Answer": {
+      "main": [
+        [
+          {
+            "node": "Save Grounded Clinical Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Urgent Clinical Safety Message": {
+      "main": [
+        [
+          {
+            "node": "Can Create Urgent Clinical Handoff?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Can Create Urgent Clinical Handoff?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Urgent Clinical Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Urgent Without Conversation Reference",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Urgent Clinical Handoff": {
+      "main": [
+        [
+          {
+            "node": "Call Urgent Clinical Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Urgent Clinical Handoff": {
+      "main": [
+        [
+          {
+            "node": "Return Urgent Clinical Handoff Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Grounded Clinical Answer": {
+      "main": [
+        [
+          {
+            "node": "Return Saved Grounded Clinical Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

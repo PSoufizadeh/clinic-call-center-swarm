@@ -1,0 +1,273 @@
+{
+  "name": "97 - Core - Data Retention and Cleanup - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "cffec025-8b0e-453c-95e0-1fa0296e7850",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f3c79f15-6d6c-48cd-b01a-ac10d2e7deb6",
+              "name": "dry_run",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "73dbd8eb-8b43-4f2b-bdb8-6a728b3e9007",
+              "name": "batch_size",
+              "value": 5000,
+              "type": "number"
+            },
+            {
+              "id": "c9360f44-0b77-4b3b-b226-69984e1cf6a5",
+              "name": "permission_check_retention_days",
+              "value": 90,
+              "type": "number"
+            },
+            {
+              "id": "1c6ea909-7d46-4bdc-a9ef-dc121dd67b44",
+              "name": "delivery_event_retention_days",
+              "value": 180,
+              "type": "number"
+            },
+            {
+              "id": "5a8f2a52-c180-40f2-a6e8-808497cbc122",
+              "name": "message_attempt_retention_days",
+              "value": 180,
+              "type": "number"
+            },
+            {
+              "id": "27869351-f0c8-42f9-a861-847dd5620214",
+              "name": "audit_retention_days",
+              "value": 365,
+              "type": "number"
+            },
+            {
+              "id": "652b03bd-97a4-4ab3-984b-b6d965d935e5",
+              "name": "resolved_error_retention_days",
+              "value": 180,
+              "type": "number"
+            },
+            {
+              "id": "5617d99e-5798-4dba-8d21-4b265b8888b4",
+              "name": "health_snapshot_retention_days",
+              "value": 90,
+              "type": "number"
+            },
+            {
+              "id": "25692157-7e52-4465-8c06-42fc2d1f00eb",
+              "name": "maintenance_run_retention_days",
+              "value": 90,
+              "type": "number"
+            },
+            {
+              "id": "d85b1760-c2a7-4c83-8a3c-469c1e932e2f",
+              "name": "confirm_cleanup",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "c32dab72-543d-4797-8d2e-1b0aa36d2b54",
+      "name": "Manual Cleanup Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/operations/maintenance/cleanup",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "b1377613-6104-4251-81c9-850a70bfed0b",
+      "name": "Webhook - Data Retention Cleanup"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst dry_run = bool(\n  input.dry_run === undefined\n    ? true\n    : input.dry_run\n);\n\nconst batch_size = Number(input.batch_size ?? 5000);\n\nconst fields = {\n  permission_check_retention_days:\n    Number(input.permission_check_retention_days ?? 90),\n\n  delivery_event_retention_days:\n    Number(input.delivery_event_retention_days ?? 180),\n\n  message_attempt_retention_days:\n    Number(input.message_attempt_retention_days ?? 180),\n\n  audit_retention_days:\n    Number(input.audit_retention_days ?? 365),\n\n  resolved_error_retention_days:\n    Number(input.resolved_error_retention_days ?? 180),\n\n  health_snapshot_retention_days:\n    Number(input.health_snapshot_retention_days ?? 90),\n\n  maintenance_run_retention_days:\n    Number(input.maintenance_run_retention_days ?? 90),\n};\n\nconst confirm_cleanup = bool(input.confirm_cleanup);\nconst errors = [];\n\nif (\n  !Number.isInteger(batch_size) ||\n  batch_size < 1 ||\n  batch_size > 100000\n) {\n  errors.push({\n    field: 'batch_size',\n    message: 'اندازه Batch معتبر نیست.',\n  });\n}\n\nfor (const [field, value] of Object.entries(fields)) {\n  if (\n    !Number.isInteger(value) ||\n    value < 7 ||\n    value > 3650\n  ) {\n    errors.push({\n      field,\n      message: 'Retention باید بین 7 و 3650 روز باشد.',\n    });\n  }\n}\n\nif (confirm_cleanup !== true) {\n  errors.push({\n    field: 'confirm_cleanup',\n    message: 'اجرای Cleanup باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    dry_run,\n    batch_size,\n    ...fields,\n    confirm_cleanup,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "44eda093-e1f5-4bc3-9ca9-d50cc704f62b",
+      "name": "Normalize and Validate Cleanup"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c9591d1d-a6cd-480e-bbdd-dde03081efde",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "07946cca-3a40-4a72-bee9-78147ff307d3",
+      "name": "Is Cleanup Request Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BOOLEAN AS dry_run,\n        $2::INTEGER AS batch_size,\n        $3::INTEGER AS permission_days,\n        $4::INTEGER AS delivery_days,\n        $5::INTEGER AS attempt_days,\n        $6::INTEGER AS audit_days,\n        $7::INTEGER AS resolved_error_days,\n        $8::INTEGER AS health_days,\n        $9::INTEGER AS maintenance_days\n),\n\npermission_candidates AS (\n    SELECT permission.id\n    FROM communication_permission_checks permission\n    CROSS JOIN request_data request\n    WHERE permission.checked_at <\n          NOW() -\n          MAKE_INTERVAL(\n              days => request.permission_days\n          )\n    ORDER BY permission.id\n    LIMIT (\n        SELECT batch_size\n        FROM request_data\n    )\n),\n\ndelivery_candidates AS (\n    SELECT delivery.id\n    FROM communication_delivery_events delivery\n    INNER JOIN outbound_messages message\n        ON message.id =\n           delivery.outbound_message_id\n    CROSS JOIN request_data request\n    WHERE delivery.event_at <\n          NOW() -\n          MAKE_INTERVAL(\n              days => request.delivery_days\n          )\n      AND message.status IN (\n            'delivered',\n            'read',\n            'failed',\n            'blocked',\n            'cancelled',\n            'dead_letter'\n          )\n    ORDER BY delivery.id\n    LIMIT (\n        SELECT batch_size\n        FROM request_data\n    )\n),\n\nattempt_candidates AS (\n    SELECT attempt.id\n    FROM outbound_message_attempts attempt\n    INNER JOIN outbound_messages message\n        ON message.id =\n           attempt.outbound_message_id\n    CROSS JOIN request_data request\n    WHERE attempt.created_at <\n          NOW() -\n          MAKE_INTERVAL(\n              days => request.attempt_days\n          )\n      AND message.status IN (\n            'delivered',\n            'read',\n            'failed',\n            'blocked',\n            'cancelled',\n            'dead_letter'\n          )\n    ORDER BY attempt.id\n    LIMIT (\n        SELECT batch_size\n        FROM request_data\n    )\n),\n\naudit_candidates AS (\n    SELECT audit.id\n    FROM system_audit_events audit\n    CROSS JOIN request_data request\n    WHERE audit.created_at <\n          NOW() -\n          MAKE_INTERVAL(\n              days => request.audit_days\n          )\n    ORDER BY audit.id\n    LIMIT (\n        SELECT batch_size\n        FROM request_data\n    )\n),\n\nerror_candidates AS (\n    SELECT error_event.id\n    FROM workflow_error_events error_event\n    CROSS JOIN request_data request\n    WHERE error_event.status IN (\n            'resolved',\n            'ignored'\n          )\n      AND error_event.updated_at <\n          NOW() -\n          MAKE_INTERVAL(\n              days =>\n                request.resolved_error_days\n          )\n    ORDER BY error_event.id\n    LIMIT (\n        SELECT batch_size\n        FROM request_data\n    )\n),\n\nhealth_candidates AS (\n    SELECT snapshot.id\n    FROM system_health_snapshots snapshot\n    CROSS JOIN request_data request\n    WHERE snapshot.checked_at <\n          NOW() -\n          MAKE_INTERVAL(\n              days => request.health_days\n          )\n    ORDER BY snapshot.id\n    LIMIT (\n        SELECT batch_size\n        FROM request_data\n    )\n),\n\nmaintenance_candidates AS (\n    SELECT maintenance.id\n    FROM maintenance_runs maintenance\n    CROSS JOIN request_data request\n    WHERE maintenance.status IN (\n            'completed',\n            'partial',\n            'failed'\n          )\n      AND COALESCE(\n            maintenance.completed_at,\n            maintenance.started_at\n          ) <\n          NOW() -\n          MAKE_INTERVAL(\n              days =>\n                request.maintenance_days\n          )\n    ORDER BY maintenance.id\n    LIMIT (\n        SELECT batch_size\n        FROM request_data\n    )\n),\n\ndeleted_permissions AS (\n    DELETE FROM communication_permission_checks permission\n    USING permission_candidates candidate,\n          request_data request\n    WHERE request.dry_run = FALSE\n      AND permission.id = candidate.id\n    RETURNING permission.id\n),\n\ndeleted_deliveries AS (\n    DELETE FROM communication_delivery_events delivery\n    USING delivery_candidates candidate,\n          request_data request\n    WHERE request.dry_run = FALSE\n      AND delivery.id = candidate.id\n    RETURNING delivery.id\n),\n\ndeleted_attempts AS (\n    DELETE FROM outbound_message_attempts attempt\n    USING attempt_candidates candidate,\n          request_data request\n    WHERE request.dry_run = FALSE\n      AND attempt.id = candidate.id\n    RETURNING attempt.id\n),\n\ndeleted_audits AS (\n    DELETE FROM system_audit_events audit\n    USING audit_candidates candidate,\n          request_data request\n    WHERE request.dry_run = FALSE\n      AND audit.id = candidate.id\n    RETURNING audit.id\n),\n\ndeleted_errors AS (\n    DELETE FROM workflow_error_events error_event\n    USING error_candidates candidate,\n          request_data request\n    WHERE request.dry_run = FALSE\n      AND error_event.id = candidate.id\n    RETURNING error_event.id\n),\n\ndeleted_health AS (\n    DELETE FROM system_health_snapshots snapshot\n    USING health_candidates candidate,\n          request_data request\n    WHERE request.dry_run = FALSE\n      AND snapshot.id = candidate.id\n    RETURNING snapshot.id\n),\n\ndeleted_maintenance AS (\n    DELETE FROM maintenance_runs maintenance\n    USING maintenance_candidates candidate,\n          request_data request\n    WHERE request.dry_run = FALSE\n      AND maintenance.id = candidate.id\n    RETURNING maintenance.id\n),\n\ncleanup_result AS (\n    SELECT JSONB_BUILD_OBJECT(\n        'dry_run',\n            request.dry_run,\n\n        'permission_checks',\n            JSONB_BUILD_OBJECT(\n                'candidates',\n                    (\n                        SELECT COUNT(*)\n                        FROM permission_candidates\n                    ),\n                'deleted',\n                    (\n                        SELECT COUNT(*)\n                        FROM deleted_permissions\n                    )\n            ),\n\n        'delivery_events',\n            JSONB_BUILD_OBJECT(\n                'candidates',\n                    (\n                        SELECT COUNT(*)\n                        FROM delivery_candidates\n                    ),\n                'deleted',\n                    (\n                        SELECT COUNT(*)\n                        FROM deleted_deliveries\n                    )\n            ),\n\n        'message_attempts',\n            JSONB_BUILD_OBJECT(\n                'candidates',\n                    (\n                        SELECT COUNT(*)\n                        FROM attempt_candidates\n                    ),\n                'deleted',\n                    (\n                        SELECT COUNT(*)\n                        FROM deleted_attempts\n                    )\n            ),\n\n        'audit_events',\n            JSONB_BUILD_OBJECT(\n                'candidates',\n                    (\n                        SELECT COUNT(*)\n                        FROM audit_candidates\n                    ),\n                'deleted',\n                    (\n                        SELECT COUNT(*)\n                        FROM deleted_audits\n                    )\n            ),\n\n        'resolved_errors',\n            JSONB_BUILD_OBJECT(\n                'candidates',\n                    (\n                        SELECT COUNT(*)\n                        FROM error_candidates\n                    ),\n                'deleted',\n                    (\n                        SELECT COUNT(*)\n                        FROM deleted_errors\n                    )\n            ),\n\n        'health_snapshots',\n            JSONB_BUILD_OBJECT(\n                'candidates',\n                    (\n                        SELECT COUNT(*)\n                        FROM health_candidates\n                    ),\n                'deleted',\n                    (\n                        SELECT COUNT(*)\n                        FROM deleted_health\n                    )\n            ),\n\n        'maintenance_runs',\n            JSONB_BUILD_OBJECT(\n                'candidates',\n                    (\n                        SELECT COUNT(*)\n                        FROM maintenance_candidates\n                    ),\n                'deleted',\n                    (\n                        SELECT COUNT(*)\n                        FROM deleted_maintenance\n                    )\n            )\n    ) AS result\n    FROM request_data request\n),\n\ninserted_run AS (\n    INSERT INTO maintenance_runs (\n        run_type,\n        status,\n        parameters,\n        result,\n        started_at,\n        completed_at\n    )\n    SELECT\n        'data_retention_cleanup',\n        'completed',\n        JSONB_BUILD_OBJECT(\n            'dry_run',\n                request.dry_run,\n            'batch_size',\n                request.batch_size,\n            'permission_days',\n                request.permission_days,\n            'delivery_days',\n                request.delivery_days,\n            'attempt_days',\n                request.attempt_days,\n            'audit_days',\n                request.audit_days,\n            'resolved_error_days',\n                request.resolved_error_days,\n            'health_days',\n                request.health_days,\n            'maintenance_days',\n                request.maintenance_days\n        ),\n        cleanup_result.result,\n        NOW(),\n        NOW()\n    FROM request_data request\n    CROSS JOIN cleanup_result\n    RETURNING id\n)\n\nSELECT\n    TRUE AS success,\n\n    CASE\n        WHEN request.dry_run = TRUE\n            THEN 'cleanup_dry_run_completed'\n        ELSE 'cleanup_completed'\n    END AS result,\n\n    request.dry_run,\n\n    (\n        SELECT result\n        FROM cleanup_result\n    ) AS cleanup_result,\n\n    (\n        SELECT id\n        FROM inserted_run\n    ) AS maintenance_run_id\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.dry_run,\n  $json.batch_size,\n  $json.permission_check_retention_days,\n  $json.delivery_event_retention_days,\n  $json.message_attempt_retention_days,\n  $json.audit_retention_days,\n  $json.resolved_error_retention_days,\n  $json.health_snapshot_retention_days,\n  $json.maintenance_run_retention_days\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "9ba1d26e-389c-4bae-b6e2-49627c0a44f7",
+      "name": "Run Data Retention Cleanup"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'تنظیمات Data Retention نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "2f18ec9d-9425-4dc7-9be0-582ee539d9b8",
+      "name": "Return Cleanup Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## Cleanup کنترل‌شده\n\nپیش‌فرض dry_run=true است.\n\nفقط Log و Eventهای قدیمی حذف می‌شوند؛ داده‌های اصلی بیمار، نوبت، Consent، پیام و Dead Letter خودکار حذف نمی‌شوند.\n\nابتدا Dry Run را بررسی کن و سپس dry_run=false اجرا کن.",
+        "height": 390,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -300
+      ],
+      "id": "1ad23d2a-5eda-493c-97cf-e4bd55431a9d",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Cleanup Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Cleanup Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Cleanup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Data Retention Cleanup": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Cleanup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Cleanup": {
+      "main": [
+        [
+          {
+            "node": "Is Cleanup Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Cleanup Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Run Data Retention Cleanup",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Cleanup Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

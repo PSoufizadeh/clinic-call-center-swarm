@@ -1,0 +1,67 @@
+{
+  "name": "29 - DB - Add Human Handoff Tasks",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "5f3e1a6e-b309-4491-ac7e-d26eb2792d87",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS human_handoff_tasks (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    patient_id BIGINT\n        REFERENCES patients(id)\n        ON DELETE SET NULL,\n\n    appointment_id BIGINT\n        REFERENCES appointments(id)\n        ON DELETE SET NULL,\n\n    task_type TEXT NOT NULL\n        CHECK (\n            task_type IN (\n                'confirmation_no_response',\n                'reschedule_request',\n                'calendar_sync_issue',\n                'medical_review',\n                'complaint',\n                'manual_followup'\n            )\n        ),\n\n    source_type TEXT NOT NULL\n        CHECK (\n            source_type IN (\n                'appointment_confirmation',\n                'disruption_case',\n                'waitlist_offer',\n                'appointment',\n                'manual'\n            )\n        ),\n\n    source_record_id BIGINT,\n\n    priority TEXT NOT NULL DEFAULT 'normal'\n        CHECK (\n            priority IN (\n                'low',\n                'normal',\n                'high',\n                'urgent'\n            )\n        ),\n\n    status TEXT NOT NULL DEFAULT 'open'\n        CHECK (\n            status IN (\n                'open',\n                'in_progress',\n                'resolved',\n                'cancelled'\n            )\n        ),\n\n    reason TEXT NOT NULL,\n    due_at TIMESTAMPTZ,\n\n    assigned_to TEXT,\n\n    resolution_code TEXT,\n    resolution_note TEXT,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    resolved_at TIMESTAMPTZ\n);\n\nCREATE UNIQUE INDEX IF NOT EXISTS uq_handoff_source_task\n    ON human_handoff_tasks(\n        source_type,\n        source_record_id,\n        task_type\n    )\n    WHERE source_record_id IS NOT NULL;\n\nCREATE INDEX IF NOT EXISTS idx_handoff_open_queue\n    ON human_handoff_tasks(\n        status,\n        priority,\n        due_at,\n        created_at\n    )\n    WHERE status IN ('open', 'in_progress');\n\nCREATE INDEX IF NOT EXISTS idx_handoff_appointment\n    ON human_handoff_tasks(appointment_id, created_at DESC)\n    WHERE appointment_id IS NOT NULL;\n\nCREATE INDEX IF NOT EXISTS idx_handoff_patient\n    ON human_handoff_tasks(patient_id, created_at DESC)\n    WHERE patient_id IS NOT NULL;\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار ارجاع موارد نیازمند مداخله انسانی ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "75177949-c4bd-48e0-8e9b-3e7c5793d111",
+      "name": "Create Human Handoff Structure"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nاین Workflow جدول `human_handoff_tasks` را برای صف کارهای منشی انسانی ایجاد می‌کند.\n\nمواردی مانند عدم پاسخ بیمار، درخواست جابه‌جایی، خطای Calendar و موارد حساس در این صف ثبت می‌شوند.\n\nپس از اجرای موفق، Workflow را غیرفعال نگه دار.",
+        "height": 300,
+        "width": 440
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -540,
+        -250
+      ],
+      "id": "8c13fc65-6263-4eb4-a6e1-0bf2f630b2be",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Human Handoff Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

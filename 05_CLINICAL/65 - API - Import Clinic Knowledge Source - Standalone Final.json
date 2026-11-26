@@ -1,0 +1,327 @@
+{
+  "name": "65 - API - Import Clinic Knowledge Source - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "e746efef-1aef-4ead-b5cc-cc979c249880",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "178d1827-fe6c-4cf6-8962-1cbe56ee6dba",
+              "name": "action",
+              "value": "create_text_document",
+              "type": "string"
+            },
+            {
+              "id": "c6e0dd61-3fdf-4f6b-92eb-7b3410c7f8dc",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "74f15c98-4605-48d0-b9c0-836107591c56",
+              "name": "document_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "61e20328-03b7-468b-935f-41683fead436",
+              "name": "title",
+              "value": "راهنمای کلینیک",
+              "type": "string"
+            },
+            {
+              "id": "da6b4258-6860-470a-a4f5-bf0c66f6c0e4",
+              "name": "source_type",
+              "value": "manual_text",
+              "type": "string"
+            },
+            {
+              "id": "9e800941-efd4-4094-ae33-e8d0a850d59b",
+              "name": "original_filename",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "0f65a0f8-bca0-4864-b929-9dff187fe593",
+              "name": "mime_type",
+              "value": "text/plain",
+              "type": "string"
+            },
+            {
+              "id": "354da256-1366-4f77-8855-7ec08c8a1d85",
+              "name": "specialty",
+              "value": "general",
+              "type": "string"
+            },
+            {
+              "id": "eb07a219-fd64-4428-9e0d-6848794b3406",
+              "name": "topic",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "69ba7a6d-426f-41d7-9d56-b72e0587f729",
+              "name": "service_name",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "d20726b2-fd63-448e-8e1f-eaee540e0a79",
+              "name": "version_label",
+              "value": "1.0",
+              "type": "string"
+            },
+            {
+              "id": "53f20da9-f495-4cbf-bb23-f4f2b0260f23",
+              "name": "source_priority",
+              "value": 70,
+              "type": "number"
+            },
+            {
+              "id": "2cfa87fd-64b3-4ef4-81ac-e8136f1feeca",
+              "name": "allowed_use",
+              "value": "clinical_information",
+              "type": "string"
+            },
+            {
+              "id": "de3c33f1-2fbd-481b-9892-196ac5b9c14c",
+              "name": "raw_text",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "8b3e2706-6ec8-4e5c-ad88-a2245b391654",
+              "name": "qa_items",
+              "value": "[]",
+              "type": "string"
+            },
+            {
+              "id": "f3414ee9-473b-42e3-9363-a3fd932331e1",
+              "name": "response_policy",
+              "value": "{}",
+              "type": "string"
+            },
+            {
+              "id": "5482f653-1f6d-4352-8b0b-d9c6f1d8d7ad",
+              "name": "metadata",
+              "value": "{}",
+              "type": "string"
+            },
+            {
+              "id": "74ca24b6-7eaf-4235-b171-c33c847062aa",
+              "name": "approved_by",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "dd3eeda8-88dc-408e-ba06-8a16a52210f6",
+              "name": "confirm_action",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "4942373d-d5ee-4cba-9eaa-c13fa9cf4c03",
+      "name": "Manual Knowledge Import"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/clinical-knowledge/import",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "37e3c2d4-3225-4e0d-8052-d78204f3c1da",
+      "name": "Webhook - Import Knowledge Source"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\nconst text = (v) => v === null || v === undefined ? '' : String(v).trim();\nconst bool = (v) => typeof v === 'boolean' ? v : ['true','1','yes','on'].includes(text(v).toLowerCase());\nconst parse = (v, fallback) => {\n  if (typeof v === 'string') {\n    try { return JSON.parse(v || JSON.stringify(fallback)); } catch { return null; }\n  }\n  return v ?? fallback;\n};\n\nconst action = text(input.action || 'create_text_document').toLowerCase();\nconst clinic_name = text(input.clinic_name);\nconst document_id = Number(input.document_id ?? 0);\nconst title = text(input.title);\nconst source_type = text(input.source_type || 'manual_text').toLowerCase();\nconst original_filename = text(input.original_filename);\nconst mime_type = text(input.mime_type);\nconst specialty = text(input.specialty || 'general').toLowerCase();\nconst topic = text(input.topic);\nconst service_name = text(input.service_name);\nconst version_label = text(input.version_label || '1.0');\nconst source_priority = Number(input.source_priority ?? 50);\nconst allowed_use = text(input.allowed_use || 'patient_information').toLowerCase();\nconst raw_text = text(input.raw_text);\nconst approved_by = text(input.approved_by);\nconst confirm_action = bool(input.confirm_action);\n\nlet qa_items = parse(input.qa_items, []);\nlet response_policy = parse(input.response_policy, {});\nlet metadata = parse(input.metadata, {});\n\nconst errors = [];\nconst actions = ['create_text_document','create_qa_document','publish','archive','list'];\nconst sources = ['pdf','docx','txt','html','manual_text','qa','other'];\nconst uses = ['patient_information','pre_visit_guidance','post_visit_guidance','clinical_information','internal_only'];\n\nif (!actions.includes(action)) errors.push({field:'action',message:'اقدام معتبر نیست.'});\nif (!clinic_name) errors.push({field:'clinic_name',message:'نام کلینیک الزامی است.'});\nif (['publish','archive'].includes(action) && (!Number.isInteger(document_id) || document_id < 1)) {\n  errors.push({field:'document_id',message:'شناسه سند الزامی است.'});\n}\nif (['create_text_document','create_qa_document'].includes(action) && !title) {\n  errors.push({field:'title',message:'عنوان سند الزامی است.'});\n}\nif (!sources.includes(source_type)) errors.push({field:'source_type',message:'نوع منبع معتبر نیست.'});\nif (!Number.isInteger(source_priority) || source_priority < 1 || source_priority > 100) {\n  errors.push({field:'source_priority',message:'اولویت منبع باید بین 1 و 100 باشد.'});\n}\nif (!uses.includes(allowed_use)) errors.push({field:'allowed_use',message:'نوع استفاده معتبر نیست.'});\nif (action === 'create_text_document' && raw_text.length < 20) {\n  errors.push({field:'raw_text',message:'متن سند باید حداقل 20 کاراکتر باشد.'});\n}\nif (action === 'create_qa_document' && (!Array.isArray(qa_items) || qa_items.length < 1 || qa_items.length > 2000)) {\n  errors.push({field:'qa_items',message:'qa_items باید آرایه‌ای با 1 تا 2000 مورد باشد.'});\n}\nif (!Array.isArray(qa_items)) qa_items = [];\nif (!response_policy || Array.isArray(response_policy) || typeof response_policy !== 'object') {\n  errors.push({field:'response_policy',message:'response_policy باید شیء JSON باشد.'});\n  response_policy = {};\n}\nif (!metadata || Array.isArray(metadata) || typeof metadata !== 'object') {\n  errors.push({field:'metadata',message:'metadata باید شیء JSON باشد.'});\n  metadata = {};\n}\nif (action === 'publish' && !approved_by) {\n  errors.push({field:'approved_by',message:'نام تأییدکننده برای انتشار الزامی است.'});\n}\nif (action !== 'list' && confirm_action !== true) {\n  errors.push({field:'confirm_action',message:'عملیات باید تأیید شود.'});\n}\n\nreturn [{json:{\n  action,clinic_name,document_id,title,source_type,original_filename,mime_type,\n  specialty,topic,service_name,version_label,source_priority,allowed_use,raw_text,\n  qa_items_json:JSON.stringify(qa_items),\n  response_policy_json:JSON.stringify(response_policy),\n  metadata_json:JSON.stringify(metadata),\n  approved_by,confirm_action,\n  validation_status:errors.length?'invalid':'valid',errors\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "4e2b2222-45b0-4f40-ac0e-9a0d1aa4946c",
+      "name": "Normalize and Validate Knowledge Import"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1285b041-bbd1-4b0b-bd9c-827ef12fcd8d",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "a38efb0b-0e47-4fc1-811d-5c2ea8959a5e",
+      "name": "Is Knowledge Import Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH r AS (\n  SELECT $1::TEXT action,$2::TEXT clinic_name,NULLIF($3::BIGINT,0) document_id,\n         NULLIF($4::TEXT,'') title,$5::TEXT source_type,NULLIF($6::TEXT,'') original_filename,\n         NULLIF($7::TEXT,'') mime_type,$8::TEXT specialty,NULLIF($9::TEXT,'') topic,\n         NULLIF($10::TEXT,'') service_name,$11::TEXT version_label,$12::INTEGER source_priority,\n         $13::TEXT allowed_use,NULLIF($14::TEXT,'') raw_text,$15::JSONB qa_items,\n         $16::JSONB response_policy,$17::JSONB metadata,NULLIF($18::TEXT,'') approved_by\n),\nc AS (\n  SELECT clinics.id clinic_id,clinics.name clinic_name,r.*\n  FROM clinics,r WHERE clinics.name=r.clinic_name AND clinics.is_active=TRUE LIMIT 1\n),\ns AS (\n  SELECT services.id service_id,services.name service_name\n  FROM services,c WHERE services.clinic_id=c.clinic_id\n    AND LOWER(services.name)=LOWER(c.service_name)\n    AND c.service_name IS NOT NULL AND services.is_active=TRUE LIMIT 1\n),\ncreated AS (\n  INSERT INTO clinic_knowledge_documents (\n    clinic_id,service_id,title,source_type,original_filename,mime_type,specialty,topic,\n    version_label,status,source_priority,raw_text,content_hash,allowed_use,response_policy,metadata\n  )\n  SELECT c.clinic_id,(SELECT service_id FROM s),c.title,\n         CASE WHEN c.action='create_qa_document' THEN 'qa' ELSE c.source_type END,\n         c.original_filename,c.mime_type,c.specialty,c.topic,c.version_label,\n         CASE WHEN c.action='create_qa_document' THEN 'review' ELSE 'draft' END,\n         c.source_priority,c.raw_text,MD5(COALESCE(c.raw_text,c.qa_items::TEXT)),\n         c.allowed_use,c.response_policy,c.metadata\n  FROM c\n  WHERE c.action IN ('create_text_document','create_qa_document')\n    AND (c.service_name IS NULL OR EXISTS(SELECT 1 FROM s))\n  RETURNING *\n),\njob AS (\n  INSERT INTO clinic_knowledge_ingestion_jobs(document_id,status)\n  SELECT id,'pending' FROM created WHERE source_type<>'qa'\n  ON CONFLICT(document_id) DO UPDATE SET status='pending',updated_at=NOW()\n  RETURNING *\n),\nqa_rows AS (\n  SELECT d.id document_id,d.clinic_id,d.service_id,d.specialty,d.topic,d.source_priority,i\n  FROM created d CROSS JOIN c CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(c.qa_items) i\n  WHERE d.source_type='qa'\n),\nqa_inserted AS (\n  INSERT INTO clinic_knowledge_qa (\n    clinic_id,document_id,service_id,specialty,topic,question,answer,\n    question_variants,keywords,requires_human_confirmation,safety_category,\n    source_priority,status\n  )\n  SELECT q.clinic_id,q.document_id,q.service_id,\n         COALESCE(NULLIF(q.i->>'specialty',''),q.specialty),\n         COALESCE(NULLIF(q.i->>'topic',''),q.topic),\n         q.i->>'question',q.i->>'answer',\n         COALESCE(q.i->'question_variants','[]'::JSONB),\n         COALESCE(q.i->'keywords','[]'::JSONB),\n         COALESCE((q.i->>'requires_human_confirmation')::BOOLEAN,FALSE),\n         COALESCE(NULLIF(q.i->>'safety_category',''),'general'),\n         COALESCE((q.i->>'source_priority')::INTEGER,q.source_priority),'draft'\n  FROM qa_rows q\n  WHERE NULLIF(q.i->>'question','') IS NOT NULL AND NULLIF(q.i->>'answer','') IS NOT NULL\n  RETURNING *\n),\npublished AS (\n  UPDATE clinic_knowledge_documents d\n  SET status='published',approved_by=c.approved_by,approved_at=NOW(),updated_at=NOW()\n  FROM c\n  WHERE c.action='publish' AND d.id=c.document_id AND d.clinic_id=c.clinic_id\n    AND ((d.source_type='qa' AND EXISTS(SELECT 1 FROM clinic_knowledge_qa q WHERE q.document_id=d.id))\n      OR (d.source_type<>'qa' AND EXISTS(SELECT 1 FROM clinic_knowledge_chunks k WHERE k.document_id=d.id)))\n  RETURNING d.*\n),\npublished_qa AS (\n  UPDATE clinic_knowledge_qa q\n  SET status='published',approved_by=c.approved_by,approved_at=NOW(),updated_at=NOW()\n  FROM c,published d WHERE q.document_id=d.id RETURNING q.id\n),\narchived AS (\n  UPDATE clinic_knowledge_documents d\n  SET status='archived',updated_at=NOW()\n  FROM c WHERE c.action='archive' AND d.id=c.document_id AND d.clinic_id=c.clinic_id\n  RETURNING d.*\n),\narchived_qa AS (\n  UPDATE clinic_knowledge_qa q SET status='archived',updated_at=NOW()\n  FROM archived d WHERE q.document_id=d.id RETURNING q.id\n),\nlisted AS (\n  SELECT d.id,d.title,d.source_type,d.original_filename,d.specialty,d.topic,\n         s2.name service_name,d.version_label,d.status,d.source_priority,d.allowed_use,\n         d.approved_by,d.approved_at,d.created_at,d.updated_at,\n         (SELECT COUNT(*) FROM clinic_knowledge_chunks k WHERE k.document_id=d.id) chunk_count,\n         (SELECT COUNT(*) FROM clinic_knowledge_qa q WHERE q.document_id=d.id) qa_count\n  FROM clinic_knowledge_documents d JOIN c ON c.clinic_id=d.clinic_id\n  LEFT JOIN services s2 ON s2.id=d.service_id\n  WHERE c.action='list'\n  ORDER BY d.updated_at DESC,d.id DESC LIMIT 500\n)\nSELECT\n  CASE\n    WHEN NOT EXISTS(SELECT 1 FROM c) THEN FALSE\n    WHEN r.service_name IS NOT NULL AND NOT EXISTS(SELECT 1 FROM s)\n      AND r.action IN ('create_text_document','create_qa_document') THEN FALSE\n    WHEN r.action IN ('create_text_document','create_qa_document') AND NOT EXISTS(SELECT 1 FROM created) THEN FALSE\n    WHEN r.action='publish' AND NOT EXISTS(SELECT 1 FROM published) THEN FALSE\n    WHEN r.action='archive' AND NOT EXISTS(SELECT 1 FROM archived) THEN FALSE\n    ELSE TRUE\n  END success,\n  CASE\n    WHEN NOT EXISTS(SELECT 1 FROM c) THEN 'clinic_not_found'\n    WHEN r.service_name IS NOT NULL AND NOT EXISTS(SELECT 1 FROM s) THEN 'service_not_found'\n    WHEN r.action='create_text_document' THEN 'knowledge_document_created'\n    WHEN r.action='create_qa_document' THEN 'knowledge_qa_document_created'\n    WHEN r.action='publish' THEN 'knowledge_document_published'\n    WHEN r.action='archive' THEN 'knowledge_document_archived'\n    ELSE 'knowledge_documents_listed'\n  END result,\n  COALESCE((SELECT id FROM created),(SELECT id FROM published),(SELECT id FROM archived)) document_id,\n  (SELECT id FROM job) ingestion_job_id,\n  COALESCE((SELECT COUNT(*) FROM qa_inserted),0) qa_items_created,\n  COALESCE((SELECT JSONB_AGG(TO_JSONB(listed)) FROM listed),'[]'::JSONB) documents,\n  CASE r.action\n    WHEN 'create_text_document' THEN 'chunk_and_index_document'\n    WHEN 'create_qa_document' THEN 'review_and_publish_document'\n    WHEN 'publish' THEN 'available_for_rag'\n    ELSE 'none'\n  END next_action\nFROM r;",
+        "options": {
+          "queryReplacement": "={{ [ $json.action,$json.clinic_name,$json.document_id,$json.title,$json.source_type,$json.original_filename,$json.mime_type,$json.specialty,$json.topic,$json.service_name,$json.version_label,$json.source_priority,$json.allowed_use,$json.raw_text,$json.qa_items_json,$json.response_policy_json,$json.metadata_json,$json.approved_by ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "54774689-b7ee-4bd1-bf0d-2079e710ca68",
+      "name": "Import and Manage Knowledge Source"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات منبع دانش نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "8d1118b6-6fc9-4d89-8af4-89a8476b04ff",
+      "name": "Return Knowledge Import Error"
+    },
+    {
+      "parameters": {
+        "content": "## ورود سند یا Q&A\n\nمتن PDF/Word پس از استخراج در raw_text قرار می‌گیرد.\n\nفقط منابع published وارد RAG می‌شوند.",
+        "height": 340,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -270
+      ],
+      "id": "a005cc7f-43bd-4a01-9f54-ce6c88d35cc7",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Knowledge Import",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Knowledge Import": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Knowledge Import",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Import Knowledge Source": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Knowledge Import",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Knowledge Import": {
+      "main": [
+        [
+          {
+            "node": "Is Knowledge Import Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Knowledge Import Valid?": {
+      "main": [
+        [
+          {
+            "node": "Import and Manage Knowledge Source",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Knowledge Import Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

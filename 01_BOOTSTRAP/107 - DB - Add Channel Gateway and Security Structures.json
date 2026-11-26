@@ -1,0 +1,67 @@
+{
+  "name": "107 - DB - Add Channel Gateway and Security Structures",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "86bd76a5-eb91-4242-b399-0f373b3aea9d",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE EXTENSION IF NOT EXISTS pgcrypto;\n\nCREATE TABLE IF NOT EXISTS channel_gateway_clients (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    client_name TEXT NOT NULL,\n\n    channel TEXT NOT NULL\n        CHECK (\n            channel IN (\n                'whatsapp',\n                'sms',\n                'phone',\n                'telegram',\n                'webchat',\n                'manual',\n                'api',\n                'email',\n                'web_push',\n                'in_app'\n            )\n        ),\n\n    provider_name TEXT,\n\n    auth_mode TEXT NOT NULL DEFAULT 'api_key'\n        CHECK (\n            auth_mode IN (\n                'api_key',\n                'provider_signature',\n                'development_none'\n            )\n        ),\n\n    api_key_hash TEXT,\n\n    signature_verifier_url TEXT,\n    signature_credential_reference TEXT,\n\n    allowed_ip_addresses TEXT[] NOT NULL\n        DEFAULT ARRAY[]::TEXT[],\n\n    rate_limit_requests INTEGER NOT NULL DEFAULT 120\n        CHECK (\n            rate_limit_requests BETWEEN 1 AND 100000\n        ),\n\n    rate_limit_window_seconds INTEGER NOT NULL DEFAULT 60\n        CHECK (\n            rate_limit_window_seconds BETWEEN 1 AND 86400\n        ),\n\n    replay_window_seconds INTEGER NOT NULL DEFAULT 86400\n        CHECK (\n            replay_window_seconds BETWEEN 60 AND 604800\n        ),\n\n    enabled BOOLEAN NOT NULL DEFAULT FALSE,\n\n    metadata JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    UNIQUE (\n        clinic_id,\n        client_name,\n        channel\n    )\n);\n\nCREATE TABLE IF NOT EXISTS channel_gateway_requests (\n    id BIGSERIAL PRIMARY KEY,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    client_id BIGINT\n        REFERENCES channel_gateway_clients(id)\n        ON DELETE SET NULL,\n\n    gateway_event_type TEXT NOT NULL\n        CHECK (\n            gateway_event_type IN (\n                'inbound_message',\n                'delivery_status'\n            )\n        ),\n\n    channel TEXT NOT NULL,\n\n    external_event_id TEXT NOT NULL,\n    external_message_id TEXT,\n\n    request_hash TEXT NOT NULL,\n    replay_key TEXT NOT NULL,\n\n    source_ip TEXT,\n    request_timestamp TIMESTAMPTZ,\n\n    authentication_status TEXT NOT NULL DEFAULT 'pending'\n        CHECK (\n            authentication_status IN (\n                'pending',\n                'allowed',\n                'denied',\n                'not_configured'\n            )\n        ),\n\n    rate_limit_status TEXT NOT NULL DEFAULT 'pending'\n        CHECK (\n            rate_limit_status IN (\n                'pending',\n                'allowed',\n                'blocked'\n            )\n        ),\n\n    processing_status TEXT NOT NULL DEFAULT 'received'\n        CHECK (\n            processing_status IN (\n                'received',\n                'accepted',\n                'duplicate',\n                'rate_limited',\n                'authentication_failed',\n                'processed',\n                'failed'\n            )\n        ),\n\n    result JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    received_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    processed_at TIMESTAMPTZ,\n\n    UNIQUE (\n        replay_key\n    )\n);\n\nCREATE TABLE IF NOT EXISTS channel_rate_limit_counters (\n    id BIGSERIAL PRIMARY KEY,\n\n    client_id BIGINT NOT NULL\n        REFERENCES channel_gateway_clients(id)\n        ON DELETE CASCADE,\n\n    window_start TIMESTAMPTZ NOT NULL,\n    window_seconds INTEGER NOT NULL,\n\n    request_count INTEGER NOT NULL DEFAULT 0\n        CHECK (\n            request_count >= 0\n        ),\n\n    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n    UNIQUE (\n        client_id,\n        window_start,\n        window_seconds\n    )\n);\n\nCREATE TABLE IF NOT EXISTS inbound_channel_messages (\n    id BIGSERIAL PRIMARY KEY,\n\n    gateway_request_id BIGINT NOT NULL\n        REFERENCES channel_gateway_requests(id)\n        ON DELETE CASCADE,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    client_id BIGINT\n        REFERENCES channel_gateway_clients(id)\n        ON DELETE SET NULL,\n\n    channel TEXT NOT NULL,\n\n    external_conversation_id TEXT NOT NULL,\n    external_message_id TEXT NOT NULL,\n\n    sender TEXT,\n    message_type TEXT NOT NULL,\n    message_text TEXT,\n\n    attachments JSONB NOT NULL DEFAULT '[]'::JSONB,\n    normalized_payload JSONB NOT NULL DEFAULT '{}'::JSONB,\n    raw_payload JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    language TEXT NOT NULL DEFAULT 'unknown',\n\n    processing_status TEXT NOT NULL DEFAULT 'received'\n        CHECK (\n            processing_status IN (\n                'received',\n                'forwarded',\n                'processed',\n                'failed'\n            )\n        ),\n\n    orchestrator_response JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    processed_at TIMESTAMPTZ,\n\n    UNIQUE (\n        clinic_id,\n        channel,\n        external_message_id\n    )\n);\n\nCREATE TABLE IF NOT EXISTS provider_callback_events (\n    id BIGSERIAL PRIMARY KEY,\n\n    gateway_request_id BIGINT NOT NULL\n        REFERENCES channel_gateway_requests(id)\n        ON DELETE CASCADE,\n\n    clinic_id BIGINT NOT NULL\n        REFERENCES clinics(id)\n        ON DELETE CASCADE,\n\n    client_id BIGINT\n        REFERENCES channel_gateway_clients(id)\n        ON DELETE SET NULL,\n\n    provider_name TEXT,\n    channel TEXT NOT NULL,\n\n    callback_type TEXT NOT NULL\n        CHECK (\n            callback_type IN (\n                'inbound_message',\n                'delivery_status'\n            )\n        ),\n\n    external_event_id TEXT NOT NULL,\n    external_message_id TEXT,\n\n    normalized_event JSONB NOT NULL DEFAULT '{}'::JSONB,\n    raw_event JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    processing_status TEXT NOT NULL DEFAULT 'received'\n        CHECK (\n            processing_status IN (\n                'received',\n                'forwarded',\n                'processed',\n                'failed'\n            )\n        ),\n\n    processing_result JSONB NOT NULL DEFAULT '{}'::JSONB,\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    processed_at TIMESTAMPTZ,\n\n    UNIQUE (\n        clinic_id,\n        provider_name,\n        external_event_id\n    )\n);\n\nCREATE INDEX IF NOT EXISTS idx_gateway_clients_lookup\nON channel_gateway_clients(\n    clinic_id,\n    client_name,\n    channel,\n    enabled\n);\n\nCREATE INDEX IF NOT EXISTS idx_gateway_requests_recent\nON channel_gateway_requests(\n    clinic_id,\n    received_at DESC\n);\n\nCREATE INDEX IF NOT EXISTS idx_gateway_requests_status\nON channel_gateway_requests(\n    processing_status,\n    received_at\n);\n\nCREATE INDEX IF NOT EXISTS idx_rate_limit_counters_recent\nON channel_rate_limit_counters(\n    client_id,\n    window_start DESC\n);\n\nCREATE INDEX IF NOT EXISTS idx_inbound_channel_messages_recent\nON inbound_channel_messages(\n    clinic_id,\n    channel,\n    created_at DESC\n);\n\nCREATE INDEX IF NOT EXISTS idx_provider_callbacks_recent\nON provider_callback_events(\n    clinic_id,\n    callback_type,\n    created_at DESC\n);\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار Channel Gateway، Authentication، Replay Protection و Rate Limiting ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "a5cc9aee-4fc4-4d6e-922d-8a75634bfb25",
+      "name": "Create Channel Gateway Structures"
+    },
+    {
+      "parameters": {
+        "content": "## فقط یک‌بار اجرا شود\n\nساختارهای ایجادشده:\n- Gateway Clients\n- Gateway Request Ledger\n- Rate Limit Counters\n- Inbound Message Registry\n- Provider Callback Registry\n\nAPI Key خام ذخیره نمی‌شود؛ فقط SHA-256 Hash در دیتابیس قرار می‌گیرد.",
+        "height": 400,
+        "width": 540
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -600,
+        -310
+      ],
+      "id": "9d8e690c-1c88-46bc-aad0-6d95c7c4d9bf",
+      "name": "Migration Guide"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Create Channel Gateway Structures",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

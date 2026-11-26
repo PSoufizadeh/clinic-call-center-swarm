@@ -1,0 +1,53 @@
+{
+  "name": "15 - DB - Add Appointment Reschedule History",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        16
+      ],
+      "id": "dbadb4a4-99ab-43ea-a424-037eee2cdb4d",
+      "name": "Run Migration Once"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "ALTER TABLE appointments\n    ADD COLUMN IF NOT EXISTS reschedule_count INTEGER NOT NULL DEFAULT 0;\n\nALTER TABLE appointments\n    ADD COLUMN IF NOT EXISTS rescheduled_at TIMESTAMPTZ;\n\nALTER TABLE appointments\n    ADD COLUMN IF NOT EXISTS last_reschedule_reason TEXT;\n\nCREATE TABLE IF NOT EXISTS appointment_reschedule_history (\n    id BIGSERIAL PRIMARY KEY,\n\n    appointment_id BIGINT NOT NULL\n        REFERENCES appointments(id)\n        ON DELETE CASCADE,\n\n    old_starts_at TIMESTAMPTZ NOT NULL,\n    old_ends_at TIMESTAMPTZ NOT NULL,\n\n    new_starts_at TIMESTAMPTZ NOT NULL,\n    new_ends_at TIMESTAMPTZ NOT NULL,\n\n    reason TEXT,\n    source TEXT NOT NULL DEFAULT 'assistant',\n\n    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\nCREATE INDEX IF NOT EXISTS idx_reschedule_history_appointment\n    ON appointment_reschedule_history(appointment_id, created_at DESC);\n\nSELECT\n    TRUE AS success,\n    'migration_completed' AS result,\n    'ساختار ثبت تاریخچه جابه‌جایی نوبت با موفقیت ایجاد شد.' AS message;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        16
+      ],
+      "id": "8f11b64f-d298-459b-a30d-2787f3be2c72",
+      "name": "Add Reschedule History Structure"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Migration Once": {
+      "main": [
+        [
+          {
+            "node": "Add Reschedule History Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": [],
+  "id": "cX5EVK6FvR8onI5L"
+}

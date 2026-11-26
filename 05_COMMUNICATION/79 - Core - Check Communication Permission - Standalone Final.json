@@ -1,0 +1,353 @@
+{
+  "name": "79 - Core - Check Communication Permission - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1180,
+        208
+      ],
+      "id": "f5ed88ec-2e45-4799-ab57-938cc564c55d",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9649483a-d672-4a73-8331-01f135746726",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "bff01a15-ae45-466e-bbc5-ca193402f32f",
+              "name": "mobile",
+              "value": "09000000000",
+              "type": "string"
+            },
+            {
+              "id": "0002182e-009b-4477-aad0-b5cca99ab1df",
+              "name": "channel",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "3ff86116-6d3f-45ca-8aa3-6ad3b78ee083",
+              "name": "purpose",
+              "value": "appointment_reminder",
+              "type": "string"
+            },
+            {
+              "id": "01eb0c9c-e6f0-469f-9b5f-3403ae3d7f4d",
+              "name": "requested_at",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "4a4ed01c-6fd3-4a5d-aac5-ebb3880bdbe2",
+              "name": "request_reference",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "9130756d-7cf7-4075-96e4-670ba1aaf30f",
+              "name": "confirm_check",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -940,
+        208
+      ],
+      "id": "da520d19-bf1b-4169-bc37-080cb4a6f5e7",
+      "name": "Manual Permission Check"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/communications/check-permission",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -940,
+        -80
+      ],
+      "id": "659af9cc-3178-4892-8dd5-4c3b202ae278",
+      "name": "Webhook - Check Communication Permission"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst clinic_name = text(input.clinic_name);\nconst mobile = text(input.mobile);\nconst channel = text(input.channel).toLowerCase();\nconst purpose = text(input.purpose).toLowerCase();\nconst requested_at = text(input.requested_at);\nconst request_reference = text(input.request_reference);\nconst confirm_check = bool(input.confirm_check);\n\nconst channels = [\n  'whatsapp',\n  'sms',\n  'email',\n  'phone',\n  'web_push',\n  'in_app',\n];\n\nconst purposes = [\n  'appointment_reminder',\n  'appointment_update',\n  'waitlist_offer',\n  'post_visit_followup',\n  'clinical_followup',\n  'marketing',\n  'satisfaction_survey',\n  'general_information',\n  'human_handoff',\n];\n\nconst errors = [];\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (!/^\\+?[0-9]{8,15}$/.test(mobile)) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل معتبر نیست.',\n  });\n}\n\nif (!channels.includes(channel)) {\n  errors.push({\n    field: 'channel',\n    message: 'کانال ارتباطی معتبر نیست.',\n  });\n}\n\nif (!purposes.includes(purpose)) {\n  errors.push({\n    field: 'purpose',\n    message: 'هدف پیام معتبر نیست.',\n  });\n}\n\nif (\n  requested_at &&\n  Number.isNaN(Date.parse(requested_at))\n) {\n  errors.push({\n    field: 'requested_at',\n    message: 'زمان درخواست معتبر نیست.',\n  });\n}\n\nif (confirm_check !== true) {\n  errors.push({\n    field: 'confirm_check',\n    message: 'بررسی مجوز باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    clinic_name,\n    mobile,\n    channel,\n    purpose,\n    requested_at:\n      requested_at || new Date().toISOString(),\n    request_reference,\n    confirm_check,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -668,
+        64
+      ],
+      "id": "1475a4d7-0580-473a-b648-ff29ed7ed690",
+      "name": "Normalize and Validate Permission Check"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b27f49ee-3466-4af0-8347-217fa1eb628d",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -428,
+        64
+      ],
+      "id": "7db37b99-5eb4-44f0-b747-f00c7fab70d9",
+      "name": "Is Permission Check Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        $2::TEXT AS mobile,\n        $3::TEXT AS channel,\n        $4::TEXT AS purpose,\n        $5::TIMESTAMPTZ AS requested_at,\n        NULLIF($6::TEXT, '') AS request_reference\n),\n\npatient_context AS (\n    SELECT\n        clinic.id AS clinic_id,\n        patient.id AS patient_id,\n        patient.full_name,\n        patient.mobile,\n        request.channel,\n        request.purpose,\n        request.requested_at,\n        request.request_reference\n    FROM request_data request\n    INNER JOIN clinics clinic\n        ON clinic.name = request.clinic_name\n       AND clinic.is_active = TRUE\n    INNER JOIN patients patient\n        ON patient.clinic_id = clinic.id\n       AND patient.mobile = request.mobile\n    LIMIT 1\n),\n\nconsent_snapshot AS (\n    SELECT\n        COALESCE(\n            JSONB_OBJECT_AGG(\n                consent.consent_type,\n                JSONB_BUILD_OBJECT(\n                    'status',\n                        CASE\n                            WHEN consent.expires_at IS NOT NULL\n                             AND consent.expires_at <= NOW()\n                                THEN 'expired'\n                            ELSE consent.status\n                        END,\n                    'policy_version',\n                        consent.policy_version,\n                    'granted_at',\n                        consent.granted_at,\n                    'revoked_at',\n                        consent.revoked_at,\n                    'expires_at',\n                        consent.expires_at\n                )\n            ),\n            '{}'::JSONB\n        ) AS consents\n    FROM patient_consents consent\n    INNER JOIN patient_context context\n        ON consent.clinic_id = context.clinic_id\n       AND consent.patient_id = context.patient_id\n),\n\npreference_snapshot AS (\n    SELECT\n        TO_JSONB(preference) AS preference\n    FROM patient_communication_preferences preference\n    INNER JOIN patient_context context\n        ON preference.clinic_id = context.clinic_id\n       AND preference.patient_id = context.patient_id\n       AND preference.channel = context.channel\n    LIMIT 1\n)\n\nSELECT\n    CASE\n        WHEN EXISTS (\n            SELECT 1\n            FROM patient_context\n        )\n            THEN TRUE\n        ELSE FALSE\n    END AS success,\n\n    CASE\n        WHEN EXISTS (\n            SELECT 1\n            FROM patient_context\n        )\n            THEN 'communication_context_loaded'\n        ELSE 'patient_not_found'\n    END AS result,\n\n    (\n        SELECT ROW_TO_JSON(context)\n        FROM patient_context context\n    ) AS patient_context,\n\n    COALESCE(\n        (\n            SELECT consents\n            FROM consent_snapshot\n        ),\n        '{}'::JSONB\n    ) AS consent_snapshot,\n\n    COALESCE(\n        (\n            SELECT preference\n            FROM preference_snapshot\n        ),\n        '{}'::JSONB\n    ) AS preference_snapshot\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.mobile,\n  $json.channel,\n  $json.purpose,\n  $json.requested_at,\n  $json.request_reference\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -172,
+        -48
+      ],
+      "id": "644a375a-0c10-4496-bec0-f54beb390f22",
+      "name": "Load Consent and Channel Preference"
+    },
+    {
+      "parameters": {
+        "jsCode": "if ($json.success !== true) {\n  return [{\n    json: {\n      success: false,\n      result: $json.result || 'permission_context_failed',\n      decision: 'error',\n      decision_reason: 'patient_not_found',\n      allowed: false,\n      deferred: false,\n    },\n  }];\n}\n\nconst patient = $json.patient_context || {};\nconst consents =\n  $json.consent_snapshot &&\n  typeof $json.consent_snapshot === 'object'\n    ? $json.consent_snapshot\n    : {};\n\nconst preference =\n  $json.preference_snapshot &&\n  typeof $json.preference_snapshot === 'object'\n    ? $json.preference_snapshot\n    : {};\n\nconst statusOf = (type) =>\n  consents[type]?.status || 'missing';\n\nconst requiredConsentByPurpose = {\n  appointment_reminder: 'appointment_reminders',\n  appointment_update: null,\n  waitlist_offer: null,\n  post_visit_followup: 'followup_messages',\n  clinical_followup: 'followup_messages',\n  marketing: 'marketing_messages',\n  satisfaction_survey: 'satisfaction_surveys',\n  general_information: null,\n  human_handoff: null,\n};\n\nlet decision = 'allowed';\nlet decisionReason = 'permission_granted';\nlet nextAllowedAt = null;\n\nconst contactStatus = statusOf('contact');\nconst specificConsent =\n  requiredConsentByPurpose[patient.purpose];\n\nif (contactStatus !== 'granted') {\n  decision = 'blocked';\n  decisionReason =\n    contactStatus === 'revoked'\n      ? 'contact_consent_revoked'\n      : (\n          contactStatus === 'expired'\n            ? 'contact_consent_expired'\n            : 'contact_consent_missing'\n        );\n}\n\nif (\n  decision === 'allowed' &&\n  specificConsent &&\n  statusOf(specificConsent) !== 'granted'\n) {\n  const status = statusOf(specificConsent);\n  decision = 'blocked';\n  decisionReason =\n    status === 'revoked'\n      ? `${specificConsent}_revoked`\n      : (\n          status === 'expired'\n            ? `${specificConsent}_expired`\n            : `${specificConsent}_missing`\n        );\n}\n\nif (\n  decision === 'allowed' &&\n  preference.enabled === false\n) {\n  decision = 'blocked';\n  decisionReason = 'channel_disabled_by_patient';\n}\n\nconst timezone =\n  preference.timezone || 'Asia/Baghdad';\n\nconst requestedAt = new Date(\n  patient.requested_at || Date.now()\n);\n\nconst timeParts = new Intl.DateTimeFormat(\n  'en-GB',\n  {\n    timeZone: timezone,\n    hour: '2-digit',\n    minute: '2-digit',\n    hourCycle: 'h23',\n  }\n).formatToParts(requestedAt);\n\nconst hour = Number(\n  timeParts.find((part) => part.type === 'hour')?.value || 0\n);\nconst minute = Number(\n  timeParts.find((part) => part.type === 'minute')?.value || 0\n);\nconst localMinutes = hour * 60 + minute;\n\nconst toMinutes = (value) => {\n  const match = String(value || '').match(\n    /^(\\d{1,2}):(\\d{2})/\n  );\n\n  if (!match) return null;\n\n  return Number(match[1]) * 60 + Number(match[2]);\n};\n\nconst quietStart =\n  toMinutes(preference.quiet_hours_start);\nconst quietEnd =\n  toMinutes(preference.quiet_hours_end);\n\nconst inQuietHours = (\n  preference.quiet_hours_enabled === true &&\n  quietStart !== null &&\n  quietEnd !== null &&\n  (\n    quietStart < quietEnd\n      ? (\n          localMinutes >= quietStart &&\n          localMinutes < quietEnd\n        )\n      : (\n          localMinutes >= quietStart ||\n          localMinutes < quietEnd\n        )\n  )\n);\n\nif (\n  decision === 'allowed' &&\n  inQuietHours\n) {\n  decision = 'deferred';\n  decisionReason = 'patient_quiet_hours';\n}\n\nreturn [{\n  json: {\n    success: true,\n    result: 'communication_permission_checked',\n    clinic_id: Number(patient.clinic_id),\n    patient_id: Number(patient.patient_id),\n    mobile: patient.mobile,\n    channel: patient.channel,\n    purpose: patient.purpose,\n    requested_at: patient.requested_at,\n    request_reference:\n      patient.request_reference || '',\n    decision,\n    decision_reason: decisionReason,\n    allowed: decision === 'allowed',\n    deferred: decision === 'deferred',\n    next_allowed_at: nextAllowedAt,\n    max_messages_per_week:\n      preference.max_messages_per_week ?? null,\n    timezone,\n    consent_snapshot: consents,\n    consent_snapshot_text:\n      JSON.stringify(consents),\n    preference_snapshot: preference,\n    preference_snapshot_text:\n      JSON.stringify(preference),\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        84,
+        -48
+      ],
+      "id": "34c7a094-dc86-4a63-906c-a9dd077dc8c3",
+      "name": "Evaluate Communication Permission"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "791f64b7-8b8f-4f2a-b8ae-140833cd7c03",
+              "leftValue": "={{ $json.success === true && Number.isInteger($json.patient_id) && $json.patient_id > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        340,
+        -48
+      ],
+      "id": "5bdfaaaf-ebbb-4edd-bcb3-e48d83905e2f",
+      "name": "Can Permission Result Be Logged?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS clinic_id,\n        $2::BIGINT AS patient_id,\n        $3::TEXT AS channel,\n        $4::TEXT AS purpose,\n        $5::TEXT AS decision,\n        $6::TEXT AS decision_reason,\n        NULLIF($7::TEXT, '')::TIMESTAMPTZ\n            AS next_allowed_at,\n        $8::JSONB AS consent_snapshot,\n        $9::JSONB AS preference_snapshot,\n        NULLIF($10::TEXT, '') AS request_reference\n),\n\ninserted_check AS (\n    INSERT INTO communication_permission_checks (\n        clinic_id,\n        patient_id,\n        channel,\n        purpose,\n        decision,\n        decision_reason,\n        next_allowed_at,\n        consent_snapshot,\n        preference_snapshot,\n        request_reference\n    )\n    SELECT\n        request.clinic_id,\n        request.patient_id,\n        request.channel,\n        request.purpose,\n        request.decision,\n        request.decision_reason,\n        request.next_allowed_at,\n        request.consent_snapshot,\n        request.preference_snapshot,\n        request.request_reference\n    FROM request_data request\n    RETURNING *\n)\n\nSELECT\n    TRUE AS success,\n    'communication_permission_saved' AS result,\n\n    (\n        SELECT id\n        FROM inserted_check\n    ) AS permission_check_id,\n\n    (\n        SELECT decision\n        FROM inserted_check\n    ) AS decision,\n\n    (\n        SELECT decision_reason\n        FROM inserted_check\n    ) AS decision_reason,\n\n    (\n        SELECT decision = 'allowed'\n        FROM inserted_check\n    ) AS allowed,\n\n    (\n        SELECT decision = 'deferred'\n        FROM inserted_check\n    ) AS deferred,\n\n    (\n        SELECT next_allowed_at\n        FROM inserted_check\n    ) AS next_allowed_at\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_id,\n  $json.patient_id,\n  $json.channel,\n  $json.purpose,\n  $json.decision,\n  $json.decision_reason,\n  $json.next_allowed_at || '',\n  $json.consent_snapshot_text,\n  $json.preference_snapshot_text,\n  $json.request_reference\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        596,
+        -144
+      ],
+      "id": "6d28675e-c3dc-4f21-8d74-0b037ad2dca5",
+      "name": "Save Communication Permission Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات بررسی مجوز پیام نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -172,
+        176
+      ],
+      "id": "731aa9e1-fae7-47ae-917b-a152ffc827bc",
+      "name": "Return Permission Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## کنترل قطعی مجوز پیام\n\nقواعد بررسی‌شده:\n- رضایت تماس\n- رضایت مخصوص هدف پیام\n- فعال بودن کانال\n- ساعات سکوت بیمار\n\nخروجی allowed، blocked یا deferred است.",
+        "height": 360,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1420,
+        -280
+      ],
+      "id": "9dcce3b4-0652-4631-b5d1-d29a3434c405",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Permission Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Permission Check": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Permission Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Check Communication Permission": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Permission Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Permission Check": {
+      "main": [
+        [
+          {
+            "node": "Is Permission Check Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Permission Check Valid?": {
+      "main": [
+        [
+          {
+            "node": "Load Consent and Channel Preference",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Permission Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Consent and Channel Preference": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Communication Permission",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Communication Permission": {
+      "main": [
+        [
+          {
+            "node": "Can Permission Result Be Logged?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Can Permission Result Be Logged?": {
+      "main": [
+        [
+          {
+            "node": "Save Communication Permission Check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

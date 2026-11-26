@@ -1,0 +1,338 @@
+{
+  "name": "80 - API - Process Communication Opt In and Opt Out - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1180,
+        208
+      ],
+      "id": "cfa92096-6460-4fed-b25a-b23a68927853",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "90292292-3f68-475d-a6db-eb253e4fa0b2",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "054ca461-bcae-4bf5-ac89-9707c54b489e",
+              "name": "mobile",
+              "value": "09000000000",
+              "type": "string"
+            },
+            {
+              "id": "d0283ee1-655e-45f0-b8f4-11a2fb66bed4",
+              "name": "action",
+              "value": "auto",
+              "type": "string"
+            },
+            {
+              "id": "187461ad-0618-462b-8656-006b47594190",
+              "name": "raw_message",
+              "value": "دیگه برای من پیام نفرستید",
+              "type": "string"
+            },
+            {
+              "id": "ff6b7149-2072-4fb1-be7b-f1823e076669",
+              "name": "channel",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "aeba1ca8-00b6-4fc0-bcd6-756dd916e153",
+              "name": "actor_name",
+              "value": "بیمار",
+              "type": "string"
+            },
+            {
+              "id": "2c6923d7-19cc-42db-bfb4-e5be2b387218",
+              "name": "source_channel",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "df7c9eb5-3d8e-4584-b8e5-cbf5bdf15d83",
+              "name": "policy_version",
+              "value": "1.0",
+              "type": "string"
+            },
+            {
+              "id": "a173a70a-3f1f-40d7-a880-ce2733372dc6",
+              "name": "reason",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "96f65d68-648e-4dd6-a743-074bc81c5b36",
+              "name": "confirm_action",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -940,
+        208
+      ],
+      "id": "6ea5894b-2af4-4a3a-893b-582398584ea7",
+      "name": "Manual Consent Response"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/communications/consent-response",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -940,
+        -80
+      ],
+      "id": "f37e8b5a-ca37-4b77-93a7-4cd01a47a525",
+      "name": "Webhook - Process Consent Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst normalize = (value) =>\n  text(value)\n    .toLowerCase()\n    .replace(/ي/g, 'ی')\n    .replace(/ك/g, 'ک')\n    .replace(/\\u200c/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n\nconst clinic_name = text(input.clinic_name);\nconst mobile = text(input.mobile);\nconst requestedAction =\n  text(input.action || 'auto').toLowerCase();\nconst raw_message = text(input.raw_message);\nconst normalizedMessage = normalize(raw_message);\nconst channel = text(input.channel).toLowerCase();\nconst actor_name = text(input.actor_name || 'patient');\nconst source_channel =\n  text(input.source_channel || channel || 'api').toLowerCase();\nconst policy_version =\n  text(input.policy_version || '1.0');\nconst reason = text(input.reason);\nconst confirm_action = bool(input.confirm_action);\n\nconst explicitActions = [\n  'auto',\n  'opt_out_all',\n  'opt_out_marketing',\n  'opt_in_contact',\n  'opt_in_marketing',\n  'disable_channel',\n  'enable_channel',\n  'get_status',\n];\n\nconst stopPatterns = [\n  /(^|\\s)stop($|\\s)/i,\n  /unsubscribe/i,\n  /لغو/,\n  /توقف/,\n  /پیام نده/,\n  /پیام نفرست/,\n  /عدم دریافت/,\n  /دیگه.*پیام/,\n  /لا ترسل/,\n  /الغاء الاشتراك/,\n  /إلغاء الاشتراك/,\n];\n\nconst marketingPatterns = [\n  /تبلیغ/,\n  /بازاریابی/,\n  /marketing/i,\n  /promotional/i,\n  /اعلان تجاری/,\n];\n\nlet action = requestedAction;\nlet requires_confirmation = false;\nlet interpretation = 'explicit_action';\n\nif (requestedAction === 'auto') {\n  const stopDetected = stopPatterns.some(\n    (pattern) => pattern.test(normalizedMessage)\n  );\n\n  const marketingDetected =\n    marketingPatterns.some(\n      (pattern) => pattern.test(normalizedMessage)\n    );\n\n  if (stopDetected) {\n    action = marketingDetected\n      ? 'opt_out_marketing'\n      : 'opt_out_all';\n    interpretation = 'deterministic_opt_out_detected';\n  } else {\n    action = 'needs_confirmation';\n    requires_confirmation = true;\n    interpretation = 'message_not_safely_interpreted';\n  }\n}\n\nconst channels = [\n  'whatsapp',\n  'sms',\n  'email',\n  'phone',\n  'web_push',\n  'in_app',\n];\n\nconst sourceChannels = [\n  'web',\n  'whatsapp',\n  'telegram',\n  'sms',\n  'email',\n  'phone',\n  'manual',\n  'api',\n  'system',\n];\n\nconst errors = [];\n\nif (!explicitActions.includes(requestedAction)) {\n  errors.push({\n    field: 'action',\n    message: 'اقدام معتبر نیست.',\n  });\n}\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (!/^\\+?[0-9]{8,15}$/.test(mobile)) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل معتبر نیست.',\n  });\n}\n\nif (\n  ['disable_channel', 'enable_channel'].includes(action) &&\n  !channels.includes(channel)\n) {\n  errors.push({\n    field: 'channel',\n    message: 'کانال ارتباطی معتبر نیست.',\n  });\n}\n\nif (!sourceChannels.includes(source_channel)) {\n  errors.push({\n    field: 'source_channel',\n    message: 'کانال منبع معتبر نیست.',\n  });\n}\n\nif (\n  requestedAction === 'auto' &&\n  !raw_message\n) {\n  errors.push({\n    field: 'raw_message',\n    message: 'برای تشخیص خودکار، متن پیام الزامی است.',\n  });\n}\n\nif (\n  action !== 'get_status' &&\n  action !== 'needs_confirmation' &&\n  confirm_action !== true\n) {\n  errors.push({\n    field: 'confirm_action',\n    message: 'تغییر وضعیت ارتباط باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    clinic_name,\n    mobile,\n    requested_action: requestedAction,\n    action,\n    raw_message,\n    channel,\n    actor_name,\n    source_channel,\n    policy_version,\n    reason:\n      reason || raw_message,\n    confirm_action,\n    interpretation,\n    requires_confirmation,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -668,
+        64
+      ],
+      "id": "c72c39fc-13a4-435a-8e8b-c5c49311275b",
+      "name": "Normalize Consent Response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "346d419e-ee79-422f-8625-f857adee2e3a",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -428,
+        64
+      ],
+      "id": "c2b62777-398e-4441-a584-9e2769ec5168",
+      "name": "Is Consent Response Valid?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cec7e341-ced5-49ef-9670-9f2725898cf6",
+              "leftValue": "={{ $json.requires_confirmation === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -172,
+        -48
+      ],
+      "id": "184be779-ad9d-41ad-9823-74d7d5b6116c",
+      "name": "Does Consent Response Need Confirmation?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        $2::TEXT AS mobile,\n        $3::TEXT AS action,\n        NULLIF($4::TEXT, '') AS channel,\n        $5::TEXT AS actor_name,\n        $6::TEXT AS source_channel,\n        NULLIF($7::TEXT, '') AS policy_version,\n        NULLIF($8::TEXT, '') AS reason\n),\n\npatient_context AS (\n    SELECT\n        clinic.id AS clinic_id,\n        patient.id AS patient_id,\n        patient.full_name,\n        patient.mobile,\n        request.*\n    FROM request_data request\n    INNER JOIN clinics clinic\n        ON clinic.name = request.clinic_name\n       AND clinic.is_active = TRUE\n    INNER JOIN patients patient\n        ON patient.clinic_id = clinic.id\n       AND patient.mobile = request.mobile\n    LIMIT 1\n),\n\nconsent_target AS (\n    SELECT\n        context.*,\n        CASE context.action\n            WHEN 'opt_out_all'\n                THEN 'contact'\n            WHEN 'opt_in_contact'\n                THEN 'contact'\n            WHEN 'opt_out_marketing'\n                THEN 'marketing_messages'\n            WHEN 'opt_in_marketing'\n                THEN 'marketing_messages'\n            ELSE NULL\n        END AS consent_type,\n\n        CASE\n            WHEN context.action IN (\n                'opt_in_contact',\n                'opt_in_marketing'\n            )\n                THEN 'granted'\n            WHEN context.action IN (\n                'opt_out_all',\n                'opt_out_marketing'\n            )\n                THEN 'revoked'\n            ELSE NULL\n        END AS new_status\n\n    FROM patient_context context\n),\n\nprevious_consent AS (\n    SELECT\n        consent.status\n    FROM patient_consents consent\n    INNER JOIN consent_target target\n        ON consent.clinic_id = target.clinic_id\n       AND consent.patient_id = target.patient_id\n       AND consent.consent_type = target.consent_type\n    WHERE target.consent_type IS NOT NULL\n    LIMIT 1\n),\n\nupserted_consent AS (\n    INSERT INTO patient_consents (\n        clinic_id,\n        patient_id,\n        consent_type,\n        status,\n        policy_version,\n        source_channel,\n        granted_at,\n        revoked_at,\n        last_actor,\n        last_reason,\n        updated_at\n    )\n    SELECT\n        target.clinic_id,\n        target.patient_id,\n        target.consent_type,\n        target.new_status,\n        target.policy_version,\n        target.source_channel,\n        CASE\n            WHEN target.new_status = 'granted'\n                THEN NOW()\n            ELSE NULL\n        END,\n        CASE\n            WHEN target.new_status = 'revoked'\n                THEN NOW()\n            ELSE NULL\n        END,\n        target.actor_name,\n        target.reason,\n        NOW()\n    FROM consent_target target\n    WHERE target.consent_type IS NOT NULL\n    ON CONFLICT (\n        clinic_id,\n        patient_id,\n        consent_type\n    )\n    DO UPDATE SET\n        status = EXCLUDED.status,\n        policy_version = EXCLUDED.policy_version,\n        source_channel = EXCLUDED.source_channel,\n        granted_at = CASE\n            WHEN EXCLUDED.status = 'granted'\n                THEN NOW()\n            ELSE patient_consents.granted_at\n        END,\n        revoked_at = CASE\n            WHEN EXCLUDED.status = 'revoked'\n                THEN NOW()\n            ELSE NULL\n        END,\n        last_actor = EXCLUDED.last_actor,\n        last_reason = EXCLUDED.last_reason,\n        updated_at = NOW()\n    RETURNING *\n),\n\ninserted_event AS (\n    INSERT INTO patient_consent_events (\n        clinic_id,\n        patient_id,\n        consent_id,\n        consent_type,\n        event_type,\n        previous_status,\n        new_status,\n        actor_name,\n        source_channel,\n        policy_version,\n        reason,\n        event_payload\n    )\n    SELECT\n        consent.clinic_id,\n        consent.patient_id,\n        consent.id,\n        consent.consent_type,\n        CASE\n            WHEN consent.status = 'granted'\n                THEN 'granted'\n            ELSE 'revoked'\n        END,\n        (\n            SELECT status\n            FROM previous_consent\n        ),\n        consent.status,\n        target.actor_name,\n        target.source_channel,\n        target.policy_version,\n        target.reason,\n        JSONB_BUILD_OBJECT(\n            'action',\n                target.action\n        )\n    FROM upserted_consent consent\n    CROSS JOIN consent_target target\n    RETURNING id\n),\n\ndisabled_all_channels AS (\n    UPDATE patient_communication_preferences preference\n    SET\n        enabled = FALSE,\n        updated_by = context.actor_name,\n        updated_at = NOW()\n    FROM patient_context context\n    WHERE context.action = 'opt_out_all'\n      AND preference.clinic_id = context.clinic_id\n      AND preference.patient_id = context.patient_id\n    RETURNING preference.*\n),\n\nupserted_channel AS (\n    INSERT INTO patient_communication_preferences (\n        clinic_id,\n        patient_id,\n        channel,\n        enabled,\n        updated_by,\n        updated_at\n    )\n    SELECT\n        context.clinic_id,\n        context.patient_id,\n        context.channel,\n        context.action = 'enable_channel',\n        context.actor_name,\n        NOW()\n    FROM patient_context context\n    WHERE context.action IN (\n        'disable_channel',\n        'enable_channel'\n    )\n    ON CONFLICT (\n        clinic_id,\n        patient_id,\n        channel\n    )\n    DO UPDATE SET\n        enabled = EXCLUDED.enabled,\n        updated_by = EXCLUDED.updated_by,\n        updated_at = NOW()\n    RETURNING *\n),\n\nchannel_event AS (\n    INSERT INTO patient_consent_events (\n        clinic_id,\n        patient_id,\n        consent_type,\n        event_type,\n        actor_name,\n        source_channel,\n        reason,\n        event_payload\n    )\n    SELECT\n        preference.clinic_id,\n        preference.patient_id,\n        'contact',\n        'preference_changed',\n        context.actor_name,\n        context.source_channel,\n        context.reason,\n        JSONB_BUILD_OBJECT(\n            'channel',\n                preference.channel,\n            'enabled',\n                preference.enabled\n        )\n    FROM upserted_channel preference\n    CROSS JOIN patient_context context\n    RETURNING id\n),\n\nensured_profile AS (\n    INSERT INTO patient_profiles (\n        patient_id\n    )\n    SELECT\n        context.patient_id\n    FROM patient_context context\n    WHERE context.action IN (\n        'opt_out_all',\n        'opt_in_contact'\n    )\n    ON CONFLICT (patient_id)\n    DO NOTHING\n    RETURNING patient_id\n),\n\nsynced_profile AS (\n    UPDATE patient_profiles profile\n    SET\n        consent_to_contact = CASE\n            WHEN context.action = 'opt_in_contact'\n                THEN TRUE\n            WHEN context.action = 'opt_out_all'\n                THEN FALSE\n            ELSE profile.consent_to_contact\n        END,\n        updated_at = NOW()\n    FROM patient_context context\n    WHERE profile.patient_id = context.patient_id\n      AND context.action IN (\n        'opt_out_all',\n        'opt_in_contact'\n      )\n    RETURNING profile.patient_id\n),\n\nconsent_list AS (\n    SELECT\n        consent.consent_type,\n        consent.status,\n        consent.policy_version,\n        consent.granted_at,\n        consent.revoked_at,\n        consent.expires_at,\n        consent.updated_at\n    FROM patient_consents consent\n    INNER JOIN patient_context context\n        ON consent.clinic_id = context.clinic_id\n       AND consent.patient_id = context.patient_id\n    ORDER BY consent.consent_type\n),\n\npreference_list AS (\n    SELECT\n        preference.channel,\n        preference.enabled,\n        preference.preferred_language,\n        preference.timezone,\n        preference.quiet_hours_enabled,\n        preference.quiet_hours_start,\n        preference.quiet_hours_end,\n        preference.updated_at\n    FROM patient_communication_preferences preference\n    INNER JOIN patient_context context\n        ON preference.clinic_id = context.clinic_id\n       AND preference.patient_id = context.patient_id\n    ORDER BY preference.channel\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM patient_context\n        )\n            THEN FALSE\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM patient_context\n        )\n            THEN 'patient_not_found'\n\n        WHEN request.action = 'opt_out_all'\n            THEN 'all_communications_opted_out'\n\n        WHEN request.action = 'opt_out_marketing'\n            THEN 'marketing_messages_opted_out'\n\n        WHEN request.action = 'opt_in_contact'\n            THEN 'contact_consent_granted'\n\n        WHEN request.action = 'opt_in_marketing'\n            THEN 'marketing_consent_granted'\n\n        WHEN request.action = 'disable_channel'\n            THEN 'communication_channel_disabled'\n\n        WHEN request.action = 'enable_channel'\n            THEN 'communication_channel_enabled'\n\n        ELSE 'communication_consent_status_loaded'\n    END AS result,\n\n    (\n        SELECT patient_id\n        FROM patient_context\n    ) AS patient_id,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                TO_JSONB(consent)\n            )\n            FROM consent_list consent\n        ),\n        '[]'::JSONB\n    ) AS consents,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                TO_JSONB(preference)\n            )\n            FROM preference_list preference\n        ),\n        '[]'::JSONB\n    ) AS preferences,\n\n    (\n        SELECT id\n        FROM inserted_event\n        LIMIT 1\n    ) AS consent_event_id,\n\n    CASE\n        WHEN request.action = 'opt_in_marketing'\n         AND NOT EXISTS (\n            SELECT 1\n            FROM patient_consents consent\n            INNER JOIN patient_context context\n                ON consent.clinic_id = context.clinic_id\n               AND consent.patient_id = context.patient_id\n            WHERE consent.consent_type = 'contact'\n              AND consent.status = 'granted'\n         )\n            THEN 'grant_contact_consent_first'\n        ELSE 'none'\n    END AS next_action\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.mobile,\n  $json.action,\n  $json.channel,\n  $json.actor_name,\n  $json.source_channel,\n  $json.policy_version,\n  $json.reason\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        84,
+        48
+      ],
+      "id": "05bebe56-b582-4cec-b8a9-c39e1796a446",
+      "name": "Apply Communication Consent Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:true,result:'consent_response_needs_confirmation',message:'منظور پیام برای تغییر رضایت ارتباطی با اطمینان کافی مشخص نشد.',requires_confirmation:true,next_action:'ask_explicit_consent_action'}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        84,
+        -144
+      ],
+      "id": "63084c6e-f10a-4928-bdfe-1b03d4579c4e",
+      "name": "Return Consent Clarification"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات تغییر وضعیت ارتباط نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -172,
+        176
+      ],
+      "id": "71a04e13-ca90-4b12-9b0c-317c9b6c2545",
+      "name": "Return Consent Response Error"
+    },
+    {
+      "parameters": {
+        "content": "## Opt-out ایمن و قطعی\n\nتشخیص خودکار فقط برای توقف پیام انجام می‌شود.\n\nفعال‌سازی مجدد باید با action صریح ارسال شود.\n\nاقدام‌ها:\n- opt_out_all\n- opt_out_marketing\n- opt_in_contact\n- opt_in_marketing\n- disable_channel\n- enable_channel\n- get_status",
+        "height": 410,
+        "width": 510
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1420,
+        -310
+      ],
+      "id": "3e6e63d1-a3b1-41df-ad96-80bcc3f40c87",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Consent Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Consent Response": {
+      "main": [
+        [
+          {
+            "node": "Normalize Consent Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Process Consent Response": {
+      "main": [
+        [
+          {
+            "node": "Normalize Consent Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Consent Response": {
+      "main": [
+        [
+          {
+            "node": "Is Consent Response Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Consent Response Valid?": {
+      "main": [
+        [
+          {
+            "node": "Does Consent Response Need Confirmation?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Consent Response Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Does Consent Response Need Confirmation?": {
+      "main": [
+        [
+          {
+            "node": "Return Consent Clarification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Apply Communication Consent Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

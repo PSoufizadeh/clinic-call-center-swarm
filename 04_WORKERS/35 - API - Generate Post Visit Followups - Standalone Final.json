@@ -1,0 +1,368 @@
+{
+  "name": "35 - API - Generate Post Visit Followups - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1120,
+        208
+      ],
+      "id": "34ad0d76-80e4-4a51-844d-0780a06d4988",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6e55d788-78ad-427c-bf37-d1108585cba5",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "ce6d5991-473c-4f69-80a0-1fccfa3db878",
+              "name": "followup_stage",
+              "value": "first_day",
+              "type": "string"
+            },
+            {
+              "id": "fc888016-fc10-4c5c-81fb-d665102c4985",
+              "name": "visit_end_min_hours_ago",
+              "value": 18,
+              "type": "number"
+            },
+            {
+              "id": "5944caa6-728b-4fc8-82db-9576d516c6e3",
+              "name": "visit_end_max_hours_ago",
+              "value": 30,
+              "type": "number"
+            },
+            {
+              "id": "3fd4737f-f891-4607-a786-6dc6b01a448c",
+              "name": "response_deadline_hours",
+              "value": 24,
+              "type": "number"
+            },
+            {
+              "id": "78ea9113-b203-4386-b06f-1b58306c72b5",
+              "name": "channel",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "2a326a0f-363f-4dfe-982c-9e2dc3db215a",
+              "name": "limit",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "dcc3a489-36c4-43f0-8df0-73af6294a539",
+              "name": "confirm_generation",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -880,
+        208
+      ],
+      "id": "9ea8b452-20cf-4cd3-8794-63feb0e1486f",
+      "name": "Manual Post Visit Generation Request"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1120,
+        -32
+      ],
+      "id": "898da875-57b0-4dce-ad80-e01d9719fa22",
+      "name": "Hourly Post Visit Scan"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bba134ef-a617-4a29-a5f5-9abbe14ec3ae",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "31a8d875-15ee-4bc9-8efe-8c5c769366c0",
+              "name": "followup_stage",
+              "value": "first_day",
+              "type": "string"
+            },
+            {
+              "id": "de6ec31a-0ad3-40bb-9b9c-1e2e6ca4b2cb",
+              "name": "visit_end_min_hours_ago",
+              "value": 18,
+              "type": "number"
+            },
+            {
+              "id": "7bc2ff64-3510-44b0-8c79-0e0597a78d99",
+              "name": "visit_end_max_hours_ago",
+              "value": 30,
+              "type": "number"
+            },
+            {
+              "id": "5f2be88c-0913-4aa2-9526-f6d293e84ce9",
+              "name": "response_deadline_hours",
+              "value": 24,
+              "type": "number"
+            },
+            {
+              "id": "5788852f-5432-4e23-9d1d-dd8706544be6",
+              "name": "channel",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "985e2e33-a00d-43bb-ba93-fca122c144f8",
+              "name": "limit",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "2bc5ac4c-59b3-4fdc-b8c9-eb4f806e0b2b",
+              "name": "confirm_generation",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -880,
+        -32
+      ],
+      "id": "abfbab79-0d2d-4c9d-8f93-9986cd16df29",
+      "name": "Scheduled Post Visit Defaults"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/appointments/generate-post-visit-followups",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -880,
+        -240
+      ],
+      "id": "49e78a19-ba7f-4ad0-a0f6-fd3845d92e76",
+      "name": "Webhook - Generate Post Visit Followups"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  return ['true', '1', 'yes', 'on'].includes(text(value).toLowerCase());\n};\n\nconst clinic_name = text(input.clinic_name);\nconst followup_stage = text(input.followup_stage || 'first_day').toLowerCase();\nconst visit_end_min_hours_ago = Number(input.visit_end_min_hours_ago ?? 18);\nconst visit_end_max_hours_ago = Number(input.visit_end_max_hours_ago ?? 30);\nconst response_deadline_hours = Number(input.response_deadline_hours ?? 24);\nconst channel = text(input.channel || 'whatsapp').toLowerCase();\nconst limit = Number(input.limit ?? 100);\nconst confirm_generation = toBoolean(input.confirm_generation);\n\nconst errors = [];\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (!['first_day', 'third_day', 'seventh_day', 'custom'].includes(followup_stage)) {\n  errors.push({\n    field: 'followup_stage',\n    message: 'مرحله پیگیری معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(visit_end_min_hours_ago) ||\n  visit_end_min_hours_ago < 0 ||\n  visit_end_min_hours_ago > 2160\n) {\n  errors.push({\n    field: 'visit_end_min_hours_ago',\n    message: 'حداقل فاصله از پایان مراجعه باید بین 0 و 2160 ساعت باشد.',\n  });\n}\n\nif (\n  !Number.isInteger(visit_end_max_hours_ago) ||\n  visit_end_max_hours_ago < 1 ||\n  visit_end_max_hours_ago > 2160 ||\n  visit_end_max_hours_ago <= visit_end_min_hours_ago\n) {\n  errors.push({\n    field: 'visit_end_max_hours_ago',\n    message: 'حداکثر فاصله باید از حداقل بیشتر و حداکثر 2160 ساعت باشد.',\n  });\n}\n\nif (\n  !Number.isInteger(response_deadline_hours) ||\n  response_deadline_hours < 1 ||\n  response_deadline_hours > 168\n) {\n  errors.push({\n    field: 'response_deadline_hours',\n    message: 'مهلت پاسخ باید بین 1 و 168 ساعت باشد.',\n  });\n}\n\nif (!['whatsapp', 'sms', 'phone', 'telegram', 'web', 'manual'].includes(channel)) {\n  errors.push({\n    field: 'channel',\n    message: 'کانال پیگیری معتبر نیست.',\n  });\n}\n\nif (!Number.isInteger(limit) || limit < 1 || limit > 500) {\n  errors.push({\n    field: 'limit',\n    message: 'limit باید یک عدد صحیح بین 1 و 500 باشد.',\n  });\n}\n\nif (confirm_generation !== true) {\n  errors.push({\n    field: 'confirm_generation',\n    message: 'ایجاد پیگیری‌ها باید به‌صورت صریح تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    clinic_name,\n    followup_stage,\n    visit_end_min_hours_ago,\n    visit_end_max_hours_ago,\n    response_deadline_hours,\n    channel,\n    limit,\n    confirm_generation,\n    validation_status: errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        -32
+      ],
+      "id": "e870d908-7c4a-4093-8500-5bcd1284b6bf",
+      "name": "Normalize and Validate Post Visit Generation"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1a745c2e-8f8d-442a-979e-1c79784dcb07",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -368,
+        -32
+      ],
+      "id": "798ba812-5c59-4761-a7cd-f16fe5c4b479",
+      "name": "Is Post Visit Generation Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        $2::TEXT AS followup_stage,\n\n        LEAST(\n            GREATEST($3::INTEGER, 0),\n            2160\n        ) AS visit_end_min_hours_ago,\n\n        LEAST(\n            GREATEST($4::INTEGER, 1),\n            2160\n        ) AS visit_end_max_hours_ago,\n\n        LEAST(\n            GREATEST($5::INTEGER, 1),\n            168\n        ) AS response_deadline_hours,\n\n        $6::TEXT AS channel,\n\n        LEAST(\n            GREATEST($7::INTEGER, 1),\n            500\n        ) AS result_limit\n),\n\nexpired_followups AS (\n    UPDATE appointment_post_visit_followups followup\n\n    SET\n        status = 'expired',\n        updated_at = NOW()\n\n    WHERE followup.status = 'pending'\n      AND followup.expires_at <= NOW()\n\n    RETURNING followup.id\n),\n\nexpiry_barrier AS (\n    SELECT COUNT(*)::INTEGER AS expired_count\n    FROM expired_followups\n),\n\nclinic_context AS (\n    SELECT\n        clinic.id AS clinic_id,\n        clinic.name AS clinic_name,\n        clinic.timezone,\n\n        request.followup_stage,\n        request.visit_end_min_hours_ago,\n        request.visit_end_max_hours_ago,\n        request.response_deadline_hours,\n        request.channel,\n        request.result_limit\n\n    FROM request_data request\n\n    CROSS JOIN expiry_barrier barrier\n\n    INNER JOIN clinics clinic\n        ON clinic.name = request.clinic_name\n       AND clinic.is_active = TRUE\n\n    ORDER BY clinic.id\n    LIMIT 1\n),\n\neligible_appointments AS (\n    SELECT\n        appointment.id AS appointment_id,\n        appointment.clinic_id,\n        appointment.doctor_id,\n        appointment.patient_id,\n        appointment.service_id,\n        appointment.starts_at,\n        appointment.ends_at,\n        appointment.status AS appointment_status,\n\n        clinic.clinic_name,\n        clinic.timezone,\n        clinic.followup_stage,\n        clinic.response_deadline_hours,\n        clinic.channel,\n\n        patient.full_name AS patient_name,\n        patient.mobile,\n\n        doctor.full_name AS doctor_name,\n        service.name AS service_name\n\n    FROM appointments appointment\n\n    INNER JOIN clinic_context clinic\n        ON clinic.clinic_id = appointment.clinic_id\n\n    INNER JOIN patients patient\n        ON patient.id = appointment.patient_id\n\n    INNER JOIN doctors doctor\n        ON doctor.id = appointment.doctor_id\n\n    LEFT JOIN services service\n        ON service.id = appointment.service_id\n\n    WHERE appointment.status = 'confirmed'\n\n      AND appointment.ends_at <=\n            NOW()\n            - MAKE_INTERVAL(\n                hours => clinic.visit_end_min_hours_ago\n            )\n\n      AND appointment.ends_at >\n            NOW()\n            - MAKE_INTERVAL(\n                hours => clinic.visit_end_max_hours_ago\n            )\n\n      AND NOT EXISTS (\n          SELECT 1\n          FROM appointment_post_visit_followups existing\n\n          WHERE existing.appointment_id =\n                appointment.id\n\n            AND existing.followup_stage =\n                clinic.followup_stage\n      )\n\n    ORDER BY appointment.ends_at, appointment.id\n\n    LIMIT (\n        SELECT result_limit\n        FROM clinic_context\n    )\n),\n\ninserted_followups AS (\n    INSERT INTO appointment_post_visit_followups (\n        appointment_id,\n        followup_stage,\n        followup_token,\n        status,\n        channel,\n        request_created_at,\n        expires_at\n    )\n\n    SELECT\n        eligible.appointment_id,\n        eligible.followup_stage,\n\n        MD5(\n            RANDOM()::TEXT\n            || CLOCK_TIMESTAMP()::TEXT\n            || eligible.appointment_id::TEXT\n            || eligible.followup_stage\n        ),\n\n        'pending',\n        eligible.channel,\n        NOW(),\n\n        NOW()\n        + MAKE_INTERVAL(\n            hours =>\n                eligible.response_deadline_hours\n        )\n\n    FROM eligible_appointments eligible\n\n    ON CONFLICT DO NOTHING\n\n    RETURNING\n        id AS followup_id,\n        appointment_id,\n        followup_stage,\n        followup_token,\n        status AS followup_status,\n        channel,\n        request_created_at,\n        expires_at\n),\n\nfollowup_details AS (\n    SELECT\n        followup.followup_id,\n        followup.followup_stage,\n        followup.followup_token,\n        followup.followup_status,\n        followup.channel,\n        followup.expires_at,\n\n        eligible.appointment_id,\n        eligible.patient_name,\n        eligible.mobile,\n        eligible.doctor_name,\n        eligible.service_name,\n        eligible.timezone,\n        eligible.starts_at,\n        eligible.ends_at\n\n    FROM inserted_followups followup\n\n    INNER JOIN eligible_appointments eligible\n        ON eligible.appointment_id =\n           followup.appointment_id\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN FALSE\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN 'clinic_not_found'\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM followup_details\n        )\n            THEN 'no_post_visit_followups_needed'\n\n        ELSE 'post_visit_followups_created'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n        )\n            THEN 'کلینیک مطابق ورودی پیدا نشد.'\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM followup_details\n        )\n            THEN 'در بازه انتخاب‌شده مراجعه‌ای برای ایجاد پیگیری جدید وجود ندارد.'\n\n        ELSE 'درخواست‌های پیگیری پس از مراجعه آماده ارسال شدند.'\n    END AS message,\n\n    request.clinic_name,\n    request.followup_stage,\n\n    (\n        SELECT COUNT(*)::INTEGER\n        FROM followup_details\n    ) AS followup_count,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'followup_id',\n                        followup_id,\n\n                    'followup_stage',\n                        followup_stage,\n\n                    'followup_token',\n                        followup_token,\n\n                    'appointment_id',\n                        appointment_id,\n\n                    'patient_name',\n                        patient_name,\n\n                    'mobile',\n                        mobile,\n\n                    'doctor_name',\n                        doctor_name,\n\n                    'service_name',\n                        service_name,\n\n                    'appointment_date',\n                        TO_CHAR(\n                            starts_at\n                            AT TIME ZONE timezone,\n                            'YYYY-MM-DD'\n                        ),\n\n                    'appointment_start_time',\n                        TO_CHAR(\n                            starts_at\n                            AT TIME ZONE timezone,\n                            'HH24:MI'\n                        ),\n\n                    'visit_end_time',\n                        TO_CHAR(\n                            ends_at\n                            AT TIME ZONE timezone,\n                            'YYYY-MM-DD HH24:MI'\n                        ),\n\n                    'channel',\n                        channel,\n\n                    'expires_at',\n                        expires_at,\n\n                    'next_action',\n                        'send_post_visit_followup'\n                )\n                ORDER BY ends_at\n            )\n            FROM followup_details\n        ),\n        '[]'::JSONB\n    ) AS followups\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.followup_stage,\n  $json.visit_end_min_hours_ago,\n  $json.visit_end_max_hours_ago,\n  $json.response_deadline_hours,\n  $json.channel,\n  $json.limit\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -112,
+        -128
+      ],
+      "id": "5a7befba-34b7-4905-bd6d-4acad213517a",
+      "name": "Generate Post Visit Followups"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    result: 'invalid_request',\n    message: 'اطلاعات تولید پیگیری پس از مراجعه ناقص یا نامعتبر است.',\n    followup_count: 0,\n    followups: [],\n    errors: $json.errors ?? [],\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        80
+      ],
+      "id": "49cf8fa1-61ac-4704-adaa-6b5a2b1c6cb2",
+      "name": "Return Post Visit Generation Error"
+    },
+    {
+      "parameters": {
+        "content": "## تولید پیگیری پس از مراجعه\n\n1. ابتدا Workflow شماره 34 را یک‌بار اجرا کن.\n\n2. Workflow به‌صورت دستی، Webhook یا ساعتی اجرا می‌شود.\n\n3. فقط نوبت‌های confirmed که زمان مراجعه آن‌ها گذشته است بررسی می‌شوند.\n\n4. برای هر نوبت و هر مرحله پیگیری فقط یک رکورد ساخته می‌شود.\n\n5. خروجی برای اتصال به WhatsApp، SMS، تماس یا فرم وب آماده است.",
+        "height": 370,
+        "width": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1360,
+        -380
+      ],
+      "id": "b196549c-cd47-4a02-b0aa-92408dc0f40a",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Post Visit Generation Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Post Visit Generation Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Post Visit Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hourly Post Visit Scan": {
+      "main": [
+        [
+          {
+            "node": "Scheduled Post Visit Defaults",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scheduled Post Visit Defaults": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Post Visit Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Generate Post Visit Followups": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Post Visit Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Post Visit Generation": {
+      "main": [
+        [
+          {
+            "node": "Is Post Visit Generation Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Post Visit Generation Valid?": {
+      "main": [
+        [
+          {
+            "node": "Generate Post Visit Followups",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Post Visit Generation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

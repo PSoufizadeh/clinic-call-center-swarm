@@ -1,0 +1,655 @@
+{
+  "name": "16 - API - Reschedule Appointment - Schedule Guarded V3",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1320,
+        176
+      ],
+      "id": "ea26511a-0a7b-4ec0-b174-13a1a21c7c4b",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9d6ec935-4049-4444-98e3-756f0261a481",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "46e91b89-b9a3-4df3-85e6-678364b0e259",
+              "name": "mobile",
+              "value": "09000000000",
+              "type": "string"
+            },
+            {
+              "id": "0cedde17-7ac2-4a62-8486-5d4944b32a85",
+              "name": "appointment_id",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "0fe5d4be-372a-4d95-acb7-5d2594e74236",
+              "name": "new_target_date",
+              "value": "2026-08-04",
+              "type": "string"
+            },
+            {
+              "id": "f5445491-dd4a-48f2-90d7-8737054e1d8a",
+              "name": "new_start_time",
+              "value": "10:15",
+              "type": "string"
+            },
+            {
+              "id": "b1481990-d7d8-4b33-b1e4-e333a3848752",
+              "name": "reschedule_reason",
+              "value": "درخواست بیمار",
+              "type": "string"
+            },
+            {
+              "id": "af506def-c52e-4475-aad6-07ad8cc3d190",
+              "name": "confirm_reschedule",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1080,
+        176
+      ],
+      "id": "67831671-a1b4-471f-8b6d-faf94caeea42",
+      "name": "Manual Reschedule Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/appointments/reschedule",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1080,
+        -96
+      ],
+      "id": "88be64ec-a6c9-4437-bde2-8c0f44c5c16a",
+      "name": "Webhook - Reschedule Appointment"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst toBoolean = (value) => {\n  if (typeof value === 'boolean') return value;\n  const normalized = text(value).toLowerCase();\n  return ['true', '1', 'yes', 'on'].includes(normalized);\n};\n\nconst clinic_name = text(input.clinic_name);\nconst mobile = text(input.mobile);\nconst appointment_id = Number(input.appointment_id);\nconst new_target_date = text(input.new_target_date);\nconst new_start_time = text(input.new_start_time);\nconst reschedule_reason = text(input.reschedule_reason);\nconst confirm_reschedule = toBoolean(input.confirm_reschedule);\n\nconst errors = [];\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (!mobile) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل بیمار الزامی است.',\n  });\n}\n\nif (mobile && !/^\\+?[0-9]{8,15}$/.test(mobile)) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل باید فقط شامل اعداد و در صورت نیاز علامت + باشد.',\n  });\n}\n\nif (!Number.isInteger(appointment_id) || appointment_id < 1) {\n  errors.push({\n    field: 'appointment_id',\n    message: 'appointment_id باید یک عدد صحیح بزرگ‌تر از صفر باشد.',\n  });\n}\n\nfunction isRealIsoDate(value) {\n  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;\n\n  const [year, month, day] = value.split('-').map(Number);\n  const parsed = new Date(Date.UTC(year, month - 1, day));\n\n  return (\n    parsed.getUTCFullYear() === year &&\n    parsed.getUTCMonth() === month - 1 &&\n    parsed.getUTCDate() === day\n  );\n}\n\nif (!new_target_date || !isRealIsoDate(new_target_date)) {\n  errors.push({\n    field: 'new_target_date',\n    message: 'تاریخ جدید باید معتبر و با قالب YYYY-MM-DD باشد.',\n  });\n}\n\nif (!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(new_start_time)) {\n  errors.push({\n    field: 'new_start_time',\n    message: 'ساعت جدید باید با قالب HH:MM باشد.',\n  });\n}\n\nif (!reschedule_reason) {\n  errors.push({\n    field: 'reschedule_reason',\n    message: 'علت جابه‌جایی نوبت الزامی است.',\n  });\n}\n\nif (reschedule_reason.length > 500) {\n  errors.push({\n    field: 'reschedule_reason',\n    message: 'علت جابه‌جایی نباید بیشتر از 500 کاراکتر باشد.',\n  });\n}\n\nif (confirm_reschedule !== true) {\n  errors.push({\n    field: 'confirm_reschedule',\n    message: 'جابه‌جایی نوبت باید ابتدا توسط بیمار تأیید شود.',\n  });\n}\n\nreturn [\n  {\n    json: {\n      clinic_name,\n      mobile,\n      appointment_id,\n      new_target_date,\n      new_start_time,\n      reschedule_reason,\n      confirm_reschedule,\n      validation_status: errors.length === 0 ? 'valid' : 'invalid',\n      errors,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -808,
+        48
+      ],
+      "id": "d6b3e017-0932-4d64-9b57-5d6eecfab7b6",
+      "name": "Normalize and Validate Reschedule"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0287c8fa-76c8-4532-ad3c-1671ecbb7e5c",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -568,
+        48
+      ],
+      "id": "cab1934d-7246-4ca7-b23c-7c56ab335f2a",
+      "name": "Is Reschedule Request Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS appointment_id,\n        $2::TEXT AS clinic_name,\n        $3::TEXT AS mobile,\n        $4::DATE AS new_target_date,\n        $5::TIME AS new_start_time\n),\n\nclinic_context AS (\n    SELECT\n        c.id AS clinic_id,\n        c.name AS clinic_name,\n        c.timezone\n    FROM clinics c\n    INNER JOIN request_data r\n        ON c.name = r.clinic_name\n    WHERE c.is_active = TRUE\n    ORDER BY c.id\n    LIMIT 1\n),\n\npatient_context AS (\n    SELECT\n        p.id AS patient_id,\n        p.full_name AS patient_name,\n        p.mobile\n    FROM patients p\n    INNER JOIN clinic_context c\n        ON c.clinic_id = p.clinic_id\n    INNER JOIN request_data r\n        ON p.mobile = r.mobile\n    ORDER BY p.id\n    LIMIT 1\n),\n\nappointment_context AS (\n    SELECT\n        a.id AS appointment_id,\n        a.clinic_id,\n        a.doctor_id,\n        a.patient_id,\n        a.service_id,\n        a.starts_at AS old_starts_at,\n        a.ends_at AS old_ends_at,\n        a.status,\n        a.visit_reason,\n        a.google_calendar_event_id,\n\n        c.clinic_name,\n        c.timezone,\n\n        p.patient_name,\n        p.mobile,\n\n        d.full_name AS doctor_name,\n        d.buffer_minutes,\n\n        s.name AS service_name,\n        s.duration_minutes,\n\n        r.new_target_date,\n        r.new_start_time\n\n    FROM appointments a\n\n    INNER JOIN clinic_context c\n        ON c.clinic_id = a.clinic_id\n\n    INNER JOIN patient_context p\n        ON p.patient_id = a.patient_id\n\n    INNER JOIN doctors d\n        ON d.id = a.doctor_id\n       AND d.is_active = TRUE\n\n    INNER JOIN services s\n        ON s.id = a.service_id\n       AND s.is_active = TRUE\n\n    INNER JOIN request_data r\n        ON r.appointment_id = a.id\n),\n\ntarget_slot AS (\n    SELECT\n        ac.*,\n\n        slot.slot_start_local\n            AT TIME ZONE ac.timezone\n            AS new_starts_at,\n\n        (\n            slot.slot_start_local\n            + make_interval(mins => ac.duration_minutes)\n        ) AT TIME ZONE ac.timezone\n            AS new_ends_at\n\n    FROM appointment_context ac\n\n    INNER JOIN doctor_schedules ds\n        ON ds.doctor_id = ac.doctor_id\n       AND ds.is_active = TRUE\n       AND ds.weekday =\n            EXTRACT(ISODOW FROM ac.new_target_date)::INTEGER\n       AND (\n            ds.valid_from IS NULL\n            OR ds.valid_from <= ac.new_target_date\n       )\n       AND (\n            ds.valid_to IS NULL\n            OR ds.valid_to >= ac.new_target_date\n       )\n\n    CROSS JOIN LATERAL generate_series(\n        ac.new_target_date + ds.start_time,\n\n        ac.new_target_date\n            + ds.end_time\n            - make_interval(mins => ac.duration_minutes),\n\n        make_interval(\n            mins => ac.duration_minutes + ac.buffer_minutes\n        )\n    ) AS slot(slot_start_local)\n\n    WHERE slot.slot_start_local =\n          ac.new_target_date + ac.new_start_time\n\n    LIMIT 1\n),\n\nslot_conflict AS (\n    SELECT EXISTS (\n        SELECT 1\n        FROM appointments existing\n\n        INNER JOIN target_slot target\n            ON target.doctor_id = existing.doctor_id\n\n        WHERE existing.id <> target.appointment_id\n\n          AND existing.status IN (\n              'pending',\n              'confirmed'\n          )\n\n          AND existing.starts_at < target.new_ends_at\n          AND existing.ends_at > target.new_starts_at\n    ) AS has_conflict\n),\n\nschedule_exception_conflict AS (\n    SELECT EXISTS (\n        SELECT 1\n        FROM schedule_exceptions se\n\n        INNER JOIN target_slot target\n            ON target.doctor_id = se.doctor_id\n\n        WHERE se.is_active = TRUE\n          AND se.exception_type = 'unavailable'\n\n          AND se.starts_at < target.new_ends_at\n          AND se.ends_at > target.new_starts_at\n    ) AS is_blocked\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM clinic_context) THEN FALSE\n        WHEN NOT EXISTS (SELECT 1 FROM patient_context) THEN FALSE\n        WHEN NOT EXISTS (SELECT 1 FROM appointment_context) THEN FALSE\n        WHEN (SELECT status FROM appointment_context)\n             NOT IN ('pending', 'confirmed') THEN FALSE\n        WHEN (SELECT old_ends_at FROM appointment_context) <= NOW() THEN FALSE\n        WHEN NOT EXISTS (SELECT 1 FROM target_slot) THEN FALSE\n        WHEN (SELECT new_starts_at FROM target_slot) <= NOW() THEN FALSE\n        WHEN (\n            SELECT old_starts_at = new_starts_at\n            FROM target_slot\n        ) THEN FALSE\n        WHEN COALESCE(\n            (SELECT is_blocked FROM schedule_exception_conflict),\n            FALSE\n        ) THEN FALSE\n        WHEN COALESCE(\n            (SELECT has_conflict FROM slot_conflict),\n            FALSE\n        ) THEN FALSE\n        ELSE TRUE\n    END AS ready_to_reschedule,\n\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM clinic_context)\n            THEN 'clinic_not_found'\n        WHEN NOT EXISTS (SELECT 1 FROM patient_context)\n            THEN 'patient_not_found'\n        WHEN NOT EXISTS (SELECT 1 FROM appointment_context)\n            THEN 'appointment_not_found'\n        WHEN (SELECT status FROM appointment_context)\n             NOT IN ('pending', 'confirmed')\n            THEN 'appointment_not_reschedulable'\n        WHEN (SELECT old_ends_at FROM appointment_context) <= NOW()\n            THEN 'appointment_in_past'\n        WHEN NOT EXISTS (SELECT 1 FROM target_slot)\n            THEN 'invalid_target_slot'\n        WHEN (SELECT new_starts_at FROM target_slot) <= NOW()\n            THEN 'target_time_in_past'\n        WHEN (\n            SELECT old_starts_at = new_starts_at\n            FROM target_slot\n        )\n            THEN 'same_appointment_time'\n        WHEN COALESCE(\n            (SELECT is_blocked FROM schedule_exception_conflict),\n            FALSE\n        )\n            THEN 'target_time_blocked'\n        WHEN COALESCE(\n            (SELECT has_conflict FROM slot_conflict),\n            FALSE\n        )\n            THEN 'slot_unavailable'\n        ELSE 'can_reschedule'\n    END AS result,\n\n    CASE\n        WHEN NOT EXISTS (SELECT 1 FROM clinic_context)\n            THEN 'کلینیک مطابق ورودی پیدا نشد.'\n        WHEN NOT EXISTS (SELECT 1 FROM patient_context)\n            THEN 'بیماری با این شماره موبایل در کلینیک پیدا نشد.'\n        WHEN NOT EXISTS (SELECT 1 FROM appointment_context)\n            THEN 'این نوبت برای بیمار موردنظر پیدا نشد.'\n        WHEN (SELECT status FROM appointment_context)\n             NOT IN ('pending', 'confirmed')\n            THEN 'وضعیت فعلی نوبت اجازه جابه‌جایی خودکار را نمی‌دهد.'\n        WHEN (SELECT old_ends_at FROM appointment_context) <= NOW()\n            THEN 'نوبت مربوط به گذشته است و قابل جابه‌جایی نیست.'\n        WHEN NOT EXISTS (SELECT 1 FROM target_slot)\n            THEN 'زمان جدید با برنامه کاری پزشک و فاصله زمانی نوبت‌ها تطابق ندارد.'\n        WHEN (SELECT new_starts_at FROM target_slot) <= NOW()\n            THEN 'زمان جدید باید مربوط به آینده باشد.'\n        WHEN (\n            SELECT old_starts_at = new_starts_at\n            FROM target_slot\n        )\n            THEN 'زمان جدید با زمان فعلی نوبت یکسان است.'\n        WHEN COALESCE(\n            (SELECT is_blocked FROM schedule_exception_conflict),\n            FALSE\n        )\n            THEN 'زمان جدید در برنامه پزشک مسدود شده است.'\n        WHEN COALESCE(\n            (SELECT has_conflict FROM slot_conflict),\n            FALSE\n        )\n            THEN 'زمان انتخاب‌شده دیگر در دسترس نیست.'\n        ELSE 'نوبت آماده جابه‌جایی است.'\n    END AS message,\n\n    (\n        SELECT appointment_id\n        FROM appointment_context\n    ) AS appointment_id,\n\n    (\n        SELECT patient_name\n        FROM appointment_context\n    ) AS patient_name,\n\n    (\n        SELECT doctor_name\n        FROM appointment_context\n    ) AS doctor_name,\n\n    (\n        SELECT service_name\n        FROM appointment_context\n    ) AS service_name,\n\n    (\n        SELECT TO_CHAR(\n            old_starts_at AT TIME ZONE timezone,\n            'YYYY-MM-DD HH24:MI'\n        )\n        FROM appointment_context\n    ) AS old_appointment_start,\n\n    (\n        SELECT TO_CHAR(\n            new_starts_at AT TIME ZONE timezone,\n            'YYYY-MM-DD HH24:MI'\n        )\n        FROM target_slot\n    ) AS new_appointment_start,\n\n    (\n        SELECT google_calendar_event_id\n        FROM appointment_context\n    ) AS google_calendar_event_id\n\nFROM request_data;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.appointment_id,\n  $json.clinic_name,\n  $json.mobile,\n  $json.new_target_date,\n  $json.new_start_time\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -312,
+        -48
+      ],
+      "id": "c1490126-8dbf-4844-a00d-68eaa93adf98",
+      "name": "Check Appointment and New Slot"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fb04026e-6e4b-48b4-afeb-6dc083731a54",
+              "leftValue": "={{ $json.ready_to_reschedule }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -56,
+        -48
+      ],
+      "id": "de47b9b5-f0b3-49f7-92cc-1fac80b3489a",
+      "name": "Can Appointment Be Rescheduled?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS appointment_id,\n        $2::TEXT AS clinic_name,\n        $3::TEXT AS mobile,\n        $4::DATE AS new_target_date,\n        $5::TIME AS new_start_time,\n        $6::TEXT AS reschedule_reason\n),\n\ntarget_context AS (\n    SELECT\n        a.id AS appointment_id,\n        a.clinic_id,\n        a.doctor_id,\n        a.patient_id,\n        a.service_id,\n\n        a.starts_at AS old_starts_at,\n        a.ends_at AS old_ends_at,\n        a.google_calendar_event_id AS old_calendar_event_id,\n\n        c.timezone,\n\n        p.full_name AS patient_name,\n        p.mobile,\n\n        d.full_name AS doctor_name,\n        d.buffer_minutes,\n\n        s.name AS service_name,\n        s.duration_minutes,\n\n        slot.slot_start_local\n            AT TIME ZONE c.timezone\n            AS new_starts_at,\n\n        (\n            slot.slot_start_local\n            + make_interval(mins => s.duration_minutes)\n        ) AT TIME ZONE c.timezone\n            AS new_ends_at,\n\n        r.reschedule_reason\n\n    FROM request_data r\n\n    INNER JOIN appointments a\n        ON a.id = r.appointment_id\n       AND a.status IN ('pending', 'confirmed')\n       AND a.ends_at > NOW()\n\n    INNER JOIN clinics c\n        ON c.id = a.clinic_id\n       AND c.name = r.clinic_name\n       AND c.is_active = TRUE\n\n    INNER JOIN patients p\n        ON p.id = a.patient_id\n       AND p.mobile = r.mobile\n\n    INNER JOIN doctors d\n        ON d.id = a.doctor_id\n       AND d.is_active = TRUE\n\n    INNER JOIN services s\n        ON s.id = a.service_id\n       AND s.is_active = TRUE\n\n    INNER JOIN doctor_schedules ds\n        ON ds.doctor_id = a.doctor_id\n       AND ds.is_active = TRUE\n       AND ds.weekday =\n            EXTRACT(ISODOW FROM r.new_target_date)::INTEGER\n       AND (\n            ds.valid_from IS NULL\n            OR ds.valid_from <= r.new_target_date\n       )\n       AND (\n            ds.valid_to IS NULL\n            OR ds.valid_to >= r.new_target_date\n       )\n\n    CROSS JOIN LATERAL generate_series(\n        r.new_target_date + ds.start_time,\n\n        r.new_target_date\n            + ds.end_time\n            - make_interval(mins => s.duration_minutes),\n\n        make_interval(\n            mins => s.duration_minutes + d.buffer_minutes\n        )\n    ) AS slot(slot_start_local)\n\n    WHERE slot.slot_start_local =\n          r.new_target_date + r.new_start_time\n\n      AND (\n            slot.slot_start_local\n                AT TIME ZONE c.timezone\n      ) > NOW()\n\n    LIMIT 1\n),\n\nupdated_appointment AS (\n    UPDATE appointments a\n\n    SET\n        starts_at = target.new_starts_at,\n        ends_at = target.new_ends_at,\n\n        reschedule_count =\n            COALESCE(a.reschedule_count, 0) + 1,\n\n        rescheduled_at = NOW(),\n        last_reschedule_reason = target.reschedule_reason,\n\n        google_calendar_event_id = NULL,\n        updated_at = NOW()\n\n    FROM target_context target\n\n    WHERE a.id = target.appointment_id\n\n      AND target.new_starts_at <> target.old_starts_at\n\n      AND NOT EXISTS (\n          SELECT 1\n          FROM appointments existing\n\n          WHERE existing.doctor_id = target.doctor_id\n            AND existing.id <> target.appointment_id\n\n            AND existing.status IN (\n                'pending',\n                'confirmed'\n            )\n\n            AND existing.starts_at < target.new_ends_at\n            AND existing.ends_at > target.new_starts_at\n      )\n\n      AND NOT EXISTS (\n          SELECT 1\n          FROM schedule_exceptions se\n\n          WHERE se.doctor_id = target.doctor_id\n            AND se.is_active = TRUE\n            AND se.exception_type = 'unavailable'\n\n            AND se.starts_at < target.new_ends_at\n            AND se.ends_at > target.new_starts_at\n      )\n\n    RETURNING\n        a.id AS appointment_id,\n        a.clinic_id,\n        a.doctor_id,\n        a.patient_id,\n        a.service_id,\n\n        target.old_starts_at,\n        target.old_ends_at,\n\n        a.starts_at AS new_starts_at,\n        a.ends_at AS new_ends_at,\n\n        target.old_calendar_event_id,\n        target.patient_name,\n        target.mobile,\n        target.doctor_name,\n        target.service_name,\n        target.timezone,\n        target.reschedule_reason,\n\n        a.status,\n        a.reschedule_count,\n        a.rescheduled_at\n),\n\nhistory_record AS (\n    INSERT INTO appointment_reschedule_history (\n        appointment_id,\n        old_starts_at,\n        old_ends_at,\n        new_starts_at,\n        new_ends_at,\n        reason,\n        source\n    )\n\n    SELECT\n        appointment_id,\n        old_starts_at,\n        old_ends_at,\n        new_starts_at,\n        new_ends_at,\n        reschedule_reason,\n        'assistant'\n\n    FROM updated_appointment\n\n    RETURNING id AS history_id\n)\n\nSELECT\n    TRUE AS success,\n    'rescheduled' AS result,\n    'نوبت با موفقیت جابه‌جا شد.' AS message,\n\n    ua.appointment_id,\n    ua.patient_name,\n    ua.mobile,\n    ua.doctor_name,\n    ua.service_name,\n\n    TO_CHAR(\n        ua.old_starts_at AT TIME ZONE ua.timezone,\n        'YYYY-MM-DD HH24:MI'\n    ) AS old_appointment_start,\n\n    TO_CHAR(\n        ua.new_starts_at AT TIME ZONE ua.timezone,\n        'YYYY-MM-DD HH24:MI'\n    ) AS new_appointment_start,\n\n    ua.new_starts_at,\n    ua.new_ends_at,\n\n    ua.status,\n    ua.reschedule_count,\n    ua.rescheduled_at,\n    ua.reschedule_reason,\n\n    ua.old_calendar_event_id,\n\n    (\n        SELECT history_id\n        FROM history_record\n        LIMIT 1\n    ) AS reschedule_history_id\n\nFROM updated_appointment ua\n\nUNION ALL\n\nSELECT\n    FALSE AS success,\n    'reschedule_conflict' AS result,\n    'زمان انتخاب‌شده در فاصله بررسی تا ثبت تغییر کرده است. زمان‌های آزاد را دوباره بررسی کنید.' AS message,\n\n    NULL::BIGINT AS appointment_id,\n    NULL::TEXT AS patient_name,\n    NULL::TEXT AS mobile,\n    NULL::TEXT AS doctor_name,\n    NULL::TEXT AS service_name,\n\n    NULL::TEXT AS old_appointment_start,\n    NULL::TEXT AS new_appointment_start,\n\n    NULL::TIMESTAMPTZ AS new_starts_at,\n    NULL::TIMESTAMPTZ AS new_ends_at,\n\n    NULL::TEXT AS status,\n    NULL::INTEGER AS reschedule_count,\n    NULL::TIMESTAMPTZ AS rescheduled_at,\n    NULL::TEXT AS reschedule_reason,\n\n    NULL::TEXT AS old_calendar_event_id,\n    NULL::BIGINT AS reschedule_history_id\n\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM updated_appointment\n);",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Normalize and Validate Reschedule').first().json.appointment_id,\n  $('Normalize and Validate Reschedule').first().json.clinic_name,\n  $('Normalize and Validate Reschedule').first().json.mobile,\n  $('Normalize and Validate Reschedule').first().json.new_target_date,\n  $('Normalize and Validate Reschedule').first().json.new_start_time,\n  $('Normalize and Validate Reschedule').first().json.reschedule_reason\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        200,
+        -144
+      ],
+      "id": "92ad1a2b-720a-46c6-a4ea-03e45feee460",
+      "name": "Reschedule Appointment in Database",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "00bfcaef-a4da-496c-8694-df9a740dbad5",
+              "leftValue": "={{ $json.success === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        456,
+        -144
+      ],
+      "id": "9edb39f3-1797-4e30-9704-f826eda26eaf",
+      "name": "Was Database Rescheduled?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "56e9622a-9183-4706-9e20-b6d748f8fedc",
+              "leftValue": "={{ Boolean($json.old_calendar_event_id) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        712,
+        -240
+      ],
+      "id": "22c46709-adbc-41ab-b19f-1d197c30ee41",
+      "name": "Has Old Calendar Event?"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "YOUR_CALENDAR_ID",
+          "mode": "list",
+          "cachedResultName": "Clinic Demo - Dr Test"
+        },
+        "eventId": "={{ $('Reschedule Appointment in Database').first().json.old_calendar_event_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        968,
+        -336
+      ],
+      "id": "5f9461a2-9e32-459a-9eaf-1322c4ac8209",
+      "name": "Delete Old Calendar Event",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "YOUR_CALENDAR_ID",
+          "mode": "list",
+          "cachedResultName": "Clinic Demo - Dr Test"
+        },
+        "start": "={{ $('Reschedule Appointment in Database').first().json.new_starts_at }}",
+        "end": "={{ $('Reschedule Appointment in Database').first().json.new_ends_at }}",
+        "additionalFields": {
+          "description": "={{ `شناسه نوبت: ${$('Reschedule Appointment in Database').first().json.appointment_id}\\nپزشک: ${$('Reschedule Appointment in Database').first().json.doctor_name}\\nخدمت: ${$('Reschedule Appointment in Database').first().json.service_name}\\nوضعیت: جابه‌جاشده\\nمنبع ثبت: منشی هوشمند` }}",
+          "summary": "={{ `نوبت ${$('Reschedule Appointment in Database').first().json.patient_name} - ${$('Reschedule Appointment in Database').first().json.service_name}` }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        1224,
+        -240
+      ],
+      "id": "4c2f1247-1a19-4d46-86f3-6804a99baa4c",
+      "name": "Create New Calendar Event",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "eaaf62f9-6f3f-46a4-806e-b0382391a2c2",
+              "leftValue": "={{ Boolean($json.id) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1480,
+        -240
+      ],
+      "id": "78cb54f1-d05a-46f2-b5f6-feffff5d5317",
+      "name": "Was New Calendar Event Created?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE appointments\nSET\n    google_calendar_event_id = $1,\n    updated_at = NOW()\nWHERE id = $2\nRETURNING\n    id AS appointment_id,\n    google_calendar_event_id;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.id,\n  $('Reschedule Appointment in Database').first().json.appointment_id\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1736,
+        -336
+      ],
+      "id": "6dcb1260-f8d7-4ab2-84de-1a60e77c6fbf",
+      "name": "Save New Calendar Event ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "const db = $('Reschedule Appointment in Database').first().json;\n\nreturn [\n  {\n    json: {\n      ...db,\n      success: true,\n      result: 'rescheduled',\n      message: 'نوبت با موفقیت جابه‌جا و تقویم به‌روزرسانی شد.',\n      calendar_sync_status: 'recreated',\n      google_calendar_event_id: $json.google_calendar_event_id,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1992,
+        -336
+      ],
+      "id": "9f2d10d7-2bc8-4fdb-b30a-cf20e76e0e4c",
+      "name": "Return Reschedule Success"
+    },
+    {
+      "parameters": {
+        "jsCode": "const db = $('Reschedule Appointment in Database').first().json;\n\nreturn [\n  {\n    json: {\n      ...db,\n      success: true,\n      result: 'rescheduled',\n      message: 'نوبت در دیتابیس جابه‌جا شد، اما ساخت رویداد جدید Google Calendar ناموفق بود.',\n      calendar_sync_status: 'create_failed',\n      google_calendar_event_id: null,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1736,
+        -144
+      ],
+      "id": "1e61cd10-86b4-4762-9d6d-13c95e002019",
+      "name": "Return Reschedule with Calendar Warning"
+    },
+    {
+      "parameters": {
+        "jsCode": "if (\n  $json.result === 'reschedule_conflict' &&\n  $json.success === false\n) {\n  return [{ json: $json }];\n}\n\nconst message =\n  $json.error?.message ??\n  $json.errorMessage ??\n  $json.message ??\n  'خطای دیتابیس هنگام جابه‌جایی نوبت رخ داد.';\n\nif (String(message).includes('appointment_time_blocked_by_schedule_exception')) {\n  return [\n    {\n      json: {\n        success: false,\n        result: 'target_time_blocked',\n        message: 'زمان جدید در برنامه پزشک مسدود شده است.',\n      },\n    },\n  ];\n}\n\nreturn [\n  {\n    json: {\n      success: false,\n      result: 'database_reschedule_error',\n      message,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        712,
+        -48
+      ],
+      "id": "2d013032-7247-460a-b5fa-d7ba08bbd875",
+      "name": "Return Database Reschedule Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      result: 'invalid_request',\n      message: 'اطلاعات درخواست ناقص یا نامعتبر است.',\n      errors: $json.errors ?? [],\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -312,
+        176
+      ],
+      "id": "3d2daa9b-ff08-4c7f-8c12-123aa020e351",
+      "name": "Return Reschedule Validation Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      result: $json.result,\n      message: $json.message,\n      appointment_id: $json.appointment_id ?? null,\n      patient_name: $json.patient_name ?? null,\n      doctor_name: $json.doctor_name ?? null,\n      service_name: $json.service_name ?? null,\n      old_appointment_start: $json.old_appointment_start ?? null,\n      new_appointment_start: $json.new_appointment_start ?? null,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        64
+      ],
+      "id": "10dc2796-cdf0-4554-aac5-cc433f7ee26a",
+      "name": "Return Reschedule Rejection"
+    },
+    {
+      "parameters": {
+        "content": "## نسخه Schedule Guarded V3\n\nاین نسخه هنگام بررسی و ثبت زمان جدید، جدول `schedule_exceptions` را نیز کنترل می‌کند.\n\nابتدا Workflow شماره 17 را فقط یک‌بار اجرا کن.\n\nزمان جدید را از خروجی Workflow شماره 11 نسخه Schedule Guarded V2 انتخاب کن.",
+        "height": 360,
+        "width": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1520,
+        -320
+      ],
+      "id": "0b4fcefd-09ef-4bb3-846e-1921987bf2da",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Reschedule Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Reschedule Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Reschedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Reschedule Appointment": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Reschedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Reschedule": {
+      "main": [
+        [
+          {
+            "node": "Is Reschedule Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Reschedule Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Check Appointment and New Slot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Reschedule Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Appointment and New Slot": {
+      "main": [
+        [
+          {
+            "node": "Can Appointment Be Rescheduled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Can Appointment Be Rescheduled?": {
+      "main": [
+        [
+          {
+            "node": "Reschedule Appointment in Database",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Reschedule Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reschedule Appointment in Database": {
+      "main": [
+        [
+          {
+            "node": "Was Database Rescheduled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Was Database Rescheduled?": {
+      "main": [
+        [
+          {
+            "node": "Has Old Calendar Event?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Database Reschedule Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Old Calendar Event?": {
+      "main": [
+        [
+          {
+            "node": "Delete Old Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create New Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Old Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Create New Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create New Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Was New Calendar Event Created?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Was New Calendar Event Created?": {
+      "main": [
+        [
+          {
+            "node": "Save New Calendar Event ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Reschedule with Calendar Warning",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save New Calendar Event ID": {
+      "main": [
+        [
+          {
+            "node": "Return Reschedule Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

@@ -1,0 +1,237 @@
+{
+  "name": "118 - API - Integration Test Report",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -760,
+        170
+      ],
+      "id": "7968461f-d457-4148-be1e-65bcc984a2cb",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "069b4d92-c69d-4364-9a77-79f063222a66",
+              "name": "run_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "a050c8ec-88d4-45db-a162-5b0fcc16ca9c",
+              "name": "suite_code",
+              "value": "mocked_e2e",
+              "type": "string"
+            },
+            {
+              "id": "62436b79-add4-407e-90af-8a5637e25fd0",
+              "name": "clinic_name",
+              "value": "کلینیک تست یکپارچه",
+              "type": "string"
+            },
+            {
+              "id": "7c2afe07-2107-48bb-8a0e-3224f92f2c55",
+              "name": "limit",
+              "value": 20,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -520,
+        170
+      ],
+      "id": "2c84beb5-bba7-47e1-b20b-80e2dbb59829",
+      "name": "Manual Test Report Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/tests/report",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -520,
+        -80
+      ],
+      "id": "baf7a410-2347-4cda-84d0-968dfef8c0a2",
+      "name": "Webhook - Integration Test Report"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst run_id =\n  Number(input.run_id ?? 0);\nconst suite_code =\n  text(input.suite_code);\nconst clinic_name =\n  text(input.clinic_name);\nconst limit =\n  Number(input.limit ?? 20);\n\nconst errors = [];\n\nif (\n  !Number.isInteger(run_id) ||\n  run_id < 0\n) {\n  errors.push({\n    field: 'run_id',\n    message: 'Run ID معتبر نیست.',\n  });\n}\n\nif (\n  run_id === 0 &&\n  !suite_code\n) {\n  errors.push({\n    field: 'suite_code',\n    message: 'در نبود Run ID، Suite Code الزامی است.',\n  });\n}\n\nif (\n  !Number.isInteger(limit) ||\n  limit < 1 ||\n  limit > 100\n) {\n  errors.push({\n    field: 'limit',\n    message: 'Limit باید بین 1 و 100 باشد.',\n  });\n}\n\nreturn [{\n  json: {\n    run_id,\n    suite_code,\n    clinic_name,\n    limit,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -250,
+        40
+      ],
+      "id": "b70671fe-8b19-4c70-9e5a-8b47dea8fbd1",
+      "name": "Normalize and Validate Test Report"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9b74b653-99a8-49a2-8b75-68e6803390a7",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        0,
+        40
+      ],
+      "id": "2d7bfeda-c7c6-42b2-8297-8657b9aa5898",
+      "name": "Is Test Report Request Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        NULLIF($1::BIGINT, 0) AS run_id,\n        NULLIF($2::TEXT, '') AS suite_code,\n        NULLIF($3::TEXT, '') AS clinic_name,\n        $4::INTEGER AS result_limit\n),\n\nclinic_context AS (\n    SELECT\n        clinic.id AS clinic_id\n    FROM clinics clinic\n    INNER JOIN request_data request\n        ON request.clinic_name IS NOT NULL\n       AND clinic.name =\n           request.clinic_name\n    LIMIT 1\n),\n\nselected_runs AS (\n    SELECT run.*\n    FROM integration_test_runs run\n    CROSS JOIN request_data request\n    WHERE (\n            request.run_id IS NOT NULL\n            AND run.id =\n                request.run_id\n          )\n       OR (\n            request.run_id IS NULL\n            AND request.suite_code IS NOT NULL\n            AND run.suite_code =\n                request.suite_code\n          )\n      AND (\n            request.clinic_name IS NULL\n            OR run.clinic_id = (\n                SELECT clinic_id\n                FROM clinic_context\n            )\n          )\n    ORDER BY\n        run.started_at DESC,\n        run.id DESC\n    LIMIT (\n        SELECT result_limit\n        FROM request_data\n    )\n),\n\nresult_rows AS (\n    SELECT result.*\n    FROM integration_test_results result\n    INNER JOIN selected_runs run\n        ON run.id = result.run_id\n)\n\nSELECT\n    CASE\n        WHEN request.clinic_name IS NOT NULL\n         AND NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n         )\n            THEN FALSE\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM selected_runs\n        )\n            THEN FALSE\n\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN request.clinic_name IS NOT NULL\n         AND NOT EXISTS (\n            SELECT 1\n            FROM clinic_context\n         )\n            THEN 'clinic_not_found'\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM selected_runs\n        )\n            THEN 'test_runs_not_found'\n\n        ELSE 'integration_test_report_loaded'\n    END AS result,\n\n    JSONB_BUILD_OBJECT(\n        'run_count',\n            (\n                SELECT COUNT(*)::INTEGER\n                FROM selected_runs\n            ),\n\n        'passed_run_count',\n            (\n                SELECT COUNT(*)::INTEGER\n                FROM selected_runs\n                WHERE status = 'passed'\n            ),\n\n        'failed_run_count',\n            (\n                SELECT COUNT(*)::INTEGER\n                FROM selected_runs\n                WHERE status = 'failed'\n            ),\n\n        'result_count',\n            (\n                SELECT COUNT(*)::INTEGER\n                FROM result_rows\n            ),\n\n        'passed_result_count',\n            (\n                SELECT COUNT(*)::INTEGER\n                FROM result_rows\n                WHERE status = 'passed'\n            ),\n\n        'failed_result_count',\n            (\n                SELECT COUNT(*)::INTEGER\n                FROM result_rows\n                WHERE status IN (\n                    'failed',\n                    'error'\n                )\n            )\n    ) AS summary,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'run_id',\n                        run.id,\n                    'run_key',\n                        run.run_key,\n                    'suite_code',\n                        run.suite_code,\n                    'status',\n                        run.status,\n                    'requested_by',\n                        run.requested_by,\n                    'environment_name',\n                        run.environment_name,\n                    'started_at',\n                        run.started_at,\n                    'completed_at',\n                        run.completed_at,\n                    'summary',\n                        run.summary\n                )\n                ORDER BY\n                    run.started_at DESC,\n                    run.id DESC\n            )\n            FROM selected_runs run\n        ),\n        '[]'::JSONB\n    ) AS runs,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'result_id',\n                        result.id,\n                    'run_id',\n                        result.run_id,\n                    'case_code',\n                        result.case_code,\n                    'status',\n                        result.status,\n                    'duration_ms',\n                        result.duration_ms,\n                    'assertion_results',\n                        result.assertion_results,\n                    'error_message',\n                        result.error_message,\n                    'completed_at',\n                        result.completed_at,\n                    'response_payload',\n                        result.response_payload\n                )\n                ORDER BY\n                    result.completed_at DESC,\n                    result.id DESC\n            )\n            FROM result_rows result\n        ),\n        '[]'::JSONB\n    ) AS test_results\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.run_id,\n  $json.suite_code,\n  $json.clinic_name,\n  $json.limit\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        250,
+        -40
+      ],
+      "id": "5ec5cf72-3c34-4592-b0ab-97dae93b3618",
+      "name": "Load Integration Test Report"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_test_report_request',message:'اطلاعات گزارش تست نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        250,
+        150
+      ],
+      "id": "d4354337-6b6f-4488-abc6-97aa0b8dfb35",
+      "name": "Return Test Report Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## گزارش تست یکپارچه\n\nبا run_id یک اجرای مشخص یا با suite_code آخرین اجراها را مشاهده کن.\n\nخروجی شامل Summary، Runها، Assertionها و Response Payload هر سناریو است.",
+        "height": 300,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1000,
+        -270
+      ],
+      "id": "22102051-7505-4540-ac80-148b2a3bb7a9",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Test Report Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Test Report Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Test Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Integration Test Report": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Test Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Test Report": {
+      "main": [
+        [
+          {
+            "node": "Is Test Report Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Test Report Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Load Integration Test Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Test Report Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

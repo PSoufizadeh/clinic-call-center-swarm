@@ -1,0 +1,343 @@
+{
+  "name": "09 - API - Create Appointment - Final Self-Testable",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        896,
+        352
+      ],
+      "id": "5b8c0cc0-cf6b-4a90-ab69-58e55673e0d4",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2f06cb19-16bf-47fa-89f8-c41e8ea2d942",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "7ecc0b13-404b-4c04-af78-e4198ab0fb30",
+              "name": "doctor_name",
+              "value": "دکتر آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "ba80bdc4-7a8d-4d04-aa46-b8018a8a3f79",
+              "name": "service_name",
+              "value": "ویزیت عمومی",
+              "type": "string"
+            },
+            {
+              "id": "ad7ce74a-9374-44ec-8c87-45d8ec8c90cc",
+              "name": "patient_name",
+              "value": "بیمار تست Workflow 09",
+              "type": "string"
+            },
+            {
+              "id": "a1b392b2-8f9f-4ed1-9dba-a0bae95c06ab",
+              "name": "mobile",
+              "value": "09000000000",
+              "type": "string"
+            },
+            {
+              "id": "3dd143f6-7fb3-4e2a-a7fd-94d78000952b",
+              "name": "target_date",
+              "value": "2026-08-17",
+              "type": "string"
+            },
+            {
+              "id": "c60af671-e050-4c5b-97b2-702dc00fdc42",
+              "name": "start_time",
+              "value": "09:00",
+              "type": "string"
+            },
+            {
+              "id": "35bc728f-e3a5-4a0f-8958-437b4aa836b1",
+              "name": "visit_reason",
+              "value": "تست داخلی API بدون نیاز به Terminal",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1136,
+        352
+      ],
+      "id": "4fb3aab0-b191-4aa6-aec2-b396b244b7c3",
+      "name": "Manual Demo Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/appointments/create",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1136,
+        96
+      ],
+      "id": "4cdc725c-4306-4449-bf34-7b6f3c12b3b6",
+      "name": "Webhook - Create Appointment"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n};\n\nconst data = {\n  clinic_name: text(input.clinic_name),\n  doctor_name: text(input.doctor_name),\n  service_name: text(input.service_name),\n  patient_name: text(input.patient_name),\n  mobile: text(input.mobile),\n  target_date: text(input.target_date),\n  start_time: text(input.start_time),\n  visit_reason: text(input.visit_reason),\n};\n\nconst errors = [];\n\nconst required = [\n  ['clinic_name', 'نام کلینیک الزامی است.'],\n  ['doctor_name', 'نام پزشک الزامی است.'],\n  ['service_name', 'نام خدمت الزامی است.'],\n  ['patient_name', 'نام بیمار الزامی است.'],\n  ['mobile', 'شماره موبایل الزامی است.'],\n  ['target_date', 'تاریخ نوبت الزامی است.'],\n  ['start_time', 'ساعت نوبت الزامی است.'],\n];\n\nfor (const [field, message] of required) {\n  if (!data[field]) errors.push({ field, message });\n}\n\nfunction isRealIsoDate(value) {\n  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;\n\n  const [year, month, day] = value.split('-').map(Number);\n  const date = new Date(Date.UTC(year, month - 1, day));\n\n  return (\n    date.getUTCFullYear() === year &&\n    date.getUTCMonth() === month - 1 &&\n    date.getUTCDate() === day\n  );\n}\n\nif (data.target_date && !isRealIsoDate(data.target_date)) {\n  errors.push({\n    field: 'target_date',\n    message: 'تاریخ باید معتبر و با قالب YYYY-MM-DD باشد.',\n  });\n}\n\nif (data.start_time && !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(data.start_time)) {\n  errors.push({\n    field: 'start_time',\n    message: 'ساعت باید با قالب HH:MM باشد.',\n  });\n}\n\nif (data.mobile && !/^\\+?[0-9]{8,15}$/.test(data.mobile)) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره موبایل باید فقط شامل اعداد و در صورت نیاز علامت + باشد.',\n  });\n}\n\nreturn [\n  {\n    json: {\n      ...data,\n      validation_status: errors.length === 0 ? 'valid' : 'invalid',\n      errors,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        224
+      ],
+      "id": "7c205eb5-1977-4366-8c7b-68001916a776",
+      "name": "Normalize and Validate Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5ce8f3e2-3870-4c26-92af-6daf4466bd29",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1648,
+        224
+      ],
+      "id": "c4c2b8e6-dc24-405e-9d61-3b175d581576",
+      "name": "Is Request Valid?"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "obzCbNzmSeVRpNwD",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/3wuBVDFCl863o9zr",
+          "cachedResultName": "07 - Core - Create Appointment - Schedule Guarded V2"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "clinic_name": "={{ $json.clinic_name }}",
+            "doctor_name": "={{ $json.doctor_name }}",
+            "service_name": "={{ $json.service_name }}",
+            "patient_name": "={{ $json.patient_name }}",
+            "mobile": "={{ $json.mobile }}",
+            "target_date": "={{ $json.target_date }}",
+            "start_time": "={{ $json.start_time }}",
+            "visit_reason": "={{ $json.visit_reason }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "clinic_name",
+              "displayName": "clinic_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "doctor_name",
+              "displayName": "doctor_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "service_name",
+              "displayName": "service_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "patient_name",
+              "displayName": "patient_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "mobile",
+              "displayName": "mobile",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "target_date",
+              "displayName": "target_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "start_time",
+              "displayName": "start_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "visit_reason",
+              "displayName": "visit_reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1888,
+        144
+      ],
+      "id": "16b534be-af0e-46d4-9a26-840d2bd3fae6",
+      "name": "Run Core Appointment Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      result: 'invalid_request',\n      message: 'اطلاعات درخواست ناقص یا نامعتبر است.',\n      errors: $json.errors ?? [],\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1888,
+        320
+      ],
+      "id": "39d2f7a2-b7b2-43bb-8845-644cd316d2ce",
+      "name": "Return Validation Error"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Demo Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Demo Request": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Create Appointment": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Request": {
+      "main": [
+        [
+          {
+            "node": "Is Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Run Core Appointment Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": [],
+  "id": "E9qJENKv9NhCsAYc"
+}

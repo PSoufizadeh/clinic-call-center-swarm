@@ -1,0 +1,237 @@
+{
+  "name": "96 - API - Operational Dashboard Summary - Corrected V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        176
+      ],
+      "id": "d42f10b8-fedc-472f-b7c9-c9ac02ce10d9",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "835f530c-9233-4d2d-91b6-ae51ace3c334",
+              "name": "clinic_name",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "b8a68b46-99df-44f9-a416-b27b1c8f35fc",
+              "name": "period_hours",
+              "value": 24,
+              "type": "number"
+            },
+            {
+              "id": "df9aba6a-16e6-4f76-a960-9e2ac6373541",
+              "name": "detail_limit",
+              "value": 20,
+              "type": "number"
+            },
+            {
+              "id": "90ac7c47-cadf-4402-89c2-a411cf783fdb",
+              "name": "confirm_query",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        176
+      ],
+      "id": "59f206c4-c5e8-4312-be73-395c2b6f9210",
+      "name": "Manual Dashboard Query"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/operations/dashboard/summary",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -680,
+        -80
+      ],
+      "id": "0e679171-1491-4ff6-b8d7-11c6a6c7f626",
+      "name": "Webhook - Operational Dashboard"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst clinic_name = text(input.clinic_name);\nconst period_hours = Number(input.period_hours ?? 24);\nconst detail_limit = Number(input.detail_limit ?? 20);\nconst confirm_query = bool(input.confirm_query);\n\nconst errors = [];\n\nif (\n  !Number.isInteger(period_hours) ||\n  period_hours < 1 ||\n  period_hours > 2160\n) {\n  errors.push({\n    field: 'period_hours',\n    message: 'بازه داشبورد معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(detail_limit) ||\n  detail_limit < 1 ||\n  detail_limit > 200\n) {\n  errors.push({\n    field: 'detail_limit',\n    message: 'تعداد جزئیات معتبر نیست.',\n  });\n}\n\nif (confirm_query !== true) {\n  errors.push({\n    field: 'confirm_query',\n    message: 'درخواست داشبورد باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    clinic_name,\n    period_hours,\n    detail_limit,\n    confirm_query,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -408,
+        48
+      ],
+      "id": "2f9e8cdf-684d-42ef-bfec-c8425c3a5b41",
+      "name": "Normalize and Validate Dashboard Query"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8547b5ed-f45d-4b65-b16e-7af2189ece74",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -168,
+        48
+      ],
+      "id": "612749c2-244f-4909-adbe-ffa55c8efdb2",
+      "name": "Is Dashboard Query Valid?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        NULLIF($1::TEXT, '') AS clinic_name,\n        $2::INTEGER AS period_hours,\n        $3::INTEGER AS detail_limit\n),\n\nscope AS (\n    SELECT\n        request.*,\n        clinic.id AS clinic_id\n    FROM request_data request\n    LEFT JOIN clinics clinic\n        ON clinic.name = request.clinic_name\n       AND clinic.is_active = TRUE\n),\n\nmessage_statuses AS (\n    SELECT\n        message.status,\n        COUNT(*) AS status_count\n    FROM outbound_messages message\n    CROSS JOIN scope scope_row\n    WHERE message.created_at >=\n          NOW() -\n          MAKE_INTERVAL(\n              hours => scope_row.period_hours\n          )\n      AND (\n            scope_row.clinic_name IS NULL\n            OR message.clinic_id =\n               scope_row.clinic_id\n          )\n    GROUP BY message.status\n),\n\ndelivery_events AS (\n    SELECT\n        delivery.event_type,\n        COUNT(*) AS event_count\n    FROM communication_delivery_events delivery\n    INNER JOIN outbound_messages message\n        ON message.id =\n           delivery.outbound_message_id\n    CROSS JOIN scope scope_row\n    WHERE delivery.event_at >=\n          NOW() -\n          MAKE_INTERVAL(\n              hours => scope_row.period_hours\n          )\n      AND (\n            scope_row.clinic_name IS NULL\n            OR message.clinic_id =\n               scope_row.clinic_id\n          )\n    GROUP BY delivery.event_type\n),\n\nhandoff_statuses AS (\n    SELECT\n        handoff.status,\n        COUNT(*) AS status_count\n    FROM human_handoff_tasks handoff\n    CROSS JOIN scope scope_row\n    WHERE handoff.created_at >=\n          NOW() -\n          MAKE_INTERVAL(\n              hours => scope_row.period_hours\n          )\n      AND (\n            scope_row.clinic_name IS NULL\n            OR handoff.clinic_id =\n               scope_row.clinic_id\n          )\n    GROUP BY handoff.status\n),\n\npermission_decisions AS (\n    SELECT\n        permission.decision,\n        COUNT(*) AS decision_count\n    FROM communication_permission_checks permission\n    CROSS JOIN scope scope_row\n    WHERE permission.checked_at >=\n          NOW() -\n          MAKE_INTERVAL(\n              hours => scope_row.period_hours\n          )\n      AND (\n            scope_row.clinic_name IS NULL\n            OR permission.clinic_id =\n               scope_row.clinic_id\n          )\n    GROUP BY permission.decision\n),\n\nconsent_statuses AS (\n    SELECT\n        consent.status,\n        COUNT(*) AS status_count\n    FROM patient_consents consent\n    CROSS JOIN scope scope_row\n    WHERE (\n            scope_row.clinic_name IS NULL\n            OR consent.clinic_id =\n               scope_row.clinic_id\n          )\n    GROUP BY consent.status\n),\n\nclinical_intake_risks AS (\n    SELECT\n        intake.risk_level,\n        COUNT(*) AS risk_count\n    FROM clinical_intake_cases intake\n    CROSS JOIN scope scope_row\n    WHERE intake.created_at >=\n          NOW() -\n          MAKE_INTERVAL(\n              hours => scope_row.period_hours\n          )\n      AND (\n            scope_row.clinic_name IS NULL\n            OR intake.clinic_id =\n               scope_row.clinic_id\n          )\n    GROUP BY intake.risk_level\n),\n\nlatest_health AS (\n    SELECT\n        snapshot.id,\n        snapshot.overall_status,\n        snapshot.checks,\n        snapshot.metrics,\n        snapshot.checked_at\n    FROM system_health_snapshots snapshot\n    CROSS JOIN scope scope_row\n    WHERE (\n            scope_row.clinic_name IS NULL\n            OR snapshot.clinic_id =\n               scope_row.clinic_id\n          )\n    ORDER BY snapshot.checked_at DESC\n    LIMIT 1\n),\n\nrecent_errors AS (\n    SELECT\n        error_event.id,\n        error_event.workflow_name,\n        error_event.node_name,\n        error_event.error_type,\n        error_event.error_message,\n        error_event.severity,\n        error_event.status,\n        error_event.retryable,\n        error_event.occurrence_count,\n        error_event.last_occurred_at\n    FROM workflow_error_events error_event\n    CROSS JOIN scope scope_row\n    WHERE error_event.status IN (\n            'open',\n            'acknowledged'\n          )\n      AND (\n            scope_row.clinic_name IS NULL\n            OR error_event.clinic_id =\n               scope_row.clinic_id\n          )\n    ORDER BY\n        CASE error_event.severity\n            WHEN 'critical' THEN 1\n            WHEN 'error' THEN 2\n            ELSE 3\n        END,\n        error_event.last_occurred_at DESC\n    LIMIT (\n        SELECT detail_limit\n        FROM request_data\n    )\n),\n\nrecent_dead_letters AS (\n    SELECT\n        dead_letter.id,\n        dead_letter.outbound_message_id,\n        message.channel,\n        message.purpose,\n        message.recipient,\n        message.attempt_count,\n        message.max_attempts,\n        dead_letter.final_error_code,\n        dead_letter.final_error_message,\n        dead_letter.created_at\n    FROM outbound_message_dead_letters dead_letter\n    INNER JOIN outbound_messages message\n        ON message.id =\n           dead_letter.outbound_message_id\n    CROSS JOIN scope scope_row\n    WHERE dead_letter.resolved = FALSE\n      AND (\n            scope_row.clinic_name IS NULL\n            OR message.clinic_id =\n               scope_row.clinic_id\n          )\n    ORDER BY dead_letter.created_at DESC\n    LIMIT (\n        SELECT detail_limit\n        FROM request_data\n    )\n),\n\nsummary_metrics AS (\n    SELECT JSONB_BUILD_OBJECT(\n        'message_total',\n            (\n                SELECT COUNT(*)\n                FROM outbound_messages message\n                CROSS JOIN scope scope_row\n                WHERE message.created_at >=\n                      NOW() -\n                      MAKE_INTERVAL(\n                          hours =>\n                            scope_row.period_hours\n                      )\n                  AND (\n                        scope_row.clinic_name IS NULL\n                        OR message.clinic_id =\n                           scope_row.clinic_id\n                      )\n            ),\n\n        'message_backlog_due',\n            (\n                SELECT COUNT(*)\n                FROM outbound_messages message\n                CROSS JOIN scope scope_row\n                WHERE message.status IN (\n                        'queued',\n                        'scheduled',\n                        'failed'\n                      )\n                  AND message.next_attempt_at <= NOW()\n                  AND (\n                        scope_row.clinic_name IS NULL\n                        OR message.clinic_id =\n                           scope_row.clinic_id\n                      )\n            ),\n\n        'unresolved_dead_letters',\n            (\n                SELECT COUNT(*)\n                FROM outbound_message_dead_letters dead_letter\n                INNER JOIN outbound_messages message\n                    ON message.id =\n                       dead_letter.outbound_message_id\n                CROSS JOIN scope scope_row\n                WHERE dead_letter.resolved = FALSE\n                  AND (\n                        scope_row.clinic_name IS NULL\n                        OR message.clinic_id =\n                           scope_row.clinic_id\n                      )\n            ),\n\n        'open_handoffs',\n            (\n                SELECT COUNT(*)\n                FROM human_handoff_tasks handoff\n                CROSS JOIN scope scope_row\n                WHERE handoff.status NOT IN (\n                        'completed',\n                        'resolved',\n                        'cancelled',\n                        'closed'\n                      )\n                  AND (\n                        scope_row.clinic_name IS NULL\n                        OR handoff.clinic_id =\n                           scope_row.clinic_id\n                      )\n            ),\n\n        'open_workflow_errors',\n            (\n                SELECT COUNT(*)\n                FROM workflow_error_events error_event\n                CROSS JOIN scope scope_row\n                WHERE error_event.status IN (\n                        'open',\n                        'acknowledged'\n                      )\n                  AND (\n                        scope_row.clinic_name IS NULL\n                        OR error_event.clinic_id =\n                           scope_row.clinic_id\n                      )\n            ),\n\n        'clinical_intake_total',\n            (\n                SELECT COUNT(*)\n                FROM clinical_intake_cases intake\n                CROSS JOIN scope scope_row\n                WHERE intake.created_at >=\n                      NOW() -\n                      MAKE_INTERVAL(\n                          hours =>\n                            scope_row.period_hours\n                      )\n                  AND (\n                        scope_row.clinic_name IS NULL\n                        OR intake.clinic_id =\n                           scope_row.clinic_id\n                      )\n            )\n    ) AS summary\n)\n\nSELECT\n    CASE\n        WHEN scope_row.clinic_name IS NOT NULL\n         AND scope_row.clinic_id IS NULL\n            THEN FALSE\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN scope_row.clinic_name IS NOT NULL\n         AND scope_row.clinic_id IS NULL\n            THEN 'clinic_not_found'\n        ELSE 'operational_dashboard_loaded'\n    END AS result,\n\n    scope_row.clinic_id,\n    scope_row.clinic_name,\n    scope_row.period_hours,\n\n    (\n        SELECT summary\n        FROM summary_metrics\n    ) AS summary,\n\n    COALESCE(\n        (\n            SELECT JSONB_OBJECT_AGG(\n                status,\n                status_count\n            )\n            FROM message_statuses\n        ),\n        '{}'::JSONB\n    ) AS message_statuses,\n\n    COALESCE(\n        (\n            SELECT JSONB_OBJECT_AGG(\n                event_type,\n                event_count\n            )\n            FROM delivery_events\n        ),\n        '{}'::JSONB\n    ) AS delivery_events,\n\n    COALESCE(\n        (\n            SELECT JSONB_OBJECT_AGG(\n                status,\n                status_count\n            )\n            FROM handoff_statuses\n        ),\n        '{}'::JSONB\n    ) AS handoff_statuses,\n\n    COALESCE(\n        (\n            SELECT JSONB_OBJECT_AGG(\n                decision,\n                decision_count\n            )\n            FROM permission_decisions\n        ),\n        '{}'::JSONB\n    ) AS permission_decisions,\n\n    COALESCE(\n        (\n            SELECT JSONB_OBJECT_AGG(\n                status,\n                status_count\n            )\n            FROM consent_statuses\n        ),\n        '{}'::JSONB\n    ) AS consent_statuses,\n\n    COALESCE(\n        (\n            SELECT JSONB_OBJECT_AGG(\n                risk_level,\n                risk_count\n            )\n            FROM clinical_intake_risks\n        ),\n        '{}'::JSONB\n    ) AS clinical_intake_risks,\n\n    (\n        SELECT TO_JSONB(health)\n        FROM latest_health health\n    ) AS latest_health,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                TO_JSONB(error_row)\n            )\n            FROM recent_errors error_row\n        ),\n        '[]'::JSONB\n    ) AS recent_errors,\n\n    COALESCE(\n        (\n            SELECT JSONB_AGG(\n                TO_JSONB(dead_letter_row)\n            )\n            FROM recent_dead_letters dead_letter_row\n        ),\n        '[]'::JSONB\n    ) AS unresolved_dead_letters,\n\n    NOW() AS generated_at\n\nFROM scope scope_row;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.clinic_name,\n  $json.period_hours,\n  $json.detail_limit\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        -48
+      ],
+      "id": "d64f1904-47ea-42f2-b1a4-31731b0e735c",
+      "name": "Load Operational Dashboard"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'تنظیمات داشبورد عملیاتی نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        144
+      ],
+      "id": "420c4e5d-1ea3-4704-b334-4766d2527237",
+      "name": "Return Dashboard Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## API خلاصه داشبورد\n\nخروجی شامل:\n- وضعیت صف پیام\n- Delivery Eventها\n- Handoffها\n- تصمیم‌های Permission\n- وضعیت رضایت‌ها\n- ریسک Clinical Intake\n- خطاهای باز\n- Dead Letterهای باز\n- آخرین Health Snapshot\n\nاصلاح V2:\n- clinic_name نامعتبر دیگر داده‌های همه کلینیک‌ها را برنمی‌گرداند.\n- Summaryها صفر، Listها خالی و نتیجه clinic_not_found خواهد بود.",
+        "height": 410,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -310
+      ],
+      "id": "95d69649-697c-457f-a03d-202f2f00153c",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Dashboard Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Dashboard Query": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Dashboard Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Operational Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Dashboard Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Dashboard Query": {
+      "main": [
+        [
+          {
+            "node": "Is Dashboard Query Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Dashboard Query Valid?": {
+      "main": [
+        [
+          {
+            "node": "Load Operational Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Dashboard Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

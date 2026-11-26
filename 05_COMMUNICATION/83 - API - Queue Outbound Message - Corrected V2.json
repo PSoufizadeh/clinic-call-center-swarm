@@ -1,0 +1,365 @@
+{
+  "name": "83 - API - Queue Outbound Message - Corrected V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1180,
+        208
+      ],
+      "id": "9a512216-8ea3-4d2e-b3a4-e7c32ebbb343",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1ebab1c1-c3d1-4bcb-a71b-eb4d2b1387a7",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "397e4c29-1624-4a62-9b9a-d4008d398a9d",
+              "name": "mobile",
+              "value": "09000000000",
+              "type": "string"
+            },
+            {
+              "id": "3734179f-42e0-44e3-92bc-43df229389ee",
+              "name": "channel",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "f43023ab-0815-45b8-bee2-cbce2b47b2ad",
+              "name": "purpose",
+              "value": "appointment_reminder",
+              "type": "string"
+            },
+            {
+              "id": "a0072de9-2fff-49e9-97fd-85ba120e93d2",
+              "name": "message_type",
+              "value": "text",
+              "type": "string"
+            },
+            {
+              "id": "18d0c166-7253-4009-94c8-876dfcddfee7",
+              "name": "template_code",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "89ae3f13-0d69-427e-ab32-5b9ea1cec836",
+              "name": "language",
+              "value": "fa",
+              "type": "string"
+            },
+            {
+              "id": "7215e7d2-c138-4cba-9341-4e4dcf95a595",
+              "name": "subject",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "9d72b267-12f5-45d2-8c11-f31e36f53ced",
+              "name": "message_text",
+              "value": "یادآوری نوبت شما",
+              "type": "string"
+            },
+            {
+              "id": "7de990e6-7b5e-4c59-8599-e1c56be7ebb9",
+              "name": "payload",
+              "value": "{}",
+              "type": "string"
+            },
+            {
+              "id": "9b44383b-d917-46c6-abd9-c3847378a9a1",
+              "name": "related_entity_type",
+              "value": "appointment",
+              "type": "string"
+            },
+            {
+              "id": "e7ab1f15-eb77-44a9-9598-242e96e060b1",
+              "name": "related_entity_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "0cd2a7fe-92bb-450d-bd4d-2d4ac3e8c648",
+              "name": "request_reference",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "d5e83ab1-f10c-4141-b570-ac41018bcd27",
+              "name": "idempotency_key",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "5315cac9-edc8-44e9-98bc-53fe4ba373f4",
+              "name": "priority",
+              "value": 5,
+              "type": "number"
+            },
+            {
+              "id": "1f282e7b-6b57-40ff-b216-0909a836f08f",
+              "name": "scheduled_at",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "75b73fe9-b40c-43de-a2c6-649684429c49",
+              "name": "max_attempts",
+              "value": 5,
+              "type": "number"
+            },
+            {
+              "id": "e3e9514f-4704-4eb4-a2d8-9de69d66a71a",
+              "name": "webhook_base_url",
+              "value": "http://localhost:5678/webhook",
+              "type": "string"
+            },
+            {
+              "id": "dca55f81-003a-41c7-9c0a-60f2f601f682",
+              "name": "confirm_queue",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -940,
+        208
+      ],
+      "id": "ec4e0dfb-7e10-4045-846f-c5d5d2debaf3",
+      "name": "Manual Queue Message"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/communications/messages/queue",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -940,
+        -80
+      ],
+      "id": "90adbbf7-cfa8-42d9-9a6f-97f001bfe99b",
+      "name": "Webhook - Queue Outbound Message"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst hash = (value) => {\n  let current = 2166136261;\n\n  for (let index = 0; index < value.length; index++) {\n    current ^= value.charCodeAt(index);\n    current = Math.imul(current, 16777619);\n  }\n\n  return (current >>> 0)\n    .toString(16)\n    .padStart(8, '0');\n};\n\nconst clinic_name = text(input.clinic_name);\nconst mobile = text(input.mobile);\nconst channel = text(input.channel).toLowerCase();\nconst purpose = text(input.purpose).toLowerCase();\nconst message_type =\n  text(input.message_type || 'text').toLowerCase();\nconst template_code = text(input.template_code);\nconst language =\n  text(input.language || 'fa').toLowerCase();\nconst subject = text(input.subject);\nconst message_text = text(input.message_text);\nconst related_entity_type =\n  text(input.related_entity_type);\nconst related_entity_id =\n  Number(input.related_entity_id ?? 0);\nconst request_reference =\n  text(input.request_reference);\nconst priority = Number(input.priority ?? 5);\nconst scheduled_at =\n  text(input.scheduled_at) ||\n  new Date().toISOString();\nconst max_attempts =\n  Number(input.max_attempts ?? 5);\nconst webhook_base_url =\n  text(\n    input.webhook_base_url ||\n    'http://localhost:5678/webhook'\n  ).replace(/\\/+$/, '');\nconst confirm_queue = bool(input.confirm_queue);\n\nlet payload = input.payload ?? {};\n\ntry {\n  if (typeof payload === 'string') {\n    payload = JSON.parse(payload || '{}');\n  }\n} catch {\n  payload = null;\n}\n\nconst generatedKeySource = [\n  clinic_name,\n  mobile,\n  channel,\n  purpose,\n  request_reference,\n  related_entity_type,\n  related_entity_id,\n  scheduled_at,\n  message_text,\n].join('|');\n\nconst idempotency_key =\n  text(input.idempotency_key) ||\n  `msg-${hash(generatedKeySource)}`;\n\nconst channels = [\n  'whatsapp',\n  'sms',\n  'email',\n  'phone',\n  'web_push',\n  'in_app',\n];\n\nconst purposes = [\n  'appointment_reminder',\n  'appointment_update',\n  'waitlist_offer',\n  'post_visit_followup',\n  'clinical_followup',\n  'marketing',\n  'satisfaction_survey',\n  'general_information',\n  'human_handoff',\n];\n\nconst messageTypes = [\n  'text',\n  'template',\n  'media',\n  'interactive',\n  'email',\n];\n\nconst errors = [];\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (!/^\\+?[0-9]{8,15}$/.test(mobile)) {\n  errors.push({\n    field: 'mobile',\n    message: 'شماره گیرنده معتبر نیست.',\n  });\n}\n\nif (!channels.includes(channel)) {\n  errors.push({\n    field: 'channel',\n    message: 'کانال معتبر نیست.',\n  });\n}\n\nif (!purposes.includes(purpose)) {\n  errors.push({\n    field: 'purpose',\n    message: 'هدف پیام معتبر نیست.',\n  });\n}\n\nif (!messageTypes.includes(message_type)) {\n  errors.push({\n    field: 'message_type',\n    message: 'نوع پیام معتبر نیست.',\n  });\n}\n\nif (!['fa', 'en', 'ar', 'unknown'].includes(language)) {\n  errors.push({\n    field: 'language',\n    message: 'زبان معتبر نیست.',\n  });\n}\n\nif (!message_text) {\n  errors.push({\n    field: 'message_text',\n    message: 'متن پیام الزامی است.',\n  });\n}\n\nif (message_text.length > 12000) {\n  errors.push({\n    field: 'message_text',\n    message: 'متن پیام بیش از حد طولانی است.',\n  });\n}\n\nif (\n  !payload ||\n  Array.isArray(payload) ||\n  typeof payload !== 'object'\n) {\n  errors.push({\n    field: 'payload',\n    message: 'payload باید یک شیء JSON باشد.',\n  });\n  payload = {};\n}\n\nif (\n  !Number.isInteger(related_entity_id) ||\n  related_entity_id < 0\n) {\n  errors.push({\n    field: 'related_entity_id',\n    message: 'شناسه موجودیت مرتبط معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(priority) ||\n  priority < 1 ||\n  priority > 9\n) {\n  errors.push({\n    field: 'priority',\n    message: 'اولویت باید بین 1 و 9 باشد.',\n  });\n}\n\nif (Number.isNaN(Date.parse(scheduled_at))) {\n  errors.push({\n    field: 'scheduled_at',\n    message: 'زمان برنامه‌ریزی معتبر نیست.',\n  });\n}\n\nif (\n  !Number.isInteger(max_attempts) ||\n  max_attempts < 1 ||\n  max_attempts > 20\n) {\n  errors.push({\n    field: 'max_attempts',\n    message: 'تعداد تلاش مجاز باید بین 1 و 20 باشد.',\n  });\n}\n\nif (!/^https?:\\/\\/.+/i.test(webhook_base_url)) {\n  errors.push({\n    field: 'webhook_base_url',\n    message: 'آدرس Webhook معتبر نیست.',\n  });\n}\n\nif (confirm_queue !== true) {\n  errors.push({\n    field: 'confirm_queue',\n    message: 'ثبت پیام در صف باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    clinic_name,\n    mobile,\n    channel,\n    purpose,\n    message_type,\n    template_code,\n    language,\n    subject,\n    message_text,\n    payload,\n    payload_text: JSON.stringify(payload),\n    related_entity_type,\n    related_entity_id,\n    request_reference,\n    idempotency_key,\n    priority,\n    scheduled_at,\n    max_attempts,\n    webhook_base_url,\n    permission_url:\n      `${webhook_base_url}/clinic/communications/check-permission`,\n    confirm_queue,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -668,
+        64
+      ],
+      "id": "fb3f6000-f728-4ae2-94a4-721f2344ff07",
+      "name": "Normalize and Validate Queue Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "be76ab23-1dec-41eb-bb08-b642d72aa2d9",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -428,
+        64
+      ],
+      "id": "ac1a9904-9c07-4bd8-93cd-5c8fa7afcd3d",
+      "name": "Is Queue Request Valid?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.permission_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { clinic_name:$json.clinic_name,mobile:$json.mobile,channel:$json.channel,purpose:$json.purpose,requested_at:$json.scheduled_at,request_reference:$json.request_reference || $json.idempotency_key,confirm_check:true } }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -172,
+        -48
+      ],
+      "id": "8c1a183f-d6b3-4869-9020-fa16cd5581c6",
+      "name": "Check Message Permission",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::TEXT AS clinic_name,\n        $2::TEXT AS mobile,\n        $3::TEXT AS channel,\n        $4::TEXT AS purpose,\n        $5::TEXT AS message_type,\n        NULLIF($6::TEXT, '') AS template_code,\n        $7::TEXT AS language,\n        NULLIF($8::TEXT, '') AS subject,\n        $9::TEXT AS message_text,\n        $10::JSONB AS payload,\n        NULLIF($11::TEXT, '') AS related_entity_type,\n        NULLIF($12::BIGINT, 0) AS related_entity_id,\n        NULLIF($13::TEXT, '') AS request_reference,\n        $14::TEXT AS idempotency_key,\n        $15::INTEGER AS priority,\n        $16::TIMESTAMPTZ AS scheduled_at,\n        $17::INTEGER AS max_attempts,\n        NULLIF($18::BIGINT, 0) AS permission_check_id,\n        $19::TEXT AS permission_decision\n),\n\npatient_context AS (\n    SELECT\n        clinic.id AS clinic_id,\n        patient.id AS patient_id,\n        patient.full_name AS patient_name,\n        request.*\n    FROM request_data request\n    INNER JOIN clinics clinic\n        ON clinic.name = request.clinic_name\n       AND clinic.is_active = TRUE\n    INNER JOIN patients patient\n        ON patient.clinic_id = clinic.id\n       AND patient.mobile = request.mobile\n    LIMIT 1\n),\n\ninserted_message AS (\n    INSERT INTO outbound_messages (\n        clinic_id,\n        patient_id,\n        permission_check_id,\n        channel,\n        purpose,\n        message_type,\n        template_code,\n        language,\n        recipient,\n        subject,\n        message_text,\n        payload,\n        related_entity_type,\n        related_entity_id,\n        request_reference,\n        idempotency_key,\n        priority,\n        status,\n        scheduled_at,\n        next_attempt_at,\n        max_attempts\n    )\n    SELECT\n        context.clinic_id,\n        context.patient_id,\n        context.permission_check_id,\n        context.channel,\n        context.purpose,\n        context.message_type,\n        context.template_code,\n        context.language,\n        context.mobile,\n        context.subject,\n        context.message_text,\n        context.payload,\n        context.related_entity_type,\n        context.related_entity_id,\n        context.request_reference,\n        context.idempotency_key,\n        context.priority,\n        CASE\n            WHEN context.permission_decision = 'deferred'\n                THEN 'scheduled'\n            WHEN context.scheduled_at > NOW()\n                THEN 'scheduled'\n            ELSE 'queued'\n        END,\n        context.scheduled_at,\n        CASE\n            WHEN context.permission_decision = 'deferred'\n                THEN GREATEST(\n                    context.scheduled_at,\n                    NOW() + INTERVAL '1 hour'\n                )\n            ELSE context.scheduled_at\n        END,\n        context.max_attempts\n    FROM patient_context context\n    WHERE context.permission_decision IN (\n        'allowed',\n        'deferred'\n    )\n    ON CONFLICT (\n        clinic_id,\n        idempotency_key\n    )\n    DO NOTHING\n    RETURNING *\n),\n\nexisting_message AS (\n    SELECT\n        message.*\n    FROM outbound_messages message\n    INNER JOIN patient_context context\n        ON message.clinic_id = context.clinic_id\n       AND message.idempotency_key =\n           context.idempotency_key\n    LIMIT 1\n),\n\nselected_message AS (\n    SELECT\n        message.*,\n        FALSE AS duplicate_existing\n    FROM inserted_message message\n\n    UNION ALL\n\n    SELECT\n        message.*,\n        TRUE AS duplicate_existing\n    FROM existing_message message\n    WHERE NOT EXISTS (\n        SELECT 1\n        FROM inserted_message\n    )\n\n    LIMIT 1\n)\n\nSELECT\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM patient_context\n        )\n            THEN FALSE\n\n        WHEN request.permission_decision NOT IN (\n            'allowed',\n            'deferred'\n        )\n            THEN FALSE\n\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM selected_message\n        )\n            THEN FALSE\n\n        ELSE TRUE\n    END AS success,\n\n    CASE\n        WHEN NOT EXISTS (\n            SELECT 1\n            FROM patient_context\n        )\n            THEN 'patient_not_found'\n\n        WHEN request.permission_decision = 'blocked'\n            THEN 'message_blocked_by_permission'\n\n        WHEN request.permission_decision = 'error'\n            THEN 'permission_check_failed'\n\n        WHEN EXISTS (\n            SELECT 1\n            FROM selected_message\n            WHERE duplicate_existing = TRUE\n        )\n            THEN 'duplicate_message_matched'\n\n        WHEN request.permission_decision = 'deferred'\n            THEN 'message_deferred_and_queued'\n\n        ELSE 'outbound_message_queued'\n    END AS result,\n\n    (\n        SELECT id\n        FROM selected_message\n    ) AS outbound_message_id,\n\n    (\n        SELECT status\n        FROM selected_message\n    ) AS message_status,\n\n    (\n        SELECT next_attempt_at\n        FROM selected_message\n    ) AS next_attempt_at,\n\n    (\n        SELECT duplicate_existing\n        FROM selected_message\n    ) AS duplicate_existing,\n\n    request.permission_decision,\n\n    CASE\n        WHEN request.permission_decision IN (\n            'allowed',\n            'deferred'\n        )\n            THEN 'dispatch_when_due'\n        ELSE 'do_not_send'\n    END AS next_action\n\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Normalize and Validate Queue Request').first().json.clinic_name,\n  $('Normalize and Validate Queue Request').first().json.mobile,\n  $('Normalize and Validate Queue Request').first().json.channel,\n  $('Normalize and Validate Queue Request').first().json.purpose,\n  $('Normalize and Validate Queue Request').first().json.message_type,\n  $('Normalize and Validate Queue Request').first().json.template_code,\n  $('Normalize and Validate Queue Request').first().json.language,\n  $('Normalize and Validate Queue Request').first().json.subject,\n  $('Normalize and Validate Queue Request').first().json.message_text,\n  $('Normalize and Validate Queue Request').first().json.payload_text,\n  $('Normalize and Validate Queue Request').first().json.related_entity_type,\n  $('Normalize and Validate Queue Request').first().json.related_entity_id,\n  $('Normalize and Validate Queue Request').first().json.request_reference,\n  $('Normalize and Validate Queue Request').first().json.idempotency_key,\n  $('Normalize and Validate Queue Request').first().json.priority,\n  $('Normalize and Validate Queue Request').first().json.scheduled_at,\n  $('Normalize and Validate Queue Request').first().json.max_attempts,\n  $json.permission_check_id || 0,\n  $json.decision || 'error'\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        84,
+        -48
+      ],
+      "id": "93c6c5ef-caba-4f3e-81a4-2f214f01e64a",
+      "name": "Queue Permitted Outbound Message"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_request',message:'اطلاعات صف پیام نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -172,
+        176
+      ],
+      "id": "8e5bd4ce-2f33-4e07-b020-f0ed56e4ca5f",
+      "name": "Return Queue Validation Error"
+    },
+    {
+      "parameters": {
+        "content": "## ثبت پیام در صف\n\nقبل از ثبت پیام، Workflow 79 فراخوانی می‌شود.\n\nallowed → queued\ndeferred → scheduled\nblocked → پیام ثبت نمی‌شود\n\nidempotency_key از ثبت تکراری جلوگیری می‌کند.",
+        "height": 370,
+        "width": 510
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1420,
+        -290
+      ],
+      "id": "020a669e-dc3d-436b-9b20-6b0d238680b2",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Queue Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Queue Message": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Queue Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Queue Outbound Message": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Queue Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Queue Request": {
+      "main": [
+        [
+          {
+            "node": "Is Queue Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Queue Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Check Message Permission",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Queue Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Message Permission": {
+      "main": [
+        [
+          {
+            "node": "Queue Permitted Outbound Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}

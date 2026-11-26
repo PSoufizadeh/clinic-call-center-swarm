@@ -1,0 +1,1005 @@
+{
+  "name": "108 - API - Unified Inbound Channel Gateway - Standalone Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2020,
+        240
+      ],
+      "id": "0276afce-4fcd-4be4-96d6-60b986848ccc",
+      "name": "Manual Test Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ad71d44d-85df-4eba-ad23-51793d412757",
+              "name": "gateway_event_type",
+              "value": "inbound_message",
+              "type": "string"
+            },
+            {
+              "id": "46d2c09a-44bb-4da1-a70a-715fc0482e41",
+              "name": "clinic_name",
+              "value": "کلینیک آزمایشی",
+              "type": "string"
+            },
+            {
+              "id": "2fc8bde2-ea1c-47ad-bd85-b324f786741b",
+              "name": "client_name",
+              "value": "webchat-demo",
+              "type": "string"
+            },
+            {
+              "id": "4763ef07-6bf8-48b5-84ad-d08bd78d7a0a",
+              "name": "provider_name",
+              "value": "internal",
+              "type": "string"
+            },
+            {
+              "id": "6a01f288-d217-46ab-b11d-63f1127a2bc4",
+              "name": "channel",
+              "value": "webchat",
+              "type": "string"
+            },
+            {
+              "id": "6b63ac1f-eacd-4a6b-aebf-6aeb2a4e42b7",
+              "name": "api_key",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "7539d8cf-5711-4c87-826d-50c1aadfda9e",
+              "name": "signature_verified",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "d720cf92-dc2d-4499-8121-5da0833ddfc9",
+              "name": "verification_reference",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "f6f83e74-66e8-4226-8d53-00f4b9ae0498",
+              "name": "source_ip",
+              "value": "127.0.0.1",
+              "type": "string"
+            },
+            {
+              "id": "148ed32f-80b5-4ad0-b0ef-2445ef525e98",
+              "name": "external_event_id",
+              "value": "event-001",
+              "type": "string"
+            },
+            {
+              "id": "c981d6d9-7ed1-430f-bfb3-25f260ece8ae",
+              "name": "external_message_id",
+              "value": "message-001",
+              "type": "string"
+            },
+            {
+              "id": "e50b4369-d83d-48ba-84be-8c1f39f4e382",
+              "name": "external_conversation_id",
+              "value": "conversation-001",
+              "type": "string"
+            },
+            {
+              "id": "ba8cec18-3015-417c-a164-31ba53794a06",
+              "name": "sender",
+              "value": "09000000000",
+              "type": "string"
+            },
+            {
+              "id": "3d504ba9-6acf-434a-907c-2de484f611f3",
+              "name": "message_type",
+              "value": "text",
+              "type": "string"
+            },
+            {
+              "id": "6331f87d-e4c7-418d-92c9-4a5180f34159",
+              "name": "message_text",
+              "value": "سلام",
+              "type": "string"
+            },
+            {
+              "id": "5d00fef6-24ed-40b3-afbf-be35475dae4f",
+              "name": "attachments",
+              "value": "[]",
+              "type": "string"
+            },
+            {
+              "id": "3c48b021-463f-46ad-b763-af9540168486",
+              "name": "language",
+              "value": "fa",
+              "type": "string"
+            },
+            {
+              "id": "b9b5a09c-d13e-47f5-9392-00fe93c91933",
+              "name": "request_timestamp",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "eb065ef3-5ee5-4e1d-a525-2aab4609079c",
+              "name": "outbound_message_id",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "599c37ae-b72e-4b1e-bcf5-fd9b14ce5684",
+              "name": "provider_message_id",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "4a020310-b175-4623-ac59-d28cc3a878ed",
+              "name": "delivery_event_type",
+              "value": "delivered",
+              "type": "string"
+            },
+            {
+              "id": "eb61fa0c-7a8a-4add-ba4b-ee52e9f6936d",
+              "name": "delivery_event_at",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "841eb9a4-4788-4af2-bb42-0990055d75c5",
+              "name": "error_code",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "09e3cb02-02fc-44e2-b1e2-6b4b934ae97a",
+              "name": "error_message",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "71105ead-d059-4a16-a539-3c8998ca8c4b",
+              "name": "raw_payload",
+              "value": "{}",
+              "type": "string"
+            },
+            {
+              "id": "36054556-b5e6-4a28-bc99-a4fbb7aebdcd",
+              "name": "webhook_base_url",
+              "value": "http://n8n:5678/webhook",
+              "type": "string"
+            },
+            {
+              "id": "3b7cee2e-6171-4612-9830-afe33669677d",
+              "name": "confirm_gateway",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1780,
+        240
+      ],
+      "id": "153d597a-e6df-4c93-b7c9-3054dd4519ea",
+      "name": "Manual Gateway Event"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic/gateway/events/process",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1780,
+        -80
+      ],
+      "id": "e5175e1d-d27f-4854-8f8f-18f84b4cef94",
+      "name": "Webhook - Unified Channel Gateway"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\n\nconst text = (value) =>\n  value === null || value === undefined\n    ? ''\n    : String(value).trim();\n\nconst bool = (value) =>\n  typeof value === 'boolean'\n    ? value\n    : ['true', '1', 'yes', 'on'].includes(\n        text(value).toLowerCase()\n      );\n\nconst hash = (value) => {\n  let current = 2166136261;\n\n  for (let index = 0; index < value.length; index++) {\n    current ^= value.charCodeAt(index);\n    current = Math.imul(current, 16777619);\n  }\n\n  return (current >>> 0)\n    .toString(16)\n    .padStart(8, '0');\n};\n\nconst gateway_event_type =\n  text(input.gateway_event_type || 'inbound_message')\n    .toLowerCase();\nconst clinic_name = text(input.clinic_name);\nconst client_name = text(input.client_name);\nconst provider_name = text(input.provider_name);\nconst channel = text(input.channel).toLowerCase();\nconst api_key = text(input.api_key);\nconst signature_verified = bool(input.signature_verified);\nconst verification_reference =\n  text(input.verification_reference);\nconst source_ip = text(input.source_ip);\nconst external_event_id =\n  text(input.external_event_id);\nconst external_message_id =\n  text(input.external_message_id);\nconst external_conversation_id =\n  text(input.external_conversation_id);\nconst sender = text(input.sender);\nconst message_type =\n  text(input.message_type || 'text').toLowerCase();\nconst message_text = text(input.message_text);\nconst language =\n  text(input.language || 'unknown').toLowerCase();\nconst request_timestamp =\n  text(input.request_timestamp) ||\n  new Date().toISOString();\n\nconst outbound_message_id =\n  Number(input.outbound_message_id ?? 0);\nconst provider_message_id =\n  text(input.provider_message_id);\nconst delivery_event_type =\n  text(\n    input.delivery_event_type ||\n    input.event_type ||\n    'unknown'\n  ).toLowerCase();\nconst delivery_event_at =\n  text(input.delivery_event_at) ||\n  new Date().toISOString();\nconst error_code = text(input.error_code);\nconst error_message = text(input.error_message);\n\nconst webhook_base_url =\n  text(\n    input.webhook_base_url ||\n    'http://n8n:5678/webhook'\n  ).replace(/\\/+$/, '');\n\nconst confirm_gateway = bool(input.confirm_gateway);\n\nlet attachments = input.attachments ?? [];\nlet raw_payload = input.raw_payload ?? input;\nlet normalized_payload =\n  input.normalized_payload ?? {};\n\nfor (const pair of [\n  ['attachments', attachments],\n  ['raw_payload', raw_payload],\n  ['normalized_payload', normalized_payload],\n]) {\n  if (typeof pair[1] === 'string') {\n    try {\n      const parsed = JSON.parse(pair[1] || '{}');\n\n      if (pair[0] === 'attachments') {\n        attachments = parsed;\n      }\n\n      if (pair[0] === 'raw_payload') {\n        raw_payload = parsed;\n      }\n\n      if (pair[0] === 'normalized_payload') {\n        normalized_payload = parsed;\n      }\n    } catch {\n      if (pair[0] === 'attachments') {\n        attachments = [];\n      }\n\n      if (pair[0] === 'raw_payload') {\n        raw_payload = { raw: pair[1] };\n      }\n\n      if (pair[0] === 'normalized_payload') {\n        normalized_payload = { raw: pair[1] };\n      }\n    }\n  }\n}\n\nif (!Array.isArray(attachments)) {\n  attachments = [];\n}\n\nif (\n  !raw_payload ||\n  Array.isArray(raw_payload) ||\n  typeof raw_payload !== 'object'\n) {\n  raw_payload = {};\n}\n\nif (\n  !normalized_payload ||\n  Array.isArray(normalized_payload) ||\n  typeof normalized_payload !== 'object'\n) {\n  normalized_payload = {};\n}\n\nconst request_hash = `gw-${hash(JSON.stringify({\n  gateway_event_type,\n  clinic_name,\n  client_name,\n  channel,\n  external_event_id,\n  external_message_id,\n  external_conversation_id,\n  sender,\n  message_type,\n  message_text,\n  outbound_message_id,\n  provider_message_id,\n  delivery_event_type,\n  delivery_event_at,\n}))}`;\n\nconst channels = [\n  'whatsapp',\n  'sms',\n  'phone',\n  'telegram',\n  'webchat',\n  'manual',\n  'api',\n  'email',\n  'web_push',\n  'in_app',\n];\n\nconst messageTypes = [\n  'text',\n  'audio',\n  'image',\n  'file',\n  'event',\n];\n\nconst deliveryTypes = [\n  'accepted',\n  'sent',\n  'delivered',\n  'read',\n  'failed',\n  'undeliverable',\n  'rejected',\n  'unknown',\n];\n\nconst errors = [];\n\nif (\n  !['inbound_message', 'delivery_status'].includes(\n    gateway_event_type\n  )\n) {\n  errors.push({\n    field: 'gateway_event_type',\n    message: 'نوع رویداد Gateway معتبر نیست.',\n  });\n}\n\nif (!clinic_name) {\n  errors.push({\n    field: 'clinic_name',\n    message: 'نام کلینیک الزامی است.',\n  });\n}\n\nif (!client_name) {\n  errors.push({\n    field: 'client_name',\n    message: 'نام Gateway Client الزامی است.',\n  });\n}\n\nif (!channels.includes(channel)) {\n  errors.push({\n    field: 'channel',\n    message: 'کانال معتبر نیست.',\n  });\n}\n\nif (!external_event_id) {\n  errors.push({\n    field: 'external_event_id',\n    message: 'شناسه خارجی رویداد الزامی است.',\n  });\n}\n\nif (Number.isNaN(Date.parse(request_timestamp))) {\n  errors.push({\n    field: 'request_timestamp',\n    message: 'زمان درخواست معتبر نیست.',\n  });\n}\n\nif (gateway_event_type === 'inbound_message') {\n  if (!external_message_id) {\n    errors.push({\n      field: 'external_message_id',\n      message: 'شناسه خارجی پیام الزامی است.',\n    });\n  }\n\n  if (!external_conversation_id) {\n    errors.push({\n      field: 'external_conversation_id',\n      message: 'شناسه خارجی مکالمه الزامی است.',\n    });\n  }\n\n  if (!messageTypes.includes(message_type)) {\n    errors.push({\n      field: 'message_type',\n      message: 'نوع پیام معتبر نیست.',\n    });\n  }\n\n  if (!message_text) {\n    errors.push({\n      field: 'message_text',\n      message: 'متن یا متن استخراج‌شده پیام الزامی است.',\n    });\n  }\n}\n\nif (gateway_event_type === 'delivery_status') {\n  if (\n    (\n      !Number.isInteger(outbound_message_id) ||\n      outbound_message_id < 1\n    ) &&\n    !provider_message_id\n  ) {\n    errors.push({\n      field: 'delivery_reference',\n      message: 'شناسه داخلی یا Provider Message ID الزامی است.',\n    });\n  }\n\n  if (!deliveryTypes.includes(delivery_event_type)) {\n    errors.push({\n      field: 'delivery_event_type',\n      message: 'نوع وضعیت تحویل معتبر نیست.',\n    });\n  }\n\n  if (Number.isNaN(Date.parse(delivery_event_at))) {\n    errors.push({\n      field: 'delivery_event_at',\n      message: 'زمان وضعیت تحویل معتبر نیست.',\n    });\n  }\n}\n\nif (!/^https?:\\/\\/.+/i.test(webhook_base_url)) {\n  errors.push({\n    field: 'webhook_base_url',\n    message: 'آدرس Webhook معتبر نیست.',\n  });\n}\n\nif (confirm_gateway !== true) {\n  errors.push({\n    field: 'confirm_gateway',\n    message: 'پردازش Gateway باید تأیید شود.',\n  });\n}\n\nreturn [{\n  json: {\n    gateway_event_type,\n    clinic_name,\n    client_name,\n    provider_name,\n    channel,\n    api_key,\n    signature_verified,\n    verification_reference,\n    source_ip,\n    external_event_id,\n    external_message_id,\n    external_conversation_id,\n    sender,\n    message_type,\n    message_text,\n    attachments,\n    attachments_text:\n      JSON.stringify(attachments),\n    language,\n    request_timestamp,\n    outbound_message_id,\n    provider_message_id,\n    delivery_event_type,\n    delivery_event_at,\n    error_code,\n    error_message,\n    normalized_payload,\n    normalized_payload_text:\n      JSON.stringify(normalized_payload),\n    raw_payload,\n    raw_payload_text:\n      JSON.stringify(raw_payload),\n    request_hash,\n    webhook_base_url,\n    auth_url:\n      `${webhook_base_url}/clinic/gateway/security/authenticate`,\n    rate_limit_url:\n      `${webhook_base_url}/clinic/gateway/security/rate-limit`,\n    replay_url:\n      `${webhook_base_url}/clinic/gateway/security/replay-check`,\n    orchestrator_url:\n      `${webhook_base_url}/clinic/conversation/process-message`,\n    delivery_url:\n      `${webhook_base_url}/clinic/communications/messages/delivery-status`,\n    confirm_gateway,\n    validation_status:\n      errors.length === 0 ? 'valid' : 'invalid',\n    errors,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1508,
+        80
+      ],
+      "id": "733610b4-4dfd-4e9c-9def-e265490431e1",
+      "name": "Normalize and Validate Gateway Event"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c1c449dd-ab94-479d-b690-4ecc8766f9be",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1268,
+        80
+      ],
+      "id": "cf76eb77-1992-4fa8-8172-0e5a39454c80",
+      "name": "Is Gateway Event Valid?"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    auth_url: $json.auth_url,\n    auth_payload: {\n      clinic_name: $json.clinic_name,\n      client_name: $json.client_name,\n      channel: $json.channel,\n      api_key: $json.api_key,\n      source_ip: $json.source_ip,\n      signature_verified:\n        $json.signature_verified,\n      verification_reference:\n        $json.verification_reference,\n      confirm_check: true,\n    },\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1012,
+        -48
+      ],
+      "id": "e6b6b4f2-9b0d-4179-a258-a050e6a81cf8",
+      "name": "Prepare Authentication Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.auth_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.auth_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -756,
+        -48
+      ],
+      "id": "bf89bc0f-778e-49cb-a898-563f93d22183",
+      "name": "Verify Gateway Authentication",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const auth = $json;\nconst source =\n  $('Normalize and Validate Gateway Event')\n    .first().json;\n\nreturn [{\n  json: {\n    allowed: auth.allowed === true,\n    auth_result: auth.result,\n    clinic_id: Number(auth.clinic_id || 0),\n    client_id: Number(auth.client_id || 0),\n    rate_limit_requests:\n      Number(auth.rate_limit_requests || 0),\n    rate_limit_window_seconds:\n      Number(auth.rate_limit_window_seconds || 0),\n    replay_window_seconds:\n      Number(auth.replay_window_seconds || 0),\n    rate_limit_url: source.rate_limit_url,\n    rate_limit_payload: {\n      client_id: Number(auth.client_id || 0),\n      max_requests:\n        Number(auth.rate_limit_requests || 0),\n      window_seconds:\n        Number(auth.rate_limit_window_seconds || 0),\n      confirm_check: true,\n    },\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -500,
+        -48
+      ],
+      "id": "8edc77c2-c86d-4941-a154-ecc7afd243b3",
+      "name": "Prepare Rate Limit Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "02cdb51d-32f4-41b6-a83f-89e2f7274f56",
+              "leftValue": "={{ $json.allowed === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -244,
+        -48
+      ],
+      "id": "83df67e0-ee12-4ccc-88ee-08e1cf962739",
+      "name": "Is Authentication Allowed?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.rate_limit_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.rate_limit_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        12,
+        -144
+      ],
+      "id": "a1183a5e-dc88-4a02-93ec-feb5d8beb233",
+      "name": "Apply Gateway Rate Limit",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rate = $json;\nconst auth =\n  $('Prepare Rate Limit Request')\n    .first().json;\nconst source =\n  $('Normalize and Validate Gateway Event')\n    .first().json;\n\nreturn [{\n  json: {\n    allowed: rate.allowed === true,\n    rate_limit_result: rate.result,\n    retry_after_seconds:\n      Number(rate.retry_after_seconds || 0),\n    remaining_requests:\n      Number(rate.remaining_requests || 0),\n    replay_url: source.replay_url,\n    replay_payload: {\n      clinic_id: auth.clinic_id,\n      client_id: auth.client_id,\n      gateway_event_type:\n        source.gateway_event_type,\n      channel: source.channel,\n      external_event_id:\n        source.external_event_id,\n      external_message_id:\n        source.external_message_id,\n      request_hash: source.request_hash,\n      source_ip: source.source_ip,\n      request_timestamp:\n        source.request_timestamp,\n      replay_window_seconds:\n        auth.replay_window_seconds,\n      confirm_check: true,\n    },\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        268,
+        -144
+      ],
+      "id": "5448d6eb-3e47-4780-9613-c3ecea2dfbf7",
+      "name": "Prepare Replay Check"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "33d64dca-3339-4cf2-9aa4-fb1264e1eef2",
+              "leftValue": "={{ $json.allowed === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        524,
+        -144
+      ],
+      "id": "e8746647-9836-4a54-8534-10563f39d0bb",
+      "name": "Is Rate Limit Allowed?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.replay_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.replay_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        780,
+        -240
+      ],
+      "id": "3c1f1324-5abf-40dc-a8e8-c0324447219d",
+      "name": "Check Replay and Duplicate Event",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "14d298bb-27c6-429d-9b8a-83be1100e837",
+              "leftValue": "={{ $json.allowed === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1036,
+        -240
+      ],
+      "id": "4529f823-83d9-461e-98e2-2132fe629313",
+      "name": "Is Gateway Event New?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3e8b4550-76fd-4a21-a86c-293e67d43d79",
+              "leftValue": "={{ $('Normalize and Validate Gateway Event').first().json.gateway_event_type }}",
+              "rightValue": "inbound_message",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1292,
+        -336
+      ],
+      "id": "dbb21d7c-2692-4b5e-939b-0771e1b4a9ad",
+      "name": "Is Inbound Message Event?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS gateway_request_id,\n        $2::BIGINT AS clinic_id,\n        $3::BIGINT AS client_id,\n        $4::TEXT AS channel,\n        $5::TEXT AS external_conversation_id,\n        $6::TEXT AS external_message_id,\n        NULLIF($7::TEXT, '') AS sender,\n        $8::TEXT AS message_type,\n        NULLIF($9::TEXT, '') AS message_text,\n        $10::JSONB AS attachments,\n        $11::JSONB AS normalized_payload,\n        $12::JSONB AS raw_payload,\n        $13::TEXT AS language\n),\n\ninserted_message AS (\n    INSERT INTO inbound_channel_messages (\n        gateway_request_id,\n        clinic_id,\n        client_id,\n        channel,\n        external_conversation_id,\n        external_message_id,\n        sender,\n        message_type,\n        message_text,\n        attachments,\n        normalized_payload,\n        raw_payload,\n        language,\n        processing_status\n    )\n    SELECT\n        request.gateway_request_id,\n        request.clinic_id,\n        request.client_id,\n        request.channel,\n        request.external_conversation_id,\n        request.external_message_id,\n        request.sender,\n        request.message_type,\n        request.message_text,\n        request.attachments,\n        request.normalized_payload,\n        request.raw_payload,\n        request.language,\n        'forwarded'\n    FROM request_data request\n    ON CONFLICT (\n        clinic_id,\n        channel,\n        external_message_id\n    )\n    DO NOTHING\n    RETURNING *\n),\n\nselected_message AS (\n    SELECT\n        inserted.*,\n        FALSE AS duplicate_message\n    FROM inserted_message inserted\n\n    UNION ALL\n\n    SELECT\n        existing.*,\n        TRUE AS duplicate_message\n    FROM inbound_channel_messages existing\n    INNER JOIN request_data request\n        ON existing.clinic_id =\n           request.clinic_id\n       AND existing.channel =\n           request.channel\n       AND existing.external_message_id =\n           request.external_message_id\n    WHERE NOT EXISTS (\n        SELECT 1\n        FROM inserted_message\n    )\n\n    LIMIT 1\n)\n\nSELECT\n    TRUE AS success,\n    'inbound_message_registered' AS result,\n    selected.id AS inbound_channel_message_id,\n    selected.duplicate_message\nFROM selected_message selected;",
+        "options": {
+          "queryReplacement": "={{ [ $('Check Replay and Duplicate Event').first().json.gateway_request_id,$('Prepare Rate Limit Request').first().json.clinic_id,$('Prepare Rate Limit Request').first().json.client_id,$('Normalize and Validate Gateway Event').first().json.channel,$('Normalize and Validate Gateway Event').first().json.external_conversation_id,$('Normalize and Validate Gateway Event').first().json.external_message_id,$('Normalize and Validate Gateway Event').first().json.sender,$('Normalize and Validate Gateway Event').first().json.message_type,$('Normalize and Validate Gateway Event').first().json.message_text,$('Normalize and Validate Gateway Event').first().json.attachments_text,$('Normalize and Validate Gateway Event').first().json.normalized_payload_text,$('Normalize and Validate Gateway Event').first().json.raw_payload_text,$('Normalize and Validate Gateway Event').first().json.language ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1548,
+        -432
+      ],
+      "id": "5a0c7188-d9e9-4d5e-9de0-2eed85855a45",
+      "name": "Register Inbound Channel Message"
+    },
+    {
+      "parameters": {
+        "jsCode": "const source =\n  $('Normalize and Validate Gateway Event')\n    .first().json;\nconst auth =\n  $('Prepare Rate Limit Request')\n    .first().json;\nconst replay =\n  $('Check Replay and Duplicate Event')\n    .first().json;\n\nreturn [{\n  json: {\n    inbound_channel_message_id:\n      Number($json.inbound_channel_message_id),\n    gateway_request_id:\n      Number(replay.gateway_request_id),\n    orchestrator_url:\n      source.orchestrator_url,\n    orchestrator_payload: {\n      clinic_name: source.clinic_name,\n      channel: source.channel,\n      external_conversation_id:\n        source.external_conversation_id,\n      mobile: source.sender,\n      message_type: source.message_type,\n      message_text: source.message_text,\n      message_payload: {\n        gateway_request_id:\n          Number(replay.gateway_request_id),\n        inbound_channel_message_id:\n          Number($json.inbound_channel_message_id),\n        client_id: auth.client_id,\n        client_name: source.client_name,\n        provider_name: source.provider_name,\n        external_event_id:\n          source.external_event_id,\n        external_message_id:\n          source.external_message_id,\n        attachments: source.attachments,\n        normalized_payload:\n          source.normalized_payload,\n      },\n      language: source.language,\n      webhook_base_url:\n        source.webhook_base_url,\n      confirm_message: true,\n    },\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1804,
+        -432
+      ],
+      "id": "7bf635e6-2b2b-4e02-9536-79b3389f69dd",
+      "name": "Prepare Conversation Orchestrator Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.orchestrator_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.orchestrator_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2060,
+        -432
+      ],
+      "id": "97cced80-4bb5-4bb0-b58b-6789199e83c7",
+      "name": "Call Conversation Orchestrator",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS inbound_message_id,\n        $2::BIGINT AS gateway_request_id,\n        $3::JSONB AS orchestrator_response,\n        $4::BOOLEAN AS execution_success\n),\n\nupdated_message AS (\n    UPDATE inbound_channel_messages message\n    SET\n        processing_status = CASE\n            WHEN request.execution_success = TRUE\n                THEN 'processed'\n            ELSE 'failed'\n        END,\n        orchestrator_response =\n            request.orchestrator_response,\n        processed_at = NOW()\n    FROM request_data request\n    WHERE message.id =\n          request.inbound_message_id\n    RETURNING message.*\n),\n\nupdated_request AS (\n    UPDATE channel_gateway_requests gateway\n    SET\n        processing_status = CASE\n            WHEN request.execution_success = TRUE\n                THEN 'processed'\n            ELSE 'failed'\n        END,\n        result =\n            request.orchestrator_response,\n        processed_at = NOW()\n    FROM request_data request\n    WHERE gateway.id =\n          request.gateway_request_id\n    RETURNING gateway.*\n)\n\nSELECT\n    request.execution_success AS success,\n    CASE\n        WHEN request.execution_success = TRUE\n            THEN 'inbound_gateway_event_processed'\n        ELSE 'inbound_gateway_event_failed'\n    END AS result,\n    request.inbound_message_id,\n    request.gateway_request_id,\n    request.orchestrator_response\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [ $('Prepare Conversation Orchestrator Request').first().json.inbound_channel_message_id,$('Prepare Conversation Orchestrator Request').first().json.gateway_request_id,JSON.stringify($json||{}),$json.success===true ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2316,
+        -432
+      ],
+      "id": "d1442462-c45c-4e61-9601-43da483ad8e5",
+      "name": "Finalize Inbound Gateway Event"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS gateway_request_id,\n        $2::BIGINT AS clinic_id,\n        $3::BIGINT AS client_id,\n        NULLIF($4::TEXT, '') AS provider_name,\n        $5::TEXT AS channel,\n        $6::TEXT AS external_event_id,\n        NULLIF($7::TEXT, '') AS external_message_id,\n        $8::JSONB AS normalized_event,\n        $9::JSONB AS raw_event\n),\n\ninserted_callback AS (\n    INSERT INTO provider_callback_events (\n        gateway_request_id,\n        clinic_id,\n        client_id,\n        provider_name,\n        channel,\n        callback_type,\n        external_event_id,\n        external_message_id,\n        normalized_event,\n        raw_event,\n        processing_status\n    )\n    SELECT\n        request.gateway_request_id,\n        request.clinic_id,\n        request.client_id,\n        request.provider_name,\n        request.channel,\n        'delivery_status',\n        request.external_event_id,\n        request.external_message_id,\n        request.normalized_event,\n        request.raw_event,\n        'forwarded'\n    FROM request_data request\n    ON CONFLICT (\n        clinic_id,\n        provider_name,\n        external_event_id\n    )\n    DO NOTHING\n    RETURNING *\n),\n\nselected_callback AS (\n    SELECT\n        inserted.*,\n        FALSE AS duplicate_callback\n    FROM inserted_callback inserted\n\n    UNION ALL\n\n    SELECT\n        existing.*,\n        TRUE AS duplicate_callback\n    FROM provider_callback_events existing\n    INNER JOIN request_data request\n        ON existing.clinic_id =\n           request.clinic_id\n       AND existing.provider_name IS NOT DISTINCT FROM\n           request.provider_name\n       AND existing.external_event_id =\n           request.external_event_id\n    WHERE NOT EXISTS (\n        SELECT 1\n        FROM inserted_callback\n    )\n\n    LIMIT 1\n)\n\nSELECT\n    TRUE AS success,\n    'delivery_callback_registered' AS result,\n    selected.id AS provider_callback_event_id,\n    selected.duplicate_callback\nFROM selected_callback selected;",
+        "options": {
+          "queryReplacement": "={{ [ $('Check Replay and Duplicate Event').first().json.gateway_request_id,$('Prepare Rate Limit Request').first().json.clinic_id,$('Prepare Rate Limit Request').first().json.client_id,$('Normalize and Validate Gateway Event').first().json.provider_name,$('Normalize and Validate Gateway Event').first().json.channel,$('Normalize and Validate Gateway Event').first().json.external_event_id,$('Normalize and Validate Gateway Event').first().json.external_message_id,$('Normalize and Validate Gateway Event').first().json.normalized_payload_text,$('Normalize and Validate Gateway Event').first().json.raw_payload_text ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1548,
+        -240
+      ],
+      "id": "b0b1d2a5-312d-4d62-bf24-324aa7943cd5",
+      "name": "Register Provider Delivery Callback"
+    },
+    {
+      "parameters": {
+        "jsCode": "const source =\n  $('Normalize and Validate Gateway Event')\n    .first().json;\nconst replay =\n  $('Check Replay and Duplicate Event')\n    .first().json;\n\nreturn [{\n  json: {\n    provider_callback_event_id:\n      Number($json.provider_callback_event_id),\n    gateway_request_id:\n      Number(replay.gateway_request_id),\n    delivery_url:\n      source.delivery_url,\n    delivery_payload: {\n      outbound_message_id:\n        source.outbound_message_id,\n      provider_message_id:\n        source.provider_message_id,\n      channel: source.channel,\n      event_type:\n        source.delivery_event_type,\n      event_at:\n        source.delivery_event_at,\n      error_code:\n        source.error_code,\n      error_message:\n        source.error_message,\n      raw_event:\n        source.raw_payload,\n    },\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1804,
+        -240
+      ],
+      "id": "5b626501-5764-4a58-8f69-d48c3d7ba505",
+      "name": "Prepare Delivery Status Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.delivery_url }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.delivery_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "autodetect"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2060,
+        -240
+      ],
+      "id": "32d44573-01ae-48e0-ba05-abbfe1ed77e6",
+      "name": "Call Delivery Status Processor",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH request_data AS (\n    SELECT\n        $1::BIGINT AS callback_event_id,\n        $2::BIGINT AS gateway_request_id,\n        $3::JSONB AS processing_result,\n        $4::BOOLEAN AS execution_success\n),\n\nupdated_callback AS (\n    UPDATE provider_callback_events callback\n    SET\n        processing_status = CASE\n            WHEN request.execution_success = TRUE\n                THEN 'processed'\n            ELSE 'failed'\n        END,\n        processing_result =\n            request.processing_result,\n        processed_at = NOW()\n    FROM request_data request\n    WHERE callback.id =\n          request.callback_event_id\n    RETURNING callback.*\n),\n\nupdated_request AS (\n    UPDATE channel_gateway_requests gateway\n    SET\n        processing_status = CASE\n            WHEN request.execution_success = TRUE\n                THEN 'processed'\n            ELSE 'failed'\n        END,\n        result =\n            request.processing_result,\n        processed_at = NOW()\n    FROM request_data request\n    WHERE gateway.id =\n          request.gateway_request_id\n    RETURNING gateway.*\n)\n\nSELECT\n    request.execution_success AS success,\n    CASE\n        WHEN request.execution_success = TRUE\n            THEN 'delivery_gateway_event_processed'\n        ELSE 'delivery_gateway_event_failed'\n    END AS result,\n    request.callback_event_id,\n    request.gateway_request_id,\n    request.processing_result\nFROM request_data request;",
+        "options": {
+          "queryReplacement": "={{ [ $('Prepare Delivery Status Request').first().json.provider_callback_event_id,$('Prepare Delivery Status Request').first().json.gateway_request_id,JSON.stringify($json||{}),$json.success===true ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2316,
+        -240
+      ],
+      "id": "7326217e-8299-4e5d-a438-8260dadbe032",
+      "name": "Finalize Delivery Gateway Event"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:'invalid_gateway_event',message:'اطلاعات Gateway نامعتبر است.',errors:$json.errors||[]}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1012,
+        176
+      ],
+      "id": "68b93390-847d-4687-90e5-012429f93dcd",
+      "name": "Return Gateway Validation Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:$json.auth_result||'authentication_failed',message:'Authentication کانال پذیرفته نشد.',next_action:'review_gateway_client_configuration'}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        12,
+        48
+      ],
+      "id": "ead31585-43f4-44f3-857a-ae2d5d510566",
+      "name": "Return Authentication Failure"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:false,result:$json.rate_limit_result||'rate_limit_exceeded',message:'تعداد درخواست‌های کانال از حد مجاز عبور کرده است.',retry_after_seconds:$json.retry_after_seconds||0}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        -48
+      ],
+      "id": "0dc7add1-317b-4595-a1c4-88f7713655d0",
+      "name": "Return Rate Limit Failure"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{success:true,result:$json.result||'duplicate_gateway_event',duplicate_event:true,gateway_request_id:$json.gateway_request_id||null,message:'این رویداد قبلاً دریافت شده و دوباره پردازش نشد.'}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1292,
+        -96
+      ],
+      "id": "dd88f415-ce6e-4a25-9738-1877ab914c35",
+      "name": "Return Duplicate Gateway Event"
+    },
+    {
+      "parameters": {
+        "content": "## Gateway یکپارچه کانال‌ها\n\nترتیب قطعی:\n1. Validation\n2. Authentication\n3. Rate Limit\n4. Replay Protection\n5. ثبت Event\n6. ارسال Inbound به 106E یا Delivery به 85\n\nاین Workflow برای Credential واقعی Provider طراحی شده، اما اتصال Provider در مرحله Integration انجام می‌شود.",
+        "height": 470,
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2260,
+        -350
+      ],
+      "id": "0c6ee41d-23e0-4ca3-a641-54fcd7513d65",
+      "name": "How to Use"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Manual Gateway Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Gateway Event": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Gateway Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Unified Channel Gateway": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Validate Gateway Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Validate Gateway Event": {
+      "main": [
+        [
+          {
+            "node": "Is Gateway Event Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Gateway Event Valid?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Authentication Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Gateway Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Authentication Request": {
+      "main": [
+        [
+          {
+            "node": "Verify Gateway Authentication",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Gateway Authentication": {
+      "main": [
+        [
+          {
+            "node": "Prepare Rate Limit Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Rate Limit Request": {
+      "main": [
+        [
+          {
+            "node": "Is Authentication Allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Authentication Allowed?": {
+      "main": [
+        [
+          {
+            "node": "Apply Gateway Rate Limit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Authentication Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply Gateway Rate Limit": {
+      "main": [
+        [
+          {
+            "node": "Prepare Replay Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Replay Check": {
+      "main": [
+        [
+          {
+            "node": "Is Rate Limit Allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Rate Limit Allowed?": {
+      "main": [
+        [
+          {
+            "node": "Check Replay and Duplicate Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Rate Limit Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Replay and Duplicate Event": {
+      "main": [
+        [
+          {
+            "node": "Is Gateway Event New?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Gateway Event New?": {
+      "main": [
+        [
+          {
+            "node": "Is Inbound Message Event?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Duplicate Gateway Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Inbound Message Event?": {
+      "main": [
+        [
+          {
+            "node": "Register Inbound Channel Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Register Provider Delivery Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register Inbound Channel Message": {
+      "main": [
+        [
+          {
+            "node": "Prepare Conversation Orchestrator Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Conversation Orchestrator Request": {
+      "main": [
+        [
+          {
+            "node": "Call Conversation Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Conversation Orchestrator": {
+      "main": [
+        [
+          {
+            "node": "Finalize Inbound Gateway Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register Provider Delivery Callback": {
+      "main": [
+        [
+          {
+            "node": "Prepare Delivery Status Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Delivery Status Request": {
+      "main": [
+        [
+          {
+            "node": "Call Delivery Status Processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Delivery Status Processor": {
+      "main": [
+        [
+          {
+            "node": "Finalize Delivery Gateway Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": []
+}
