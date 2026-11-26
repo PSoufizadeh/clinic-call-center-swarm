@@ -1,0 +1,41 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+client_secret*.json
+credentials*.json
+**/credentials/
+**/secrets/
+*.pem
+*.key
+*.p12
+
+# Database files and backups
+*.sqlite*
+*.db
+*.sql.gz
+*.dump
+**/backups/
+
+# Confidential clinical data
+**/data/
+**/patient_data/
+**/exports/
+**/logs/
+**/execution_data/
+*.csv
+*.xlsx
+*.pdf
+*.log
+
+# Development environment
+**/node_modules/
+.vscode/
+.idea/
+
+# Archives and system files
+*.zip
+*.rar
+.DS_Store
+__MACOSX/
+Thumbs.db
