@@ -6,7 +6,7 @@ An exploratory project by Parham Soufizadeh to learn how coordinated AI-assisted
 
 ## Development disclosure
 
-OpenAI ChatGPT was used extensively to assist in designing, generating, refining and troubleshooting the workflow code and logic. This was a hands-on learning and experimentation phase; the code was not developed independently by me. The repository documents an ongoing exploration of multi-agent orchestration and workflow automation rather than a claim of independently authored production software.
+OpenAI ChatGPT was used extensively to assist in generating, refining and troubleshooting the workflow code and logic. This was a hands-on learning and experimentation phase; the code was not developed independently by me. The repository documents an ongoing exploration of multi-agent orchestration and workflow automation rather than a claim of independently authored production software.
 
 ## Architecture
 
