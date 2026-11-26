@@ -10,23 +10,41 @@ OpenAI ChatGPT was used extensively to assist in designing, generating, refining
 
 ## Architecture
 
+The system explores a modular multi-agent architecture for clinic operations, conversation management, and workflow automation.
+
 ```mermaid
 flowchart TD
-    A[Channel gateway] --> B[Conversation orchestrator]
-    B --> C[Safety gate]
-    C --> D[Intent and entity routing]
-    D --> E[Tool routing and execution]
-    E --> F[Appointment and patient operations]
-    E --> G[Clinic information and support]
-    E --> H[Human handoff]
-    F --> I[Response composition]
-    G --> I
-    H --> I
-    I --> J[Communication workflows]
-    E --> K[(PostgreSQL)]
+    A[Inbound Communication] --> B[Conversation Orchestrator]
+    B --> C[Safety Gate]
+    C --> D[Intent and Entity Router]
+    D --> E[Tool Router]
+
+    E --> F[Appointment Management]
+    E --> G[Patient Management]
+    E --> H[Clinical Intake]
+    E --> I[Knowledge Retrieval - RAG]
+    E --> J[Human Handoff]
+
+    F --> K[Response Composer]
+    G --> K
+    H --> K
+    I --> K
+    J --> K
+
+    E <--> M[(PostgreSQL)]
+    K --> L[Outbound Communication]
+
+    classDef core fill:#164E63,stroke:#0891B2,color:#FFFFFF
+    classDef agent fill:#E0F2FE,stroke:#0891B2,color:#164E63
+    classDef database fill:#334155,stroke:#64748B,color:#FFFFFF
+
+    class B,C,D,E,K core
+    class F,G,H,I,J agent
+    class M database
 ```
 
-Conceptual component map; consult the workflow definitions for actual execution paths. AI and mock routing/composition workflows are alternatives, not simultaneous endpoints.
+*Conceptual architecture of the experimental multi-agent workflow system.*
+
 
 ## Repository layout
 
